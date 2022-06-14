@@ -1,0 +1,907 @@
+openapi: 3.0.3
+info:
+  version: 1.0.0
+  title: favorX API
+  description: "A list of the currently provided Interfaces to interact with the boson, implementing file operations and sending messages"
+
+security:
+  - { }
+
+externalDocs:
+  description: Browse the documentation @ the favorX Docs
+  url: ""
+
+servers:
+  - url: "http://{apiRoot}:{port}/v1"
+    variables:
+      apiRoot:
+        default: "localhost"
+        description: Base address of the local favorX node main API
+      port:
+        default: "1633"
+        description: Service port provided in favorX node config
+  - url: "http://{apiRoot}:{port}"
+    variables:
+      apiRoot:
+        default: "localhost"
+        description: Base address of the local favorX node main API
+      port:
+        default: "1633"
+        description: Service port provided in favorX node config
+
+paths:
+  "/auth":
+    post:
+      summary: "Authenticate - This endpoint is experimental"
+      tags:
+        - Auth
+      security:
+        - basicAuth: [ ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "favorXCommon.yaml#/components/schemas/SecurityTokenRequest"
+      responses:
+        "201":
+          description: Ok
+          content:
+            application/json:
+              schema:
+                $ref: "favorXCommon.yaml#/components/schemas/SecurityTokenResponse"
+        "400":
+          $ref: "favorXCommon.yaml#/components/responses/400"
+        "401":
+          $ref: "favorXCommon.yaml#/components/responses/401"
+        "500":
+          $ref: "favorXCommon.yaml#/components/responses/500"
+        default:
+          description: Default response
+
+  "/refresh":
+    post:
+      summary: "Refresh the auth token - This endpoint is experimental"
+      tags:
+        - Auth
+      security:
+        - bearerAuth: [ ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "favorXCommon.yaml#/components/schemas/SecurityTokenRequest"
+      responses:
+        "201":
+          description: Ok
+          content:
+            application/json:
+              schema:
+                $ref: "favorXCommon.yaml#/components/schemas/SecurityTokenResponse"
+        "400":
+          $ref: "favorXCommon.yaml#/components/responses/400"
+        "401":
+          $ref: "favorXCommon.yaml#/components/responses/401"
+        "500":
+          $ref: "favorXCommon.yaml#/components/responses/500"
+        default:
+          description: Default response
+
+  "/bytes":
+    post:
+      summary: "Upload data"
+      tags:
+        - Bytes
+      parameters:
+        #        - $ref: "favorXCommon.yaml#/components/parameters/AuroraTagParameter"
+        - $ref: "favorXCommon.yaml#/components/parameters/AuroraPinParameter"
+        - $ref: "favorXCommon.yaml#/components/parameters/AuroraEncryptParameter"
+      requestBody:
+        content:
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
+      responses:
+        "201":
+          description: Ok
+          #          headers:
+          #            "Aurora-tag":
+          #              $ref: "favorXCommon.yaml#/components/headers/AuroraTag"
+          content:
+            application/json:
+              schema:
+                $ref: "favorXCommon.yaml#/components/schemas/ReferenceResponse"
+        "403":
+          $ref: "favorXCommon.yaml#/components/responses/403"
+        "500":
+          $ref: "favorXCommon.yaml#/components/responses/500"
+        default:
+          description: Default response
+
+  "/bytes/{reference}":
+    get:
+      summary: "Get referenced data"
+      tags:
+        - Bytes
+      parameters:
+        - in: path
+          name: reference
+          schema:
+            $ref: "favorXCommon.yaml#/components/schemas/BosonReference"
+          required: true
+          description: Aurora address reference to content
+      responses:
+        "200":
+          description: Retrieved content specified by reference
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        "404":
+          $ref: "favorXCommon.yaml#/components/responses/404"
+        default:
+          description: Default response
+
+  "/chunks":
+    post:
+      summary: "Upload Chunk"
+      tags:
+        - Chunk
+      parameters:
+        #        - $ref: "favorXCommon.yaml#/components/parameters/AuroraTagParameter"
+        - $ref: "favorXCommon.yaml#/components/parameters/AuroraPinParameter"
+      requestBody:
+        content:
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
+      responses:
+        "201":
+          description: Ok
+          content:
+            application/json:
+              schema:
+                $ref: "favorXCommon.yaml#/components/schemas/ReferenceResponse"
+        "400":
+          $ref: "favorXCommon.yaml#/components/responses/400"
+        "500":
+          $ref: "favorXCommon.yaml#/components/responses/500"
+        default:
+          description: Default response
+
+  "/chunks/{reference}":
+    get:
+      summary: "Get chunk"
+      tags:
+        - Chunk
+      parameters:
+        - $ref: "favorXCommon.yaml#/components/parameters/AuroraRecoveryTargetsParameter"
+        - in: path
+          name: reference
+          schema:
+            $ref: "favorXCommon.yaml#/components/schemas/BosonReference"
+          required: true
+          description: Boson address of chunk
+      responses:
+        "200":
+          description: Retrieved chunk content
+          headers:
+            "aurora-recovery-targets":
+              $ref: "favorXCommon.yaml#/components/headers/AuroraRecoveryTargets"
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        "400":
+          $ref: "favorXCommon.yaml#/components/responses/400"
+        "404":
+          $ref: "favorXCommon.yaml#/components/responses/404"
+        "500":
+          $ref: "favorXCommon.yaml#/components/responses/500"
+        default:
+          description: Default response
+
+  "/file":
+    post:
+      summary: "Upload file or a collection of files"
+      description: "In order to upload a collection, user can send a multipart request with all the files populated in the form data with appropriate headers.\n\n
+              User can also upload a tar file along with the aurora-collection header. This will upload the tar file after extracting the entire directory structure.\n\n
+              If the aurora-collection header is absent, all requests (including tar files) are considered as single file uploads.\n\n
+              A multipart request is treated as a collection regardless of whether the aurora-collection header is present. This means in order to serve single files
+              uploaded as a multipart request, the aurora-index-document header should be used with the name of the file."
+      tags:
+        - File
+        - Collection
+      parameters:
+        - $ref: "favorXCommon.yaml#/components/parameters/AuroraPinParameter"
+        - $ref: "favorXCommon.yaml#/components/parameters/AuroraEncryptParameter"
+        - $ref: "favorXCommon.yaml#/components/parameters/ContentTypePreserved"
+        - $ref: "favorXCommon.yaml#/components/parameters/AuroraCollectionParameter"
+        - $ref: "favorXCommon.yaml#/components/parameters/AuroraIndexDocumentParameter"
+        - $ref: "favorXCommon.yaml#/components/parameters/AuroraErrorDocumentParameter"
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              properties:
+                file:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
+          application/x-tar:
+            schema:
+              type: string
+              format: binary
+      responses:
+        "201":
+          description: Ok
+          headers:
+            "etag":
+              $ref: "favorXCommon.yaml#/components/headers/ETag"
+          content:
+            application/json:
+              schema:
+                $ref: "favorXCommon.yaml#/components/schemas/ReferenceResponse"
+        "400":
+          $ref: "favorXCommon.yaml#/components/responses/400"
+        "403":
+          $ref: "favorXCommon.yaml#/components/responses/403"
+        "500":
+          $ref: "favorXCommon.yaml#/components/responses/500"
+        default:
+          description: Default response
+    get:
+      summary: "Page the file list"
+      description: ""
+      tags:
+        - File
+      parameters:
+        - in: query
+          name: filter
+          schema:
+            type: string
+          required: false
+          example: '[ { "key": "FieldName","term": "eq","value": "false" } ]'
+        - in: query
+          name: page
+          schema:
+            type: string
+          required: true
+          example: '{ "pageNum": 1, "pageSize": 10 }'
+        - in: query
+          name: sort
+          schema:
+            type: string
+          required: false
+          example: '{ "key": "FieldName", "order": "desc" }'
+      responses:
+        "200":
+          description: "A list of file"
+          content:
+            application/json:
+              schema:
+                $ref: "favorXCommon.yaml#/components/schemas/AuroraPageResponse"
+        "400":
+          $ref: "favorXCommon.yaml#/components/responses/400"
+        "404":
+          $ref: "favorXCommon.yaml#/components/responses/404"
+        "500":
+          $ref: "favorXCommon.yaml#/components/responses/500"
+        default:
+          description: Default response
+
+  "/file/{reference}":
+    get:
+      summary: "Get file or index document from a collection of files"
+      tags:
+        - File
+        - Collection
+      parameters:
+        - in: path
+          name: reference
+          schema:
+            $ref: "favorXCommon.yaml#/components/schemas/BosonReference"
+          required: true
+          description: Boson address of content
+        - $ref: "favorXCommon.yaml#/components/parameters/AuroraRecoveryTargetsParameter"
+      responses:
+        "200":
+          description: Ok
+          headers:
+            "aurora-recovery-targets":
+              $ref: "favorXCommon.yaml#/components/headers/AuroraRecoveryTargets"
+          #           "aurora-feed-index":
+          #             $ref: "favorXCommon.yaml#/components/headers/AuroraFeedIndex"
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        "400":
+          $ref: "favorXCommon.yaml#/components/responses/400"
+        "404":
+          $ref: "favorXCommon.yaml#/components/responses/404"
+        "500":
+          $ref: "favorXCommon.yaml#/components/responses/500"
+        default:
+          description: Default response
+    delete:
+      summary: "Delete file or a collection of files"
+      tags:
+        - File
+        - Collection
+      parameters:
+        - in: path
+          name: reference
+          schema:
+            $ref: "favorXCommon.yaml#/components/schemas/BosonReference"
+          required: true
+          description: Boson address of content
+      responses:
+        "200":
+          description: Ok
+        "400":
+          $ref: "favorXCommon.yaml#/components/responses/400"
+        "404":
+          $ref: "favorXCommon.yaml#/components/responses/404"
+        "500":
+          $ref: "favorXCommon.yaml#/components/responses/500"
+        default:
+          description: Default response
+
+  "/file/{reference}/{path}":
+    get:
+      summary: "Get referenced file from a collection of files"
+      tags:
+        - Collection
+      parameters:
+        - in: path
+          name: reference
+          schema:
+            $ref: "favorXCommon.yaml#/components/schemas/BosonReference"
+          required: true
+          description: Boson address of content
+        - in: path
+          name: path
+          schema:
+            type: string
+          required: true
+          description: Path to the file in the collection.
+        - $ref: "favorXCommon.yaml#/components/parameters/AuroraRecoveryTargetsParameter"
+      responses:
+        "200":
+          description: Ok
+        "400":
+          $ref: "favorXCommon.yaml#/components/responses/400"
+        "404":
+          $ref: "favorXCommon.yaml#/components/responses/404"
+        "500":
+          $ref: "favorXCommon.yaml#/components/responses/500"
+        default:
+          description: Default response
+
+  "/manifest/{reference}/{path}":
+    get:
+      summary: "If path to a directory, show items under path. Show the content type."
+      tags:
+        - File
+        - Collection
+      parameters:
+        - in: path
+          name: reference
+          schema:
+            $ref: "favorXCommon.yaml#/components/schemas/BosonReference"
+          required: true
+          description: Boson address of content
+        - in: path
+          name: path
+          schema:
+            type: string
+          required: false
+          description: An exist path in the collection. If the path point to a directory, path must end with slash.
+      responses:
+        "200":
+          description: Ok
+          content:
+            application/json:
+              schema:
+                $ref: "favorXCommon.yaml#/components/schemas/ManifestViewResponse"
+        "404":
+          $ref: "favorXCommon.yaml#/components/responses/404"
+        "500":
+          $ref: "favorXCommon.yaml#/components/responses/500"
+        default:
+          description: Default response
+
+  "/fileRegister/{reference}":
+    parameters:
+      - in: path
+        name: reference
+        schema:
+          $ref: "favorXCommon.yaml#/components/schemas/BosonReference"
+        required: true
+        description: Boson address of content
+    post:
+      summary: "FileRegister registers the information to the chain after the file upload is successful."
+      tags:
+        - File
+        - Collection
+      responses:
+        "200":
+          description: Ok
+          content:
+            application/json:
+              schema:
+                $ref: "favorXCommon.yaml#/components/schemas/HashResponse"
+        "404":
+          $ref: "favorXCommon.yaml#/components/responses/404"
+        "500":
+          $ref: "favorXCommon.yaml#/components/responses/500"
+        default:
+          description: Default response
+    delete:
+      summary: "Remove registration information from the chain."
+      tags:
+        - File
+        - Collection
+      responses:
+        "200":
+          description: Ok
+          content:
+            application/json:
+              schema:
+                $ref: "favorXCommon.yaml#/components/schemas/HashResponse"
+        "404":
+          $ref: "favorXCommon.yaml#/components/responses/404"
+        "500":
+          $ref: "favorXCommon.yaml#/components/responses/500"
+        default:
+          description: Default response
+
+  "/pins/{reference}":
+    parameters:
+      - in: path
+        name: reference
+        schema:
+          $ref: "favorXCommon.yaml#/components/schemas/BosonOnlyReference"
+        required: true
+        description: Boson reference of the root hash
+    post:
+      summary: "Pin the root hash with the given reference"
+      tags:
+        - Pinning
+      responses:
+        "200":
+          description: Pin already exists, so no operation
+          content:
+            application/json:
+              schema:
+                $ref: "favorXCommon.yaml#/components/schemas/Response"
+        "201":
+          description: New pin with root reference was created
+          content:
+            application/json:
+              schema:
+                $ref: "favorXCommon.yaml#/components/schemas/Response"
+        "400":
+          $ref: "favorXCommon.yaml#/components/responses/400"
+        "403":
+          $ref: "favorXCommon.yaml#/components/responses/GatewayForbidden"
+        "404":
+          $ref: "favorXCommon.yaml#/components/responses/404"
+        "500":
+          $ref: "favorXCommon.yaml#/components/responses/500"
+        default:
+          description: Default response
+    delete:
+      summary: "Unpin the root hash with the given reference"
+      tags:
+        - Pinning
+      parameters:
+        - in: path
+          name: reference
+          schema:
+            $ref: "favorXCommon.yaml#/components/schemas/BosonReference"
+          required: true
+          description: Boson address of content
+      responses:
+        "200":
+          description: Unpinning root hash with reference
+          content:
+            application/json:
+              schema:
+                $ref: "favorXCommon.yaml#/components/schemas/Response"
+        "400":
+          $ref: "favorXCommon.yaml#/components/responses/400"
+        "403":
+          $ref: "favorXCommon.yaml#/components/responses/GatewayForbidden"
+        "500":
+          $ref: "favorXCommon.yaml#/components/responses/500"
+        default:
+          description: Default response
+    get:
+      summary: Get pinning status of the root hash with the given reference
+      tags:
+        - Pinning
+      responses:
+        "200":
+          description: Reference of the pinned root hash
+          content:
+            application/json:
+              schema:
+                $ref: "favorXCommon.yaml#/components/schemas/BosonOnlyReference"
+        "400":
+          $ref: "favorXCommon.yaml#/components/responses/400"
+        "403":
+          $ref: "favorXCommon.yaml#/components/responses/GatewayForbidden"
+        "404":
+          $ref: "favorXCommon.yaml#/components/responses/404"
+        "500":
+          $ref: "favorXCommon.yaml#/components/responses/500"
+        default:
+          description: Default response
+
+  "/pins":
+    get:
+      summary: Get the list of pinned root hash references
+      tags:
+        - Pinning
+      responses:
+        "200":
+          description: List of pinned root hash references
+          content:
+            application/json:
+              schema:
+                $ref: "favorXCommon.yaml#/components/schemas/BosonOnlyReferencesList"
+        "403":
+          $ref: "favorXCommon.yaml#/components/responses/GatewayForbidden"
+        "500":
+          $ref: "favorXCommon.yaml#/components/responses/500"
+        default:
+          description: Default response
+
+  "/traffic/info":
+    get:
+      summary: Get the remaining flow and the total flow usage
+      tags:
+        - Traffic
+      responses:
+        "200":
+          description: Flow situation
+          content:
+            application/json:
+              schema:
+                $ref: "favorXCommon.yaml#/components/schemas/ChequeTrafficInfo"
+        "403":
+          $ref: "favorXCommon.yaml#/components/responses/GatewayForbidden"
+        "500":
+          $ref: "favorXCommon.yaml#/components/responses/500"
+        default:
+          description: Default response
+
+  "/traffic/address":
+    get:
+      summary: Get the chain account address
+      tags:
+        - Traffic
+      responses:
+        "200":
+          description: address messages
+          content:
+            application/json:
+              schema:
+                $ref: "favorXCommon.yaml#/components/schemas/ReferenceResponse"
+        "403":
+          $ref: "favorXCommon.yaml#/components/responses/GatewayForbidden"
+        "500":
+          $ref: "favorXCommon.yaml#/components/responses/500"
+        default:
+          description: Default response
+
+  "/traffic/cheques":
+    get:
+      summary: Acquire traffic interaction information of each node
+      tags:
+        - Traffic
+      responses:
+        "200":
+          description: traffic information
+          content:
+            application/json:
+              schema:
+                $ref: "favorXCommon.yaml#/components/schemas/ChequeTrafficCheque"
+        "403":
+          $ref: "favorXCommon.yaml#/components/responses/GatewayForbidden"
+        "500":
+          $ref: "favorXCommon.yaml#/components/responses/500"
+        default:
+          description: Default response
+
+  "/traffic/cash/{address}":
+    get:
+      summary: cheque exchange
+      tags:
+        - Traffic
+      parameters:
+        - in: path
+          name: address
+          schema:
+            $ref: "favorXCommon.yaml#/components/schemas/BosonReference"
+          required: true
+          description: Boson address of content
+      responses:
+        "200":
+          description: Exchange code
+          content:
+            application/json:
+              schema:
+                $ref: "favorXCommon.yaml#/components/schemas/ChequeTrafficHash"
+        "403":
+          $ref: "favorXCommon.yaml#/components/responses/GatewayForbidden"
+        "500":
+          $ref: "favorXCommon.yaml#/components/responses/500"
+        default:
+          description: Default response
+
+  "/group/join/{gid}":
+    parameters:
+      - in: path
+        name: gid
+        schema:
+          $ref: "favorXCommon.yaml#/components/schemas/BosonAddress"
+        required: true
+        description: group address or name
+    post:
+      summary: "Join to group with the given gid"
+      tags:
+        - Group
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "favorXCommon.yaml#/components/schemas/ConfigNodeGroup"
+      responses:
+        "200":
+          description: success
+          content:
+            application/json:
+              schema:
+                $ref: "favorXCommon.yaml#/components/schemas/Response"
+        "500":
+          $ref: "favorXCommon.yaml#/components/responses/500"
+        default:
+          description: Default response
+    delete:
+      summary: "Leave the group with the given gid"
+      tags:
+        - Group
+      parameters:
+        - in: path
+          name: gid
+          schema:
+            $ref: "favorXCommon.yaml#/components/schemas/BosonAddress"
+          required: true
+          description: group address
+      responses:
+        "200":
+          description: success
+          content:
+            application/json:
+              schema:
+                $ref: "favorXCommon.yaml#/components/schemas/Response"
+        "500":
+          $ref: "favorXCommon.yaml#/components/responses/500"
+        default:
+          description: Default response
+
+  "/group/observe/{gid}":
+    parameters:
+      - in: path
+        name: gid
+        schema:
+          $ref: "favorXCommon.yaml#/components/schemas/BosonAddress"
+        required: true
+        description: group address or name
+    post:
+      summary: "observe to group with the given gid"
+      tags:
+        - Group
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "favorXCommon.yaml#/components/schemas/ConfigNodeGroup"
+      responses:
+        "200":
+          description: success
+          content:
+            application/json:
+              schema:
+                $ref: "favorXCommon.yaml#/components/schemas/Response"
+        "500":
+          $ref: "favorXCommon.yaml#/components/responses/500"
+        default:
+          description: Default response
+    delete:
+      summary: "cancel observe the group with the given gid"
+      tags:
+        - Group
+      parameters:
+        - in: path
+          name: gid
+          schema:
+            $ref: "favorXCommon.yaml#/components/schemas/BosonAddress"
+          required: true
+          description: group address
+      responses:
+        "200":
+          description: success
+          content:
+            application/json:
+              schema:
+                $ref: "favorXCommon.yaml#/components/schemas/Response"
+        "500":
+          $ref: "favorXCommon.yaml#/components/responses/500"
+        default:
+          description: Default response
+
+  "/group/multicast/{gid}":
+    parameters:
+      - in: path
+        name: gid
+        schema:
+          $ref: "favorXCommon.yaml#/components/schemas/BosonAddress"
+        required: true
+        description: group address
+    post:
+      summary: "send a message to group with the given gid"
+      tags:
+        - Group
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          description: success
+          content:
+            application/json:
+              schema:
+                $ref: "favorXCommon.yaml#/components/schemas/Response"
+        "500":
+          $ref: "favorXCommon.yaml#/components/responses/500"
+        default:
+          description: Default response
+
+  "/group/send/{gid}/{target}":
+    parameters:
+      - in: path
+        name: gid
+        schema:
+          $ref: "favorXCommon.yaml#/components/schemas/BosonAddress"
+        required: true
+        description: group address
+      - in: path
+        name: target
+        schema:
+          $ref: "favorXCommon.yaml#/components/schemas/BosonAddress"
+        required: true
+        description: target address
+    post:
+      summary: "Send a message to the node in the group with the given gid."
+      tags:
+        - Group
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          description: success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: string
+                    description: base64 string
+        "500":
+          $ref: "favorXCommon.yaml#/components/responses/500"
+        default:
+          description: Default response
+
+  "/group/notify/{gid}/{target}":
+    parameters:
+      - in: path
+        name: gid
+        schema:
+          $ref: "favorXCommon.yaml#/components/schemas/BosonAddress"
+        required: true
+        description: group address
+      - in: path
+        name: target
+        schema:
+          $ref: "favorXCommon.yaml#/components/schemas/BosonAddress"
+        required: true
+        description: target address
+    post:
+      summary: "Send a message to the node in the group with the given gid. no result"
+      tags:
+        - Group
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          description: success
+          content:
+            application/json:
+              schema:
+                $ref: "favorXCommon.yaml#/components/schemas/Response"
+        "500":
+          $ref: "favorXCommon.yaml#/components/responses/500"
+        default:
+          description: Default response
+
+  "/group/peers/{gid}":
+    parameters:
+      - in: path
+        name: gid
+        schema:
+          $ref: "favorXCommon.yaml#/components/schemas/BosonAddress"
+        required: true
+        description: group address
+    get:
+      summary: "Get the peers in the group with the given gid"
+      tags:
+        - Group
+      responses:
+        "200":
+          description: success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  connected:
+                    type: array
+                    items:
+                      - $ref: "favorXCommon.yaml#/components/schemas/BosonAddress"
+                  keep:
+                    type: array
+                    items:
+                      - $ref: "favorXCommon.yaml#/components/schemas/BosonAddress"
+        "500":
+          $ref: "favorXCommon.yaml#/components/responses/500"
+        default:
+          description: Default response
+
+  "/apiPort":
+    get:
+      summary: Get debugapi/rpc port of node
+      tags:
+        - Status
+      responses:
+        "200":
+          description: debugapi/rpc port of node
+          content:
+            application/json:
+              schema:
+                $ref: "favorXCommon.yaml#/components/schemas/ApiPort"
+        default:
+          description: Default response

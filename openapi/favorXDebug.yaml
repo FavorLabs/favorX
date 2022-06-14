@@ -1,0 +1,717 @@
+openapi: 3.0.3
+info:
+  version: 1.0.0
+  title: favorX Debug API
+  description: "A list of the currently provided debug interfaces to interact with the favorX node"
+
+security:
+  - { }
+
+externalDocs:
+  description: Browse the documentation @ the favorX Docs
+  url: ""
+
+servers:
+  - url: "http://{apiRoot}:{port}"
+    variables:
+      apiRoot:
+        default: "localhost"
+        description: Base address of the local favorX node debug API
+      port:
+        default: "1635"
+        description: Service port provided in favorX node config
+
+paths:
+
+  "/readiness":
+    get:
+      summary: Get readiness state of node
+      tags:
+        - Status
+      responses:
+        "200":
+          description: Health State of node
+          content:
+            application/json:
+              schema:
+                $ref: "favorXCommon.yaml#/components/schemas/HealthStatus"
+        default:
+          description: Default response
+
+  "/health":
+    get:
+      summary: Get health of node
+      tags:
+        - Status
+      responses:
+        "200":
+          description: Health State of node
+          content:
+            application/json:
+              schema:
+                $ref: "favorXCommon.yaml#/components/schemas/HealthStatus"
+        default:
+          description: Default response
+
+  "/addresses":
+    get:
+      summary: Get overlay and underlay addresses of the node
+      tags:
+        - Connectivity
+      responses:
+        "200":
+          description: Own node underlay and overlay addresses
+          content:
+            application/json:
+              schema:
+                $ref: "favorXCommon.yaml#/components/schemas/Addresses"
+        "500":
+          $ref: "favorXCommon.yaml#/components/responses/500"
+        default:
+          description: Default response
+
+  "/pingpong/{peer-id}":
+    post:
+      summary: Try connection to node
+      tags:
+        - Connectivity
+      parameters:
+        - in: path
+          name: peer-id
+          schema:
+            $ref: "favorXCommon.yaml#/components/schemas/BosonAddress"
+          required: true
+          description: Boson address of peer
+      responses:
+        "200":
+          description: Returns round trip time for given peer
+          content:
+            application/json:
+              schema:
+                $ref: "favorXCommon.yaml#/components/schemas/RttMs"
+        "400":
+          $ref: "favorXCommon.yaml#/components/responses/400"
+        "404":
+          $ref: "favorXCommon.yaml#/components/responses/404"
+        "500":
+          $ref: "favorXCommon.yaml#/components/responses/500"
+        default:
+          description: Default response
+
+  "/route/{peer-id}":
+    get:
+      summary: Get route from node
+      tags:
+        - Routetab
+      parameters:
+        - in: path
+          name: peer-id
+          schema:
+            $ref: "favorXCommon.yaml#/components/schemas/BosonAddress"
+          required: true
+          description: Boson address of peer
+      responses:
+        "200":
+          description: Returns route paths for given peer
+          content:
+            application/json:
+              schema:
+                $ref: "favorXCommon.yaml#/components/schemas/RoutePaths"
+        "400":
+          $ref: "favorXCommon.yaml#/components/responses/400"
+        "404":
+          $ref: "favorXCommon.yaml#/components/responses/404"
+        "500":
+          $ref: "favorXCommon.yaml#/components/responses/500"
+        default:
+          description: Default response
+    post:
+      summary: Doing findroute to node
+      tags:
+        - Routetab
+      parameters:
+        - in: path
+          name: peer-id
+          schema:
+            $ref: "favorXCommon.yaml#/components/schemas/BosonAddress"
+          required: true
+          description: Boson address of peer
+      responses:
+        "200":
+          description: Returns route paths for given peer
+          content:
+            application/json:
+              schema:
+                $ref: "favorXCommon.yaml#/components/schemas/RoutePaths"
+        "400":
+          $ref: "favorXCommon.yaml#/components/responses/400"
+        "404":
+          $ref: "favorXCommon.yaml#/components/responses/404"
+        "500":
+          $ref: "favorXCommon.yaml#/components/responses/500"
+        default:
+          description: Default response
+    delete:
+      summary: Delete route to node
+      tags:
+        - Routetab
+      parameters:
+        - in: path
+          name: peer-id
+          schema:
+            $ref: "favorXCommon.yaml#/components/schemas/BosonAddress"
+          required: true
+          description: Boson address of peer
+      responses:
+        "200":
+          description: delete route paths for given peer
+          content:
+            application/json:
+              schema:
+                $ref: "favorXCommon.yaml#/components/schemas/Response"
+        "400":
+          $ref: "favorXCommon.yaml#/components/responses/400"
+        "404":
+          $ref: "favorXCommon.yaml#/components/responses/404"
+        "500":
+          $ref: "favorXCommon.yaml#/components/responses/500"
+        default:
+          description: Default response
+
+  "/connect/{multiAddress}":
+    post:
+      summary: Connect to address
+      tags:
+        - Connectivity
+      parameters:
+        - in: path
+          allowReserved: true
+          name: multiAddress
+          schema:
+            $ref: "favorXCommon.yaml#/components/schemas/MultiAddress"
+          required: true
+          description: Underlay address of peer
+      responses:
+        "200":
+          description: Returns overlay address of connected peer
+          content:
+            application/json:
+              schema:
+                $ref: "favorXCommon.yaml#/components/schemas/Address"
+        "400":
+          $ref: "favorXCommon.yaml#/components/responses/400"
+        "500":
+          $ref: "favorXCommon.yaml#/components/responses/500"
+        default:
+          description: Default response
+
+  "/blocklist":
+    get:
+      summary: Get a list of block peers
+      tags:
+        - Connectivity
+      responses:
+        "200":
+          description: Returns overlay addresses of blocked peers
+          content:
+            application/json:
+              schema:
+                $ref: "favorXCommon.yaml#/components/schemas/BlockPeers"
+        default:
+          description: Default response
+
+  "/blocklist/{address}":
+    post:
+      summary: add peer to block list
+      tags:
+        - Connectivity
+      parameters:
+        - in: path
+          name: address
+          schema:
+            $ref: "favorXCommon.yaml#/components/schemas/BosonAddress"
+          required: true
+          description: Boson address of peer
+        - in: query
+          name: timeout
+          schema:
+            type: string
+          required: true
+          description: "A duration string is a possibly signed sequence of decimal numbers, each with optional fraction and a unit suffix,such as '300ms', '2h45m'. Valid time units are 'ns', 'us' (or 'µs'), 'ms', 's', 'm', 'h'."
+      responses:
+        "200":
+          description: add peer to block list
+          content:
+            application/json:
+              schema:
+                $ref: "favorXCommon.yaml#/components/schemas/Response"
+        "400":
+          $ref: "favorXCommon.yaml#/components/responses/400"
+        "500":
+          $ref: "favorXCommon.yaml#/components/responses/500"
+        default:
+          description: Default response
+    delete:
+      summary: Remove peer from block list
+      tags:
+        - Connectivity
+      parameters:
+        - in: path
+          name: address
+          schema:
+            $ref: "favorXCommon.yaml#/components/schemas/BosonAddress"
+          required: true
+          description: Boson address of peer
+      responses:
+        "200":
+          description: Remove peer from block list
+          content:
+            application/json:
+              schema:
+                $ref: "favorXCommon.yaml#/components/schemas/Response"
+        "400":
+          $ref: "favorXCommon.yaml#/components/responses/400"
+        "500":
+          $ref: "favorXCommon.yaml#/components/responses/500"
+        default:
+          description: Default response
+
+  "/peers":
+    get:
+      summary: Get a list of peers
+      tags:
+        - Connectivity
+      responses:
+        "200":
+          description: Returns overlay addresses of connected peers
+          content:
+            application/json:
+              schema:
+                $ref: "favorXCommon.yaml#/components/schemas/Peers"
+        default:
+          description: Default response
+
+  "/peers/{address}":
+    delete:
+      summary: Remove peer
+      tags:
+        - Connectivity
+      parameters:
+        - in: path
+          name: address
+          schema:
+            $ref: "favorXCommon.yaml#/components/schemas/BosonAddress"
+          required: true
+          description: Boson address of peer
+      responses:
+        "200":
+          description: Disconnected peer
+          content:
+            application/json:
+              schema:
+                $ref: "favorXCommon.yaml#/components/schemas/Response"
+        "400":
+          $ref: "favorXCommon.yaml#/components/responses/400"
+        "500":
+          $ref: "favorXCommon.yaml#/components/responses/500"
+        default:
+          description: Default response
+
+  "/chunks/{address}":
+    get:
+      summary: Check if chunk at address exists locally
+      tags:
+        - Chunk
+      parameters:
+        - in: path
+          name: address
+          schema:
+            $ref: "favorXCommon.yaml#/components/schemas/BosonAddress"
+          required: true
+          description: Boson address of chunk
+      responses:
+        "200":
+          description: Chunk exists
+          content:
+            application/json:
+              schema:
+                $ref: "favorXCommon.yaml#/components/schemas/Response"
+        "400":
+          $ref: "favorXCommon.yaml#/components/responses/400"
+        "404":
+          $ref: "favorXCommon.yaml#/components/responses/404"
+        default:
+          description: Default response
+    delete:
+      summary: Delete a chunk from local storage
+      tags:
+        - Chunk
+      parameters:
+        - in: path
+          name: address
+          schema:
+            $ref: "favorXCommon.yaml#/components/schemas/BosonAddress"
+          required: true
+          description: Boson address of chunk
+      responses:
+        "200":
+          description: Chunk exists
+          content:
+            application/json:
+              schema:
+                $ref: "favorXCommon.yaml#/components/schemas/Response"
+        "400":
+          $ref: "favorXCommon.yaml#/components/responses/400"
+        "404":
+          $ref: "favorXCommon.yaml#/components/responses/404"
+        default:
+          description: Default response
+
+  "/chunk/discover/{address}":
+    get:
+      summary: Get chunk discovery nodes
+      tags:
+        - Chunk
+      parameters:
+        - in: path
+          name: address
+          schema:
+            $ref: "favorXCommon.yaml#/components/schemas/BosonAddress"
+          required: true
+          description: Boson address of chunk
+      responses:
+        "200":
+          description: Chunk exists
+          content:
+            application/json:
+              schema:
+                $ref: "favorXCommon.yaml#/components/schemas/ChunkResponse"
+        "400":
+          $ref: "favorXCommon.yaml#/components/responses/400"
+        "404":
+          $ref: "favorXCommon.yaml#/components/responses/404"
+        default:
+          description: Default response
+
+  "/chunk/server/{address}":
+    get:
+      summary: Get chunk server nodes
+      tags:
+        - Chunk
+      parameters:
+        - in: path
+          name: address
+          schema:
+            $ref: "favorXCommon.yaml#/components/schemas/BosonAddress"
+          required: true
+          description: Boson address of chunk
+      responses:
+        "200":
+          description: Chunk exists
+          content:
+            application/json:
+              schema:
+                $ref: "favorXCommon.yaml#/components/schemas/ChunkResponse"
+        "400":
+          $ref: "favorXCommon.yaml#/components/responses/400"
+        "404":
+          $ref: "favorXCommon.yaml#/components/responses/404"
+        default:
+          description: Default response
+
+  "/chunk/init/{address}":
+    get:
+      summary: Get chunk pyramid
+      tags:
+        - Chunk
+      parameters:
+        - in: path
+          name: address
+          schema:
+            $ref: "favorXCommon.yaml#/components/schemas/BosonAddress"
+          required: true
+          description: Boson address of chunk
+      responses:
+        "200":
+          description: Chunk exists
+          content:
+            application/json:
+              schema:
+                $ref: "favorXCommon.yaml#/components/schemas/ChunkInfoInitResponse"
+        "400":
+          $ref: "favorXCommon.yaml#/components/responses/400"
+        "404":
+          $ref: "favorXCommon.yaml#/components/responses/404"
+        default:
+          description: Default response
+
+  "/topology":
+    get:
+      description: Get topology of known network
+      tags:
+        - Connectivity
+      responses:
+        "200":
+          description: Kademlia topology of the favorX node
+          content:
+            application/json:
+              schema:
+                $ref: "favorXCommon.yaml#/components/schemas/Topology"
+
+  "/topology/group":
+    get:
+      description: Get topology of known groups
+      tags:
+        - Connectivity
+      responses:
+        "200":
+          description: groups topology of the favorX node
+          content:
+            application/json:
+              schema:
+                $ref: "favorXCommon.yaml#/components/schemas/TopologyGroup"
+
+  "/welcome-message":
+    get:
+      summary: Get configured P2P welcome message
+      tags:
+        - Connectivity
+      responses:
+        "200":
+          description: Welcome message
+          content:
+            application/json:
+              schema:
+                $ref: "favorXCommon.yaml#/components/schemas/WelcomeMessage"
+        "500":
+          $ref: "favorXCommon.yaml#/components/responses/500"
+        default:
+          description: Default response
+    post:
+      summary: Set P2P welcome message
+      tags:
+        - Connectivity
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "favorXCommon.yaml#/components/schemas/WelcomeMessage"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "favorXCommon.yaml#/components/schemas/Status"
+        "400":
+          $ref: "favorXCommon.yaml#/components/responses/400"
+        "500":
+          $ref: "favorXCommon.yaml#/components/responses/500"
+        default:
+          description: Default response
+
+  "/metrics":
+    get:
+      summary: Prometheus metrics gateway
+      tags:
+        - metrics
+      responses:
+        "200":
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "# HELP favorX_api_request_count Number of API requests."
+        default:
+          description: Default response
+
+  "/debug/pprof/cmdline":
+    get:
+      summary: Responds with the running program's command line, with arguments separated by NUL bytes
+      tags:
+        - pprof
+      responses:
+        "200":
+          description: Ok
+          content:
+            text/plain:
+              schema:
+                type: string
+        default:
+          description: Default response
+
+  "/debug/pprof/profile":
+    get:
+      summary: Responds with the pprof-formatted cpu profile
+      tags:
+        - pprof
+      parameters:
+        - in: query
+          name: seconds
+          schema:
+            type: integer
+          required: false
+          description: profiling lasts for duration specified in seconds GET parameter, or for 30 seconds if not specified.
+      responses:
+        "200":
+          description: Ok
+          content:
+            application/octet-stream:
+              schema:
+                format: binary
+        default:
+          description: Default response
+
+  "/debug/pprof/symbol":
+    post:
+      summary: Looks up the program counters listed in the request, responding with a table mapping program counters to function names
+      tags:
+        - pprof
+      requestBody:
+        content:
+          text/plain:
+            schema:
+              type: string
+      responses:
+        "200":
+          description: Ok
+          content:
+            text/plain:
+              schema:
+                type: string
+        default:
+          description: Default response
+
+  "/debug/pprof/trace":
+    get:
+      summary: Responds with the execution trace in binary form
+      tags:
+        - pprof
+      parameters:
+        - in: query
+          name: seconds
+          schema:
+            type: integer
+          required: false
+          description: tracing lasts for duration specified in seconds GET parameter, or for 1 second if not specified.
+      responses:
+        "200":
+          description: Ok
+          content:
+            application/octet-stream:
+              schema:
+                format: binary
+        default:
+          description: Default response
+
+  "/debug/pprof":
+    get:
+      summary: Responds with the pprof-formatted profile named by the request
+      tags:
+        - pprof
+      responses:
+        "200":
+          description: Ok
+          content:
+            text/html:
+              schema:
+                type: string
+        default:
+          description: Default response
+
+  "/debug/vars":
+    get:
+      summary: Exposes os.Args and runtime.Memstats information
+      tags:
+        - pprof
+      responses:
+        "200":
+          description: Ok
+          content:
+            application/json:
+              schema:
+                type: string
+        default:
+          description: Default response
+
+  "/chunk/source/{address}":
+    get:
+      summary: Get chunk source
+      tags:
+        - Chunk
+      parameters:
+        - in: path
+          name: address
+          schema:
+            $ref: "favorXCommon.yaml#/components/schemas/BosonAddress"
+          required: true
+          description: Boson address of chunk
+      responses:
+        "200":
+          description: Chunk exists
+          content:
+            application/json:
+              schema:
+                $ref: "favorXCommon.yaml#/components/schemas/ChunkSourceResponse"
+        "400":
+          $ref: "favorXCommon.yaml#/components/responses/400"
+        "404":
+          $ref: "favorXCommon.yaml#/components/responses/404"
+        default:
+          description: Default response
+
+  "/traffic/init":
+    post:
+      summary: Initialize traffic information
+      tags:
+        - Traffic
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "favorXCommon.yaml#/components/schemas/Response"
+        "400":
+          $ref: "favorXCommon.yaml#/components/responses/400"
+        "404":
+          $ref: "favorXCommon.yaml#/components/responses/404"
+        default:
+          description: Default response
+
+  "/keystore":
+    post:
+      summary: Get account keystore json or private key
+      tags:
+        - Account
+      requestBody:
+        content:
+          'application/json':
+            schema:
+              type: object
+              properties:
+                password:
+                  type: string
+                  description: The password for this private key
+                  required: true
+                type:
+                  type: string
+                  description: If the type is equal to private, export the private key, otherwise export the keystore json
+                  required: false
+      responses:
+        "200":
+          description: Exported keysotore json or privatekey
+          content:
+            application/json:
+              examples:
+                default:
+                  summary: The parameter type is not equal to private
+                  value: { "address": "2f8b6f42b70a1ed0bf4f9100f88b8e9e3aecfafd","crypto": { "cipher": "aes-128-ctr","ciphertext": "38dca54facaa0153dd74b28379de278b5065107b650fd25702e41b7da6c1486d","cipherparams": { "iv": "a80c4d741ae7d558deeab6aebdd7862b" },"kdf": "scrypt","kdfparams": { "dklen": 32,"n": 4096,"p": 6,"r": 8,"salt": "9fa03653fe70ff1a5d3529fbfe158952deedc9e052622eefebf039beeaaacc66" },"mac": "89f4a1265bc5c3452a26685155a3d56162dfee5a5d430d0bbf9c7b67221b85a6" },"id": "4480f8d3-80ec-4dff-bbff-0390e1fbd83c","version": 3 }
+                private:
+                  summary: The parameter type is equal to private
+                  value: { "private_key": "b9cc06bbe5bc3a992decaf9050b35eb28a8660383191406718efe56d190fa2eb" }
+        "500":
+          $ref: "favorXCommon.yaml#/components/responses/500"
+        default:
+          description: Default response

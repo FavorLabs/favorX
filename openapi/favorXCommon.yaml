@@ -1,0 +1,708 @@
+openapi: 3.0.3
+info:
+  version: 1.0.0
+  title: Common Data Types
+  description: |
+
+externalDocs:
+  description: Browse the documentation @ the favorX Docs
+  url: ""
+
+paths: { }
+components:
+  securitySchemes:
+    basicAuth:
+      type: http
+      scheme: basic
+
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: SecurityToken
+
+  schemas:
+    Address:
+      type: object
+      properties:
+        address:
+          $ref: "#/components/schemas/BosonAddress"
+
+    Addresses:
+      type: object
+      properties:
+        overlay:
+          $ref: "#/components/schemas/BosonAddress"
+        underlay:
+          type: array
+          items:
+            $ref: "#/components/schemas/P2PUnderlay"
+        nat_route:
+          type: array
+          items:
+            $ref: "#/components/schemas/ListenAddress"
+        public_ip:
+          $ref: "#/components/schemas/PublicIP"
+        network_id:
+          type: integer
+        public_key:
+          $ref: "#/components/schemas/PublicKey"
+
+    PublicIP:
+      type: object
+      properties:
+        ipv4:
+          type: string
+        ipv6:
+          type: string
+
+    ConfigNodeGroup:
+      type: object
+      properties:
+        name:
+          type: string
+          description: "group name"
+        type:
+          type: number
+          description: "0 join group, 1 observe group"
+        keep-connected-peers:
+          type: number
+          required: true
+          description: "the param must"
+        keep-ping-peers:
+          type: number
+          required: true
+          description: "the param must"
+        nodes:
+          type: array
+          items:
+            - $ref: "favorXCommon.yaml#/components/schemas/BosonAddress"
+
+    TopologyGroup:
+      type: object
+      properties:
+        connected:
+          type: integer
+        timestamp:
+          $ref: "#/components/schemas/DateTime"
+        groups:
+          type: array
+          items:
+            - properties:
+                gid:
+                  type: string
+                option:
+                  $ref: "#/components/schemas/ConfigNodeGroup"
+                keepPeers:
+                  type: array
+                knowPeers:
+                  type: array
+                connectedInfo:
+                  type: object
+                  properties:
+                      connected:
+                        type: integer
+                      connectedPeers:
+                        type: array
+                        items:
+                          - properties:
+                              address:
+                                $ref: "#/components/schemas/BosonAddress"
+                              metrics:
+                                $ref: "#/components/schemas/PeerMetricsView"
+
+    Topology:
+      type: object
+      properties:
+        baseAddr:
+          $ref: "#/components/schemas/BosonAddress"
+        population:
+          type: integer
+        connected:
+          type: integer
+        timestamp:
+          type: string
+        nnLowWatermark:
+          type: integer
+        depth:
+          type: integer
+        reachability:
+          type: string
+          enum:
+            - "Unknown"
+            - "Public"
+            - "Private"
+        networkAvailability:
+          type: string
+          enum:
+            - "Unknown"
+            - "Available"
+            - "Unavailable"
+        bins:
+          type: object
+          additionalProperties:
+            $ref: "#/components/schemas/PeerInfo"
+        lightNodes:
+          $ref: "#/components/schemas/PeerInfo"
+        bootNodes:
+          $ref: "#/components/schemas/PeerInfo"
+
+    PeerInfo:
+      type: object
+      properties:
+        population:
+          type: integer
+        connected:
+          type: integer
+        disconnectedPeers:
+          type: array
+          items:
+            type: object
+            properties:
+              address:
+                $ref: "#/components/schemas/BosonAddress"
+              metrics:
+                $ref: "#/components/schemas/PeerMetricsView"
+        connectedPeers:
+          type: array
+          items:
+            type: object
+            properties:
+              address:
+                $ref: "#/components/schemas/BosonAddress"
+              metrics:
+                $ref: "#/components/schemas/PeerMetricsView"
+
+    PeerMetricsView:
+      type: object
+      properties:
+        lastSeenTimestamp:
+          type: integer
+          nullable: false
+        sessionConnectionRetry:
+          type: integer
+          nullable: false
+        connectionTotalDuration:
+          type: number
+          nullable: false
+        sessionConnectionDuration:
+          type: number
+          nullable: false
+        sessionConnectionDirection:
+          type: string
+          nullable: false
+        latencyEWMA:
+          type: integer
+          nullable: false
+
+    DateTime:
+      type: string
+      format: date-time
+      #pattern: '^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{7}\+\d{2}:\d{2})$'
+      example: "2020-06-11T11:26:42.6969797+02:00"
+
+    Duration:
+      description: Go time.Duration format
+      type: string
+      example: "5.0018ms"
+
+    FileName:
+      type: string
+
+    Hash:
+      type: object
+      properties:
+        hash:
+          $ref: "#/components/schemas/BosonAddress"
+
+    BitVector:
+      type: object
+      properties:
+        len:
+          type: integer
+        b:
+          type: string
+
+    NewFileResponse:
+      type: object
+      properties:
+        fileHash:
+          $ref: "#/components/schemas/Hash"
+        size:
+          type: integer
+        pinState:
+          type: boolean
+        bitVector:
+          $ref: "#/components/schemas/BitVector"
+
+    FileList:
+      type: object
+      properties:
+        tags:
+          type: array
+          nullable: true
+          items:
+            $ref: "#/components/schemas/NewFileResponse"
+
+    HexString:
+      type: string
+      pattern: "^([A-Fa-f0-9]+)$"
+      example: "cf880b8eeac5093fa27b0825906c600685"
+
+    LinkAddress:
+      type: string
+      pattern: "^[A-Fa-f0-9]{40}$"
+      example: "36b7efd913ca4cf880b8eeac5093fa27b0825906"
+
+    MultiAddress:
+      type: string
+
+    P2PUnderlay:
+      type: string
+      example: "/ip4/127.0.0.1/tcp/1634/p2p/16Uiu2HAmTm17toLDaPYzRyjKn27iCB76yjKnJ5DjQXneFmifFvaX"
+
+    ListenAddress:
+      type: string
+      example: "172.12.0.111:15346"
+
+    Peers:
+      type: object
+      properties:
+        peers:
+          type: array
+          items:
+            $ref: "#/components/schemas/P2PAddress"
+
+    BlockPeers:
+      type: object
+      properties:
+        peers:
+          type: array
+          items:
+            $ref: "#/components/schemas/BlockAddress"
+
+    P2PAddress:
+      type: object
+      properties:
+        address:
+          $ref: "#/components/schemas/BosonAddress"
+        fullNode:
+          type: boolean
+        direction:
+          type: string
+          example: "inbound"
+
+    BlockAddress:
+      type: object
+      properties:
+        address:
+          $ref: "#/components/schemas/BosonAddress"
+        timestamp:
+          type: string
+          format: date-time
+          example: "2020-06-11T11:26:42+02:00"
+        direction:
+          type: number
+          description: "time of seconds"
+          example: 3600
+
+    PinningState:
+      type: object
+      properties:
+        address:
+          $ref: "#/components/schemas/BosonAddress"
+        pinCounter:
+          type: integer
+
+    ProblemDetails:
+      type: string
+    DataCount:
+      type: integer
+      example: 2
+
+    ReferenceResponse:
+      type: object
+      properties:
+        reference:
+          $ref: "#/components/schemas/BosonReference"
+    HashResponse:
+      type: object
+      properties:
+        hash:
+          type: string
+          example: "36b7efd913ca4cf880b8eeac5093fa27b0825906c600685b6abdd6566e6cfe8f"
+
+    ManifestViewResponse:
+      type: object
+      properties:
+        type:
+          type: string
+        hash:
+          $ref: "#/components/schemas/Hash"
+        #          nullable: true
+        name:
+          type: string
+          nullable: true
+        size:
+          type: integer
+          nullable: true
+        ext:
+          type: string
+          nullable: true
+        mime:
+          type: string
+          nullable: true
+        sub:
+          $ref: "#/components/schemas/ManifestViewResponse"
+
+    AuroraResponse:
+      type: object
+      properties:
+        rootCid:
+          type: string
+        size:
+          type: integer
+        fileSize:
+          type: integer
+        pinState:
+          type: boolean
+        bitVector:
+          $ref: "#/components/schemas/BitVector"
+        register:
+          type: boolean
+        manifest:
+          $ref: "#/components/schemas/ManifestViewResponse"
+
+    AuroraPageResponse:
+      type: object
+      properties:
+        total:
+          type: integer
+        list:
+          type: array
+          items:
+            $ref: "#/components/schemas/AuroraResponse"
+
+    Response:
+      type: object
+      properties:
+        message:
+          type: string
+        code:
+          type: integer
+
+    ChunkResponse:
+      type: array
+      items:
+        type: object
+        properties:
+          overlay:
+            $ref: "#/components/schemas/BosonAddress"
+          bit:
+            type: string
+
+    ChunkInfoInitResponse:
+      type: object
+      properties:
+        msg:
+          type: boolean
+
+    ChunkSourceResponse:
+      type: object
+      properties:
+        pyramidSource:
+          $ref: "#/components/schemas/BosonAddress"
+        fileChunkCount:
+          $ref: "#/components/schemas/DataCount"
+        chunkSource:
+          type: array
+          nullable: true
+          items:
+            $ref: "#/components/schemas/ChunkSourceReference"
+
+    RoutePaths:
+      type: object
+      properties:
+        paths:
+          type: array
+          items:
+            - $ref: "#/components/schemas/RoutePath"
+
+    RoutePath:
+      type: object
+      properties:
+        sign:
+          type: string
+        bodys:
+          type: array
+        items:
+          type: array
+        createTime:
+          $ref: "#/components/schemas/DateTime"
+        usedTime:
+          $ref: "#/components/schemas/DateTime"
+
+    RttMs:
+      type: object
+      properties:
+        rtt:
+          $ref: "#/components/schemas/Duration"
+
+    Status:
+      type: object
+      properties:
+        status:
+          type: string
+
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+        version:
+          type: string
+        fullNode:
+          type: boolean
+        bootNodeMode:
+          type: boolean
+        auth:
+          type: boolean
+
+    ApiPort:
+      type: object
+      properties:
+        debugApiPort:
+          type: string
+        rpcWsPort:
+          type: string
+
+    BosonAddress:
+      type: string
+      pattern: "^[A-Fa-f0-9]{64}$"
+      example: "36b7efd913ca4cf880b8eeac5093fa27b0825906c600685b6abdd6566e6cfe8f"
+
+    PublicKey:
+      type: string
+      pattern: "^[A-Fa-f0-9]{66}$"
+      example: "02ab7473879005929d10ce7d4f626412dad9fe56b0a6622038931d26bd79abf0a4"
+
+    BosonEncryptedReference:
+      type: string
+      pattern: "^[A-Fa-f0-9]{128}$"
+      example: "36b7efd913ca4cf880b8eeac5093fa27b0825906c600685b6abdd6566e6cfe8f2d2810619d29b5dbefd5d74abce25d58b81b251baddb9c3871cf0d6967deaae2"
+
+    DomainName:
+      type: string
+      pattern: '^[A-Za-z0-9]+\.[A-Za-z0-9]+$'
+      example: "boson.eth"
+
+    BosonOnlyReference:
+      oneOf:
+        - $ref: "#/components/schemas/BosonAddress"
+        - $ref: "#/components/schemas/BosonEncryptedReference"
+
+    BosonOnlyReferencesList:
+      type: object
+      properties:
+        addresses:
+          type: array
+          nullable: true
+          items:
+            $ref: "#/components/schemas/BosonOnlyReference"
+
+    BosonReference:
+      oneOf:
+        - $ref: "#/components/schemas/BosonAddress"
+        - $ref: "#/components/schemas/BosonEncryptedReference"
+        - $ref: "#/components/schemas/DomainName"
+
+    ChunkSourceReference:
+      type: object
+      properties:
+        overlay:
+          $ref: "#/components/schemas/BosonAddress"
+        chunkCount:
+          $ref: "#/components/schemas/DataCount"
+
+    ChequeTrafficInfo:
+      type: object
+      properties:
+        balance:
+          type: integer
+        availableBalance:
+          type: integer
+        totalSendTraffic:
+          type: integer
+        receivedTraffic:
+          type: integer
+
+    ChequeTrafficCheque:
+      type: object
+      properties:
+        peer:
+          $ref: "#/components/schemas/BosonAddress"
+        outstandingTraffic:
+          type: integer
+        sendTraffic:
+          type: integer
+        receivedTraffic:
+          type: integer
+        total:
+          type: integer
+        unCashed:
+          type: integer
+
+    ChequeTrafficHash:
+      type: object
+      properties:
+        hash:
+          $ref: "#/components/schemas/BosonAddress"
+
+    Uid:
+      type: integer
+
+    WelcomeMessage:
+      type: object
+      properties:
+        welcome_message:
+          type: string
+
+    SecurityTokenRequest:
+      type: object
+      properties:
+        Role:
+          type: string
+          nullable: false
+        Expiry:
+          type: integer
+          nullable: false
+
+    SecurityTokenResponse:
+      type: object
+      properties:
+        Key:
+          type: string
+          nullable: false
+
+  headers:
+    AuroraFeedIndex:
+      description: "The index of the found update"
+      schema:
+        $ref: "#/components/schemas/HexString"
+
+    AuroraFeedIndexNext:
+      description: "The index of the next possible update"
+      schema:
+        $ref: "#/components/schemas/HexString"
+
+    AuroraRecoveryTargets:
+      description: "The targets provided for recovery"
+      schema:
+        type: string
+
+    ETag:
+      description: |
+        The RFC7232 ETag header field in a response provides the current entity-
+        tag for the selected resource. An entity-tag is an opaque identifier for
+        different versions of a resource over time, regardless whether multiple
+        versions are valid at the same time. An entity-tag consists of an opaque
+        quoted string, possibly prefixed by a weakness indicator.
+      schema:
+        type: string
+
+  parameters:
+    AuroraRecoveryTargetsParameter:
+      in: query
+      name: targets
+      schema:
+        type: string
+      required: false
+      description: Global pinning targets prefix
+
+    AuroraPinParameter:
+      in: header
+      name: aurora-pin
+      schema:
+        type: boolean
+      required: false
+      description: Represents the pinning state of the chunk
+
+    AuroraEncryptParameter:
+      in: header
+      name: aurora-encrypt
+      schema:
+        type: boolean
+      required: false
+      description: Represents the encrypting state of the file
+
+    ContentTypePreserved:
+      in: header
+      name: content-type
+      schema:
+        type: string
+      description: The specified content-type is preserved for download of the asset
+
+    AuroraIndexDocumentParameter:
+      in: header
+      name: aurora-index-document
+      schema:
+        type: string
+        example: index.html
+      required: false
+      description: Default file to be referenced on path, if exists under that path
+
+    AuroraErrorDocumentParameter:
+      in: header
+      name: aurora-error-document
+      schema:
+        type: string
+        example: error.html
+      required: false
+      description: Configure custom error document to be returned when a specified path can not be found in collection
+
+    AuroraCollectionParameter:
+      in: header
+      name: aurora-collection
+      schema:
+        type: boolean
+      required: false
+      description: Upload file/files as a collection
+
+  responses:
+    "204":
+      description: The resource was deleted successfully.
+    "400":
+      description: Bad request
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/ProblemDetails"
+    "401":
+      description: Unauthorized
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/ProblemDetails"
+    "403":
+      description: Forbidden
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/ProblemDetails"
+    "404":
+      description: Not Found
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/ProblemDetails"
+    "500":
+      description: Internal Server Error
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/ProblemDetails"
+    "GatewayForbidden":
+      description: "Endpoint or header (pinning or encryption headers) forbidden in Gateway mode"
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/ProblemDetails"
