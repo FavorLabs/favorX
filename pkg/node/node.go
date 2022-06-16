@@ -408,7 +408,7 @@ func NewNode(nodeMode aurora.Model, addr string, bosonAddress boson.Address, pub
 	if o.APIAddr != "" {
 		// API server
 		apiService = api.New(ns, multiResolver, bosonAddress, chunkInfo, traversalService, pinningService,
-			authenticator, logger, tracer, apiInterface, commonChain, oracleChain, relay, group,
+			authenticator, logger, tracer, apiInterface, commonChain, oracleChain, relay, group, kad, route,
 			api.Options{
 				CORSAllowedOrigins: o.CORSAllowedOrigins,
 				GatewayMode:        o.GatewayMode,
