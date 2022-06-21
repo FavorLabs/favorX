@@ -27,9 +27,11 @@ import (
 	"github.com/gauss-project/aurorafs/pkg/netrelay"
 	"github.com/gauss-project/aurorafs/pkg/pinning"
 	"github.com/gauss-project/aurorafs/pkg/resolver"
+	"github.com/gauss-project/aurorafs/pkg/routetab"
 	"github.com/gauss-project/aurorafs/pkg/settlement/chain"
 	"github.com/gauss-project/aurorafs/pkg/settlement/traffic"
 	"github.com/gauss-project/aurorafs/pkg/storage"
+	"github.com/gauss-project/aurorafs/pkg/topology"
 	"github.com/gauss-project/aurorafs/pkg/tracing"
 	"github.com/gauss-project/aurorafs/pkg/traversal"
 )
@@ -114,6 +116,9 @@ type server struct {
 	transactionChan chan TransactionResponse
 	multicast       multicast.GroupInterface
 	netRelay        netrelay.NetRelay
+	route           routetab.RouteTab
+	kad             topology.Driver
+	snapshotPeers   []boson.Address
 }
 
 type Options struct {
@@ -139,8 +144,8 @@ const (
 // New will create a and initialize a new API service.
 func New(storer storage.Storer, resolver resolver.Interface, addr boson.Address, chunkInfo chunkinfo.Interface,
 	traversalService traversal.Traverser, pinning pinning.Interface, auth authenticator, logger logging.Logger,
-	tracer *tracing.Tracer, traffic traffic.ApiInterface, commonChain chain.Common, oracleChain chain.Resolver, netRelay netrelay.NetRelay,
-	multicast multicast.GroupInterface, o Options) Service {
+	tracer *tracing.Tracer, traffic traffic.ApiInterface, commonChain chain.Common, oracleChain chain.Resolver,
+	netRelay netrelay.NetRelay, multicast multicast.GroupInterface, kad topology.Driver, route routetab.RouteTab, o Options) Service {
 	s := &server{
 		auth:            auth,
 		storer:          storer,
@@ -157,6 +162,8 @@ func New(storer storage.Storer, resolver resolver.Interface, addr boson.Address,
 		metrics:         newMetrics(),
 		quit:            make(chan struct{}),
 		traffic:         traffic,
+		kad:             kad,
+		route:           route,
 		transactionChan: make(chan TransactionResponse, 10),
 		multicast:       multicast,
 		netRelay:        netRelay,
