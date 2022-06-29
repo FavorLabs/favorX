@@ -255,7 +255,14 @@ func (s *server) auroraDownloadHandler(w http.ResponseWriter, r *http.Request) {
 		jsonhttp.NotFound(w, nil)
 		return
 	}
-
+	fn := func(nodeType int, path, prefix, hash []byte, metadata map[string]string) error {
+		return nil
+	}
+	err = m.IterateDirectories(ctx, []byte(""), 0, fn)
+	if err != nil {
+		jsonhttp.NotFound(w, "path address not found")
+		return
+	}
 	if pathVar == "" {
 		logger.Debugf("download: handle empty path %s", address)
 
@@ -271,15 +278,6 @@ func (s *server) auroraDownloadHandler(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		}
-	}
-
-	fn := func(nodeType int, path, prefix, hash []byte, metadata map[string]string) error {
-		return nil
-	}
-	err = m.IterateDirectories(ctx, []byte(""), 0, fn)
-	if err != nil {
-		jsonhttp.NotFound(w, "path address not found")
-		return
 	}
 
 	me, err := m.Lookup(ctx, pathVar)
