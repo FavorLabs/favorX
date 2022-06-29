@@ -27,10 +27,10 @@ import (
 	"time"
 
 	"github.com/FavorLabs/favorX/pkg/shed"
-	"github.com/FavorLabs/favorX/pkg/shed/driver"
-	"github.com/FavorLabs/favorX/pkg/storage"
 	"github.com/FavorLabs/favorX/pkg/storage/testing"
 	"github.com/gauss-project/aurorafs/pkg/boson"
+	"github.com/gauss-project/aurorafs/pkg/shed/driver"
+	"github.com/gauss-project/aurorafs/pkg/storage"
 )
 
 // Store holds fields and indexes (including their encoding functions)

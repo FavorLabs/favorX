@@ -19,12 +19,12 @@ package localstore
 import (
 	"context"
 	"errors"
-	"github.com/FavorLabs/favorX/pkg/shed"
-	"github.com/FavorLabs/favorX/pkg/shed/driver"
-	"github.com/FavorLabs/favorX/pkg/storage"
 	"time"
 
+	"github.com/FavorLabs/favorX/pkg/shed"
+	"github.com/FavorLabs/favorX/pkg/storage"
 	"github.com/gauss-project/aurorafs/pkg/boson"
+	"github.com/gauss-project/aurorafs/pkg/shed/driver"
 )
 
 // GetMulti returns chunks from the database. If one of the chunks is not found

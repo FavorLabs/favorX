@@ -18,12 +18,13 @@ package localstore
 
 import (
 	"errors"
-	"github.com/FavorLabs/favorX/pkg/shed"
-	"github.com/FavorLabs/favorX/pkg/shed/driver"
-	"github.com/gauss-project/aurorafs/pkg/boson"
-	"github.com/pbnjay/memory"
 	"runtime"
 	"time"
+
+	"github.com/FavorLabs/favorX/pkg/shed"
+	"github.com/gauss-project/aurorafs/pkg/boson"
+	"github.com/gauss-project/aurorafs/pkg/shed/driver"
+	"github.com/pbnjay/memory"
 )
 
 var (

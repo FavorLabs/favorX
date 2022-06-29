@@ -25,7 +25,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/FavorLabs/favorX/pkg/shed/driver"
+	"github.com/gauss-project/aurorafs/pkg/shed/driver"
 )
 
 // Index functions for the index that is used in tests in this file.

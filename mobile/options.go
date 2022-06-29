@@ -105,6 +105,7 @@ func (o Options) DebugAPIAddr(c *node.Options) {
 
 func (o Options) WSAddr(c *node.Options) {
 	c.WSAddr = fmt.Sprintf("%s:%d", listenAddress, o.WebsocketPort)
+	c.CORSAllowedOrigins = []string{"*"}
 }
 
 func (o Options) Bootnodes(c *node.Options) {

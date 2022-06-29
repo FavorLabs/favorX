@@ -20,48 +20,42 @@ LDFLAGS ?= -s -w -X github.com/FavorLabs/favorX.commitHash="$(COMMIT_HASH)" -X g
 GOOS ?= $(shell go env GOOS)
 SHELL ?= bash
 IS_DOCKER ?= false
-DATABASE ?= leveldb
 LIB_INSTALL_DIR ?= /usr/local
 CGO_ENABLED ?= $(shell go env CGO_ENABLED)
 
 ifeq ($(GOOS), windows)
 WORK_DIR := $(shell pwd | sed -E 's/^\/([a-zA-Z])\//\1\:\//' | sed -E 's/\//\\\\/g' | tr '[:upper:]' '[:lower:]')
 PATH_SEP := ;
+BINARY_NAME := favorX.exe
 else
 WORK_DIR := $(shell pwd | tr '[:upper:]' '[:lower:]')
 PATH_SEP := :
+BINARY_NAME := favorX
 endif
 
 .PHONY: all
-all: build lint vet test-race binary
-
-.PHONY: binary-wt
-binary-wt: DATABASE=wiredtiger
-binary-wt: binary
+all: check-version lint vet test-race binary
 
 .PHONY: binary-ldb
-binary-ldb: DATABASE=leveldb
-binary-ldb: binary
+binary-ldb: dist
+binary-ldb:
+	$(GO) env -w CGO_ENABLED=0
+	$(GO) build -tags leveldb -trimpath -ldflags "$(LDFLAGS)" -o dist/$(BINARY_NAME) ./cmd/favorX
+	$(GO) env -w CGO_ENABLED=$(CGO_ENABLED)
 
 .PHONY: binary
 binary: dist FORCE
 	$(GO) version
-ifeq ($(GOOS), windows)
-	$(GO) env -w CGO_ENABLED=0
-	$(GO) build -tags leveldb -trimpath -ldflags "$(LDFLAGS)" -o dist/favorX.exe ./cmd/favorX
-else
-ifeq ($(DATABASE), wiredtiger)
+ifneq ($(GOOS), windows)
 	sh -c "./install-deps.sh $(LIB_INSTALL_DIR) $(IS_DOCKER)"
+endif
 	$(GO) env -w CGO_ENABLED=1
-else
-	$(GO) env -w CGO_ENABLED=0
-endif
-	$(GO) build -tags $(DATABASE) -trimpath -ldflags "$(LDFLAGS)" -o dist/favorX ./cmd/favorX
-endif
+	$(GO) build -trimpath -ldflags "$(LDFLAGS)" -o dist/$(BINARY_NAME) ./cmd/favorX
 	$(GO) env -w CGO_ENABLED=$(CGO_ENABLED)
 
 dist:
 	mkdir $@
+	$(GO) version
 
 .PHONY: lint
 lint: linter

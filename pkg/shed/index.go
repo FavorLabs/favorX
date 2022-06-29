@@ -20,7 +20,8 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/FavorLabs/favorX/pkg/shed/driver"
+
+	"github.com/gauss-project/aurorafs/pkg/shed/driver"
 )
 
 // Item holds fields relevant to Aurora Chunk data and metadata.
