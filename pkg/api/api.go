@@ -19,6 +19,7 @@ import (
 	"github.com/FavorLabs/favorX/pkg/file/pipeline/builder"
 	"github.com/FavorLabs/favorX/pkg/fileinfo"
 	"github.com/FavorLabs/favorX/pkg/multicast"
+	"github.com/FavorLabs/favorX/pkg/routetab"
 	"github.com/FavorLabs/favorX/pkg/storage"
 	"github.com/FavorLabs/favorX/pkg/traversal"
 	"github.com/ethereum/go-ethereum/common"
@@ -32,6 +33,7 @@ import (
 	"github.com/gauss-project/aurorafs/pkg/resolver"
 	"github.com/gauss-project/aurorafs/pkg/settlement/chain"
 	"github.com/gauss-project/aurorafs/pkg/settlement/traffic"
+	"github.com/gauss-project/aurorafs/pkg/topology"
 	"github.com/gauss-project/aurorafs/pkg/tracing"
 )
 
@@ -116,6 +118,8 @@ type server struct {
 	transactionChan chan TransactionResponse
 	multicast       multicast.GroupInterface
 	netRelay        netrelay.NetRelay
+	kad             topology.Driver
+	route           routetab.RouteTab
 }
 
 type Options struct {
@@ -140,9 +144,9 @@ const (
 
 // New will create a and initialize a new API service.
 func New(storer storage.Storer, resolver resolver.Interface, addr boson.Address, chunkInfo chunkinfo.Interface, fileInfo fileinfo.Interface,
-	traversalService traversal.Traverser, pinning pinning.Interface, auth authenticator, logger logging.Logger,
+	traversalService traversal.Traverser, pinning pinning.Interface, auth authenticator, logger logging.Logger, kad topology.Driver,
 	tracer *tracing.Tracer, traffic traffic.ApiInterface, commonChain chain.Common, oracleChain chain.Resolver, netRelay netrelay.NetRelay,
-	multicast multicast.GroupInterface, o Options) Service {
+	multicast multicast.GroupInterface, route routetab.RouteTab, o Options) Service {
 	s := &server{
 		auth:            auth,
 		storer:          storer,
@@ -163,6 +167,8 @@ func New(storer storage.Storer, resolver resolver.Interface, addr boson.Address,
 		transactionChan: make(chan TransactionResponse, 10),
 		multicast:       multicast,
 		netRelay:        netRelay,
+		kad:             kad,
+		route:           route,
 	}
 
 	BufferSizeMul = o.BufferSizeMul

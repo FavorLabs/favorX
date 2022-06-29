@@ -35,37 +35,31 @@ type authenticator interface {
 
 // Service implements http.Handler interface to be used in HTTP server.
 type Service struct {
-	restricted     bool
-	auth           authenticator
-	overlay        boson.Address
-	publicKey      ecdsa.PublicKey
-	p2p            p2p.DebugService
-	pingpong       pingpong.Interface
-	topologyDriver topology.Driver
-	group          *multicast.Service
-	storer         storage.Storer
-	logger         logging.Logger
-	tracer         *tracing.Tracer
-	lightNodes     *lightnode.Container
-	bootNodes      *bootnode.Container
-	routetab       routetab.RouteTab
-	chunkInfo      chunkinfo.Interface
-	fileInfo       fileinfo.Interface
-	retrieval      retrieval.Interface
-	traffic        traffic.ApiInterface
-	// accounting         accounting.Interface
-	// settlement         settlement.Interface
-	// chequebookEnabled  bool
-	// chequebook         chequebook.Service
-	// swap               swap.ApiInterface
+	restricted         bool
+	auth               authenticator
+	overlay            boson.Address
+	publicKey          ecdsa.PublicKey
+	p2p                p2p.DebugService
+	pingpong           pingpong.Interface
+	topologyDriver     topology.Driver
+	group              *multicast.Service
+	storer             storage.Storer
+	logger             logging.Logger
+	tracer             *tracing.Tracer
+	lightNodes         *lightnode.Container
+	bootNodes          *bootnode.Container
+	routetab           routetab.RouteTab
+	chunkInfo          chunkinfo.Interface
+	fileInfo           fileinfo.Interface
+	retrieval          retrieval.Interface
+	traffic            traffic.ApiInterface
 	corsAllowedOrigins []string
 	metricsRegistry    *prometheus.Registry
-	// handler is changed in the Configure method
-	handler     http.Handler
-	handlerMu   sync.RWMutex
-	nodeOptions Options
-	cache       *gcache.Cache
-	cacheCtx    context.Context
+	handler            http.Handler
+	handlerMu          sync.RWMutex
+	nodeOptions        Options
+	cache              *gcache.Cache
+	cacheCtx           context.Context
 }
 
 type Options struct {
@@ -117,11 +111,6 @@ func (s *Service) Configure(p2p p2p.DebugService, pingpong pingpong.Interface, g
 	s.chunkInfo = chunkinfo
 	s.fileInfo = fileInfo
 	s.retrieval = retrieval
-	// s.accounting = accounting
-	// s.settlement = settlement
-	// s.chequebookEnabled = chequebookEnabled
-	// s.chequebook = chequebook
-	// s.swap = swap
 
 	s.setRouter(s.newRouter())
 }
