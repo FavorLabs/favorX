@@ -1,0 +1,11 @@
+
+
+syntax = "proto3";
+
+package pseudosettle;
+
+option go_package = "pb";
+
+message Payment {
+  uint64 Amount = 1;
+}

@@ -43,6 +43,10 @@ func (s *server) pinRootHash(w http.ResponseWriter, r *http.Request) {
 		jsonhttp.InternalServerError(w, nil)
 		return
 	}
+	err = s.fileInfo.PinFile(ref, true)
+	if err != nil {
+		s.logger.Errorf("aurora upload file:update fileinfo pin failed:%v", err)
+	}
 
 	jsonhttp.Created(w, nil)
 }
@@ -80,11 +84,15 @@ func (s *server) unpinRootHash(w http.ResponseWriter, r *http.Request) {
 		jsonhttp.InternalServerError(w, nil)
 		return
 	}
+	err = s.fileInfo.PinFile(ref, false)
+	if err != nil {
+		s.logger.Errorf("aurora upload file:update fileinfo unpin failed:%v", err)
+	}
 
 	jsonhttp.OK(w, nil)
 }
 
-// getPinnedRootHash returns the given reference if its root hash is pinned.
+// getPinnedRootHash returns back the given reference if its root hash is pinned.
 func (s *server) getPinnedRootHash(w http.ResponseWriter, r *http.Request) {
 	ref, err := boson.ParseHexAddress(mux.Vars(r)["reference"])
 	if err != nil {

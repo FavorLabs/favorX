@@ -14,26 +14,25 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/FavorLabs/favorX/pkg/chunkinfo"
+	"github.com/FavorLabs/favorX/pkg/file/pipeline"
+	"github.com/FavorLabs/favorX/pkg/file/pipeline/builder"
+	"github.com/FavorLabs/favorX/pkg/fileinfo"
+	"github.com/FavorLabs/favorX/pkg/multicast"
+	"github.com/FavorLabs/favorX/pkg/storage"
+	"github.com/FavorLabs/favorX/pkg/traversal"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gauss-project/aurorafs/pkg/auth"
 	"github.com/gauss-project/aurorafs/pkg/boson"
-	"github.com/gauss-project/aurorafs/pkg/chunkinfo"
-	"github.com/gauss-project/aurorafs/pkg/file/pipeline"
-	"github.com/gauss-project/aurorafs/pkg/file/pipeline/builder"
 	"github.com/gauss-project/aurorafs/pkg/jsonhttp"
 	"github.com/gauss-project/aurorafs/pkg/logging"
 	m "github.com/gauss-project/aurorafs/pkg/metrics"
-	"github.com/gauss-project/aurorafs/pkg/multicast"
 	"github.com/gauss-project/aurorafs/pkg/netrelay"
 	"github.com/gauss-project/aurorafs/pkg/pinning"
 	"github.com/gauss-project/aurorafs/pkg/resolver"
-	"github.com/gauss-project/aurorafs/pkg/routetab"
 	"github.com/gauss-project/aurorafs/pkg/settlement/chain"
 	"github.com/gauss-project/aurorafs/pkg/settlement/traffic"
-	"github.com/gauss-project/aurorafs/pkg/storage"
-	"github.com/gauss-project/aurorafs/pkg/topology"
 	"github.com/gauss-project/aurorafs/pkg/tracing"
-	"github.com/gauss-project/aurorafs/pkg/traversal"
 )
 
 const (
@@ -98,6 +97,7 @@ type server struct {
 	resolver    resolver.Interface
 	overlay     boson.Address
 	chunkInfo   chunkinfo.Interface
+	fileInfo    fileinfo.Interface
 	traversal   traversal.Traverser
 	pinning     pinning.Interface
 	logger      logging.Logger
@@ -116,9 +116,6 @@ type server struct {
 	transactionChan chan TransactionResponse
 	multicast       multicast.GroupInterface
 	netRelay        netrelay.NetRelay
-	route           routetab.RouteTab
-	kad             topology.Driver
-	snapshotPeers   []boson.Address
 }
 
 type Options struct {
@@ -142,16 +139,17 @@ const (
 )
 
 // New will create a and initialize a new API service.
-func New(storer storage.Storer, resolver resolver.Interface, addr boson.Address, chunkInfo chunkinfo.Interface,
+func New(storer storage.Storer, resolver resolver.Interface, addr boson.Address, chunkInfo chunkinfo.Interface, fileInfo fileinfo.Interface,
 	traversalService traversal.Traverser, pinning pinning.Interface, auth authenticator, logger logging.Logger,
-	tracer *tracing.Tracer, traffic traffic.ApiInterface, commonChain chain.Common, oracleChain chain.Resolver,
-	netRelay netrelay.NetRelay, multicast multicast.GroupInterface, kad topology.Driver, route routetab.RouteTab, o Options) Service {
+	tracer *tracing.Tracer, traffic traffic.ApiInterface, commonChain chain.Common, oracleChain chain.Resolver, netRelay netrelay.NetRelay,
+	multicast multicast.GroupInterface, o Options) Service {
 	s := &server{
 		auth:            auth,
 		storer:          storer,
 		resolver:        resolver,
 		overlay:         addr,
 		chunkInfo:       chunkInfo,
+		fileInfo:        fileInfo,
 		traversal:       traversalService,
 		pinning:         pinning,
 		Options:         o,
@@ -162,8 +160,6 @@ func New(storer storage.Storer, resolver resolver.Interface, addr boson.Address,
 		metrics:         newMetrics(),
 		quit:            make(chan struct{}),
 		traffic:         traffic,
-		kad:             kad,
-		route:           route,
 		transactionChan: make(chan TransactionResponse, 10),
 		multicast:       multicast,
 		netRelay:        netRelay,
@@ -499,3 +495,10 @@ func calculateNumberOfChunks(contentLength int64, isEncrypted bool) int64 {
 
 	return int64(totalChunks) + 1
 }
+
+// func requestCalculateNumberOfChunks(r *http.Request) int64 {
+//	if !strings.Contains(r.Header.Get(contentTypeHeader), "multipart") && r.ContentLength > 0 {
+//		return calculateNumberOfChunks(r.ContentLength, requestEncrypt(r))
+//	}
+//	return 0
+// }

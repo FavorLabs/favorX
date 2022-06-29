@@ -4,8 +4,8 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/FavorLabs/favorX/pkg/file/pipeline/builder"
 	"github.com/gauss-project/aurorafs/pkg/boson"
-	"github.com/gauss-project/aurorafs/pkg/file/pipeline/builder"
 	"github.com/gauss-project/aurorafs/pkg/jsonhttp"
 	"github.com/gauss-project/aurorafs/pkg/tracing"
 	"github.com/gorilla/mux"
@@ -62,5 +62,5 @@ func (s *server) bytesGetHandler(w http.ResponseWriter, r *http.Request) {
 		"Content-Type": {"application/octet-stream"},
 	}
 
-	s.downloadHandler(w, r, address, additionalHeaders, true)
+	s.downloadHandler(w, r, address, address, 0, additionalHeaders, true)
 }
