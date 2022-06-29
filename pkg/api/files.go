@@ -16,18 +16,18 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gauss-project/aurorafs/pkg/chunkinfo"
-
+	"github.com/FavorLabs/favorX/pkg/file/joiner"
+	"github.com/FavorLabs/favorX/pkg/file/loadsave"
+	"github.com/FavorLabs/favorX/pkg/fileinfo"
+	"github.com/FavorLabs/favorX/pkg/localstore/filestore"
+	"github.com/FavorLabs/favorX/pkg/manifest"
+	"github.com/FavorLabs/favorX/pkg/sctx"
+	"github.com/FavorLabs/favorX/pkg/storage"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethersphere/langos"
 	"github.com/gauss-project/aurorafs/pkg/aurora"
 	"github.com/gauss-project/aurorafs/pkg/boson"
-	"github.com/gauss-project/aurorafs/pkg/file/joiner"
-	"github.com/gauss-project/aurorafs/pkg/file/loadsave"
 	"github.com/gauss-project/aurorafs/pkg/jsonhttp"
-	"github.com/gauss-project/aurorafs/pkg/manifest"
-	"github.com/gauss-project/aurorafs/pkg/sctx"
-	"github.com/gauss-project/aurorafs/pkg/storage"
 	"github.com/gauss-project/aurorafs/pkg/tracing"
 	"github.com/gorilla/mux"
 )
@@ -88,12 +88,17 @@ func (s *server) fileUploadHandler(w http.ResponseWriter, r *http.Request) {
 	// first store the file and get its reference
 	fr, err := p(ctx, reader)
 	if err != nil {
-		logger.Debugf("upload file: file store, file %q: %v", fileName, err)
-		logger.Errorf("upload file: file store, file %q", fileName)
-		jsonhttp.InternalServerError(w, fileStoreError)
+		logger.Debugf("upload file: file len, file %q: %v", fileName, err)
+		logger.Errorf("upload file: file len, file %q", fileName)
+		jsonhttp.InternalServerError(w, nil)
 		return
 	}
 
+	bitLen, err := s.fileInfo.GetFileSize(fr)
+	if err != nil {
+		jsonhttp.InternalServerError(w, fileStoreError)
+		return
+	}
 	// If filename is still empty, use the file hash as the filename
 	if fileName == "" {
 		fileName = fr.String()
@@ -134,7 +139,7 @@ func (s *server) fileUploadHandler(w http.ResponseWriter, r *http.Request) {
 		rootMtdt[manifest.EntryMetadataDirnameKey] = realDirName
 	}
 
-	err = m.Add(ctx, manifest.RootPath, manifest.NewEntry(boson.ZeroAddress, rootMtdt))
+	err = m.Add(ctx, manifest.RootPath, manifest.NewEntry(boson.ZeroAddress, rootMtdt, nil, 0))
 	if err != nil {
 		logger.Debugf("upload file: adding metadata to manifest, file %q: %v", fileName, err)
 		logger.Errorf("upload file: adding metadata to manifest, file %q", fileName)
@@ -147,7 +152,7 @@ func (s *server) fileUploadHandler(w http.ResponseWriter, r *http.Request) {
 		manifest.EntryMetadataFilenameKey:    realIndexFilename,
 	}
 
-	err = m.Add(ctx, fileName, manifest.NewEntry(fr, fileMtdt))
+	err = m.Add(ctx, fileName, manifest.NewEntry(fr, fileMtdt, nil, 0))
 	if err != nil {
 		logger.Debugf("upload file: adding file to manifest, file %q: %v", fileName, err)
 		logger.Errorf("upload file: adding file to manifest, file %q", fileName)
@@ -161,6 +166,11 @@ func (s *server) fileUploadHandler(w http.ResponseWriter, r *http.Request) {
 	var storeSizeFn []manifest.StoreSizeFunc
 
 	manifestReference, err := m.Store(ctx, storeSizeFn...)
+	fn := func(reference boson.Address) error {
+		bitLen++
+		return nil
+	}
+	err = m.IterateAddresses(ctx, fn)
 	if err != nil {
 		logger.Debugf("upload file: manifest store, file %q: %v", fileName, err)
 		logger.Errorf("upload file: manifest store, file %q", fileName)
@@ -169,25 +179,14 @@ func (s *server) fileUploadHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	logger.Debugf("Manifest Reference: %s", manifestReference.String())
 
-	dataChunks, _, err := s.traversal.GetChunkHashes(ctx, manifestReference, nil)
+	err = s.chunkInfo.OnFileUpload(ctx, manifestReference, bitLen)
 	if err != nil {
-		logger.Debugf("upload file: get chunk hashes of file %q: %v", fileName, err)
-		logger.Errorf("upload file: get chunk hashes of file %q", fileName)
-		jsonhttp.InternalServerError(w, "could not get chunk hashes")
+		logger.Debugf("upload file: chunk transfer data err: %v", err)
+		logger.Errorf("upload file: chunk transfer data err")
+		jsonhttp.InternalServerError(w, "chunk transfer data error")
 		return
 	}
 
-	for _, li := range dataChunks {
-		for _, b := range li {
-			err := s.chunkInfo.OnChunkRetrieved(boson.NewAddress(b), manifestReference, s.overlay)
-			if err != nil {
-				logger.Debugf("upload file: chunk transfer data err: %v", err)
-				logger.Errorf("upload file: chunk transfer data err")
-				jsonhttp.InternalServerError(w, "chunk transfer data error")
-				return
-			}
-		}
-	}
 	if strings.ToLower(r.Header.Get(AuroraPinHeader)) == StringTrue {
 		if err := s.pinning.CreatePin(ctx, manifestReference, false); err != nil {
 			logger.Debugf("upload file: creation of pin for %q failed: %v", manifestReference, err)
@@ -195,8 +194,16 @@ func (s *server) fileUploadHandler(w http.ResponseWriter, r *http.Request) {
 			jsonhttp.InternalServerError(w, nil)
 			return
 		}
+		err = s.fileInfo.PinFile(manifestReference, true)
+		if err != nil {
+			s.logger.Errorf("upload file:update fileinfo pin failed:%v", err)
+		}
 	}
-
+	err = s.fileInfo.AddFile(manifestReference)
+	if err != nil {
+		jsonhttp.NotFound(w, "add file error")
+		return
+	}
 	w.Header().Set("ETag", fmt.Sprintf("%q", manifestReference.String()))
 	jsonhttp.Created(w, auroraUploadResponse{
 		Reference: manifestReference,
@@ -229,7 +236,7 @@ func (s *server) auroraDownloadHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	r = r.WithContext(sctx.SetRootHash(r.Context(), address))
-	if !s.chunkInfo.Init(r.Context(), nil, address) {
+	if !s.chunkInfo.Discover(r.Context(), nil, address) {
 		logger.Debugf("download: chunkInfo init %s: %v", nameOrHex, err)
 		jsonhttp.NotFound(w, nil)
 		return
@@ -248,7 +255,14 @@ func (s *server) auroraDownloadHandler(w http.ResponseWriter, r *http.Request) {
 		jsonhttp.NotFound(w, nil)
 		return
 	}
-
+	fn := func(nodeType int, path, prefix, hash []byte, metadata map[string]string) error {
+		return nil
+	}
+	err = m.IterateDirectories(ctx, []byte(""), 0, fn)
+	if err != nil {
+		jsonhttp.NotFound(w, "path address not found")
+		return
+	}
 	if pathVar == "" {
 		logger.Debugf("download: handle empty path %s", address)
 
@@ -256,6 +270,7 @@ func (s *server) auroraDownloadHandler(w http.ResponseWriter, r *http.Request) {
 			pathVar = path.Join(pathVar, indexDocumentSuffixKey)
 			indexDocumentManifestEntry, err := m.Lookup(ctx, pathVar)
 			if err == nil {
+
 				// index document exists
 				logger.Debugf("download: serving path: %s", pathVar)
 
@@ -266,6 +281,7 @@ func (s *server) auroraDownloadHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	me, err := m.Lookup(ctx, pathVar)
+
 	if err != nil {
 		logger.Debugf("download: invalid path %s/%s: %v", address, pathVar, err)
 		logger.Error("download: invalid path")
@@ -325,7 +341,24 @@ func (s *server) auroraDownloadHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
+	me = manifest.NewEntry(me.Reference(), me.Metadata(), me.Prefix(), 0)
+	prefix := me.Prefix()
+	if prefix != nil && len(prefix) > 0 {
+		p := make([]string, 0, len(prefix))
+		for _, f := range prefix {
+			p = append(p, string(f))
+		}
+		sort.Strings(p)
+		jsonhttp.Created(w, dirs{Dirs: p})
+		return
+	}
 
+	if !s.chunkInfo.Discover(r.Context(), nil, me.Reference()) {
+		logger.Debugf("download: chunkInfo init %s: %v", nameOrHex, err)
+		jsonhttp.NotFound(w, nil)
+		return
+	}
+	r = r.WithContext(sctx.SetRootHash(r.Context(), me.Reference()))
 	// serve requested path
 	s.serveManifestEntry(w, r, address, me, true)
 }
@@ -333,7 +366,7 @@ func (s *server) auroraDownloadHandler(w http.ResponseWriter, r *http.Request) {
 func (s *server) serveManifestEntry(
 	w http.ResponseWriter,
 	r *http.Request,
-	_ boson.Address,
+	rootCid boson.Address,
 	manifestEntry manifest.Entry,
 	etag bool,
 ) {
@@ -349,18 +382,32 @@ func (s *server) serveManifestEntry(
 		additionalHeaders["Content-Type"] = []string{mimeType}
 	}
 
-	s.downloadHandler(w, r, manifestEntry.Reference(), additionalHeaders, etag)
+	s.downloadHandler(w, r, rootCid, manifestEntry.Reference(), manifestEntry.Index(), additionalHeaders, etag)
 }
 
 // downloadHandler contains common logic for dowloading file from API
-func (s *server) downloadHandler(w http.ResponseWriter, r *http.Request, reference boson.Address, additionalHeaders http.Header, etag bool) {
+func (s *server) downloadHandler(w http.ResponseWriter, r *http.Request, rootCid, reference boson.Address, index int64, additionalHeaders http.Header, etag bool) {
 	logger := tracing.NewLoggerWithTraceID(r.Context(), s.logger)
 	targets := r.URL.Query().Get("targets")
 	if targets != "" {
 		r = r.WithContext(sctx.SetTargets(r.Context(), targets))
 	}
+	_, _ = s.storer.Get(r.Context(), storage.ModeGetRequest, reference, index)
+	length, err := s.fileInfo.GetFileSize(reference)
+	if err != nil {
+		jsonhttp.BadRequest(w, "path address not found")
+		return
+	}
+	if length > 1 && index == 0 {
+		length++
+	}
 
-	reader, l, err := joiner.New(r.Context(), s.storer, storage.ModeGetRequest, reference)
+	if index > 0 {
+		length += index + 1
+	}
+
+	r = r.WithContext(sctx.SetRootLen(r.Context(), length))
+	reader, l, err := joiner.New(r.Context(), s.storer, storage.ModeGetRequest, reference, index)
 	if err != nil {
 		if errors.Is(err, storage.ErrNotFound) {
 			logger.Debugf("api download: not found %s: %v", reference, err)
@@ -373,7 +420,12 @@ func (s *server) downloadHandler(w http.ResponseWriter, r *http.Request, referen
 		jsonhttp.InternalServerError(w, nil)
 		return
 	}
-
+	err = s.fileInfo.AddFile(rootCid)
+	if err != nil {
+		s.logger.Error(err.Error())
+		jsonhttp.BadRequest(w, "add file error")
+		return
+	}
 	// include additional headers
 	for name, values := range additionalHeaders {
 		w.Header().Set(name, strings.Join(values, "; "))
@@ -396,13 +448,13 @@ func (s *server) downloadHandler(w http.ResponseWriter, r *http.Request, referen
 }
 
 type auroraListResponse struct {
-	RootCid   boson.Address           `json:"rootCid"`
-	Size      int                     `json:"size"`
-	FileSize  int                     `json:"fileSize"`
-	PinState  bool                    `json:"pinState"`
-	BitVector aurora.BitVectorApi     `json:"bitVector"`
-	Register  bool                    `json:"register"`
-	Manifest  *chunkinfo.ManifestNode `json:"manifest"`
+	RootCid   boson.Address          `json:"rootCid"`
+	Size      int                    `json:"size"`
+	FileSize  int                    `json:"fileSize"`
+	PinState  bool                   `json:"pinState"`
+	BitVector aurora.BitVectorApi    `json:"bitVector"`
+	Register  bool                   `json:"register"`
+	Manifest  *fileinfo.ManifestNode `json:"manifest"`
 }
 
 type auroraPageResponse struct {
@@ -413,14 +465,9 @@ type auroraPageResponse struct {
 func (s *server) auroraListHandler(w http.ResponseWriter, r *http.Request) {
 	var wg sync.WaitGroup
 	var reqs aurora.ApiBody
-	pathVar := ""
-	depth := 1
 	isBody := true
 	isPage := false
 	pageTotal := 0
-	if r.URL.Query().Get("recursive") != "" {
-		depth = -1
-	}
 
 	req, err := ioutil.ReadAll(r.Body)
 	if err != nil {
@@ -485,85 +532,54 @@ func (s *server) auroraListHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	registerStatus := func(rootCid boson.Address) bool {
-		if v, ok := s.auroraChainSate.Load(rootCid.String()); ok {
-			register := v.(bool)
-			return register
+	//if r.URL.Query().Get("recursive") != "" {
+	//	depth = -1
+	//}
+
+	var filePage filestore.Page
+	var fileFilter []filestore.Filter
+	var fileSort filestore.Sort
+	if isPage {
+		filePage = filestore.Page{
+			PageNum:  reqs.Page.PageNum,
+			PageSize: reqs.Page.PageSize,
 		}
-		return false
+		fileFilter = make([]filestore.Filter, 0, len(reqs.Filter))
+		for i := range reqs.Filter {
+			fileFilter = append(fileFilter, filestore.Filter{
+				Key:   reqs.Filter[i].Key,
+				Term:  reqs.Filter[i].Term,
+				Value: reqs.Filter[i].Value,
+			})
+		}
+		fileSort = filestore.Sort{
+			Key:   reqs.Sort.Key,
+			Order: reqs.Sort.Order,
+		}
+
 	}
+	fileListInfo := s.fileInfo.GetFileList(filePage, fileFilter, fileSort)
 
 	responseList := make([]auroraListResponse, 0)
-	fileListInfo, _ := s.chunkInfo.GetFileList(s.overlay)
 
-	for i, v := range fileListInfo {
-		rootCid := v["rootCid"].(string)
-		maniFest := s.chunkInfo.GetManifest(rootCid, pathVar, depth)
-		if err == nil && maniFest != nil {
-			fileListInfo[i]["manifest.type"] = maniFest.Type
-			fileListInfo[i]["manifest.hash"] = maniFest.Hash
-			fileListInfo[i]["manifest.name"] = maniFest.Name
-			fileListInfo[i]["manifest.size"] = maniFest.Size
-			fileListInfo[i]["manifest.ext"] = maniFest.Extension
-			fileListInfo[i]["manifest.mime"] = maniFest.MimeType
-			fileListInfo[i]["manifest.sub"] = maniFest.Nodes
-			if maniFest.Nodes != nil {
-				var fileSize uint64
-				var maniFestNode chunkinfo.ManifestNode
-				for _, mv := range maniFest.Nodes {
-					fileSize = fileSize + mv.Size
-					maniFestNode = *mv
-				}
-				fileListInfo[i]["manifest.sub.type"] = maniFestNode.Type
-				fileListInfo[i]["manifest.sub.hash"] = maniFestNode.Hash
-				fileListInfo[i]["manifest.sub.name"] = maniFestNode.Name
-				fileListInfo[i]["manifest.sub.size"] = fileSize
-				fileListInfo[i]["manifest.sub.ext"] = maniFestNode.Extension
-				fileListInfo[i]["manifest.sub.mime"] = maniFestNode.MimeType
-			}
-		}
-		pinned, err := s.pinning.HasPin(boson.MustParseHexAddress(rootCid))
-		if err != nil {
-			s.logger.Errorf("file list: check hash %s pinning err", v)
-			continue
-		}
-		fileListInfo[i]["pinState"] = pinned
-		fileListInfo[i]["register"] = registerStatus(boson.MustParseHexAddress(rootCid))
-	}
-
-	if isPage {
-		paging := aurora.NewPaging(s.logger, reqs.Page.PageNum, reqs.Page.PageSize, reqs.Sort.Key, reqs.Sort.Order)
-		fileListInfo = paging.ResponseFilter(fileListInfo, reqs.Filter)
-		fileListInfo = paging.PageSort(fileListInfo, reqs.Sort.Key, reqs.Sort.Order)
-		pageTotal = len(fileListInfo)
-		fileListInfo = paging.Page(fileListInfo)
-	}
-
-	for _, v := range fileListInfo {
-		bitvector := aurora.BitVectorApi{
-			Len: v["bitvector.len"].(int),
-			B:   v["bitvector.b"].([]byte),
-		}
-
-		var manifestNode chunkinfo.ManifestNode
-		if _, ok := v["manifest.type"]; ok {
-			manifestNode.Type = v["manifest.type"].(string)
-			manifestNode.Hash = v["manifest.hash"].(string)
-			manifestNode.Name = v["manifest.name"].(string)
-			manifestNode.Size = v["manifest.size"].(uint64)
-			manifestNode.Extension = v["manifest.ext"].(string)
-			manifestNode.MimeType = v["manifest.mime"].(string)
-			manifestNode.Nodes = v["manifest.sub"].(map[string]*chunkinfo.ManifestNode)
-		}
-
+	for i := range fileListInfo {
 		responseList = append(responseList, auroraListResponse{
-			RootCid:   boson.MustParseHexAddress(v["rootCid"].(string)),
-			Size:      v["treeSize"].(int),
-			FileSize:  v["fileSize"].(int),
-			PinState:  v["pinState"].(bool),
-			BitVector: bitvector,
-			Register:  v["register"].(bool),
-			Manifest:  &manifestNode,
+			RootCid:  fileListInfo[i].RootCid,
+			PinState: fileListInfo[i].Pinned,
+			BitVector: aurora.BitVectorApi{
+				Len: fileListInfo[i].BvLen,
+				B:   fileListInfo[i].Bv,
+			},
+			Register: fileListInfo[i].Registered,
+			FileSize: fileListInfo[i].Size,
+			Manifest: &fileinfo.ManifestNode{
+				Type:      fileListInfo[i].Type,
+				Hash:      fileListInfo[i].Hash,
+				Name:      fileListInfo[i].Name,
+				Size:      uint64(fileListInfo[i].Size),
+				Extension: fileListInfo[i].Extension,
+				MimeType:  fileListInfo[i].MimeType,
+			},
 		})
 	}
 	wg.Add(len(responseList))
@@ -664,7 +680,7 @@ func (s *server) manifestViewHandler(w http.ResponseWriter, r *http.Request) {
 		depth = -1
 	}
 
-	rootNode, err := s.chunkInfo.ManifestView(r.Context(), nameOrHex, pathVar, depth)
+	rootNode, err := s.fileInfo.ManifestView(r.Context(), nameOrHex, pathVar, depth)
 	if errors.Is(err, ErrNotFound) {
 		jsonhttp.NotFound(w, nil)
 	}
@@ -707,6 +723,10 @@ func (s *server) fileRegister(w http.ResponseWriter, r *http.Request) {
 		logger.Errorf("fileRegister failed: %v ", err)
 		jsonhttp.InternalServerError(w, fmt.Sprintf("fileRegister failed: %v ", err))
 		return
+	}
+	err = s.fileInfo.RegisterFile(address, true)
+	if err != nil {
+		logger.Errorf("fileRegister update info:%v", err)
 	}
 
 	trans := TransactionResponse{
@@ -757,6 +777,11 @@ func (s *server) fileRegisterRemove(w http.ResponseWriter, r *http.Request) {
 		s.logger.Error("fileRegisterRemove failed: %v ", err)
 		jsonhttp.InternalServerError(w, fmt.Sprintf("fileRegisterRemove failed: %v ", err))
 		return
+	}
+
+	err = s.fileInfo.RegisterFile(address, false)
+	if err != nil {
+		logger.Errorf("fileRegister update info:%v", err)
 	}
 
 	trans := TransactionResponse{

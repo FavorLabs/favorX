@@ -5,6 +5,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/FavorLabs/favorX/pkg/chunkinfo"
+	"github.com/FavorLabs/favorX/pkg/fileinfo"
 	"io"
 	"mime"
 	"mime/multipart"
@@ -14,19 +16,20 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/FavorLabs/favorX/pkg/file"
+	"github.com/FavorLabs/favorX/pkg/file/loadsave"
+	"github.com/FavorLabs/favorX/pkg/manifest"
+	"github.com/FavorLabs/favorX/pkg/sctx"
 	"github.com/gauss-project/aurorafs/pkg/boson"
-	"github.com/gauss-project/aurorafs/pkg/chunkinfo"
-	"github.com/gauss-project/aurorafs/pkg/file"
-	"github.com/gauss-project/aurorafs/pkg/file/loadsave"
 	"github.com/gauss-project/aurorafs/pkg/jsonhttp"
 	"github.com/gauss-project/aurorafs/pkg/logging"
-	"github.com/gauss-project/aurorafs/pkg/manifest"
-	"github.com/gauss-project/aurorafs/pkg/sctx"
-	"github.com/gauss-project/aurorafs/pkg/shed/driver"
-	"github.com/gauss-project/aurorafs/pkg/storage"
 	"github.com/gauss-project/aurorafs/pkg/tracing"
 	"github.com/gorilla/mux"
 )
+
+type dirs struct {
+	Dirs []string `json:"dirs"`
+}
 
 // dirUploadHandler uploads a directory supplied as a tar in an HTTP request
 func (s *server) dirUploadHandler(w http.ResponseWriter, r *http.Request) {
@@ -69,6 +72,8 @@ func (s *server) dirUploadHandler(w http.ResponseWriter, r *http.Request) {
 		s.logger,
 		p,
 		loadsave.New(s.storer, factory),
+		s.fileInfo,
+		s.chunkInfo,
 		r.Header.Get(AuroraCollectionNameHeader),
 		r.Header.Get(AuroraIndexDocumentHeader),
 		r.Header.Get(AuroraErrorDocumentHeader),
@@ -80,26 +85,6 @@ func (s *server) dirUploadHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	dataChunks, _, err := s.traversal.GetChunkHashes(ctx, reference, nil)
-	if err != nil {
-		logger.Debugf("dir upload dir: get chunk hashes err: %v", err)
-		logger.Errorf("dir upload dir: get chunk hashes err")
-		jsonhttp.InternalServerError(w, "could not get chunk hashes")
-		return
-	}
-
-	for _, li := range dataChunks {
-		for _, b := range li {
-			err := s.chunkInfo.OnChunkRetrieved(boson.NewAddress(b), reference, s.overlay)
-			if err != nil {
-				logger.Errorf("dir upload dir: chunk transfer data err: %v", err)
-				logger.Errorf("dir upload dir: chunk transfer data err")
-				jsonhttp.InternalServerError(w, "chunk transfer data error")
-				return
-			}
-		}
-	}
-
 	if strings.ToLower(r.Header.Get(AuroraPinHeader)) == StringTrue {
 		if err := s.pinning.CreatePin(r.Context(), reference, false); err != nil {
 			logger.Debugf("dir upload dir: creation of pin for %q failed: %v", reference, err)
@@ -107,8 +92,16 @@ func (s *server) dirUploadHandler(w http.ResponseWriter, r *http.Request) {
 			jsonhttp.InternalServerError(w, nil)
 			return
 		}
+		err = s.fileInfo.PinFile(reference, true)
+		if err != nil {
+			s.logger.Errorf("dir upload file:update fileinfo pin failed:%v", err)
+		}
 	}
-
+	err = s.fileInfo.AddFile(reference)
+	if err != nil {
+		jsonhttp.NotFound(w, "add file error")
+		return
+	}
 	jsonhttp.Created(w, auroraUploadResponse{
 		Reference: reference,
 	})
@@ -132,6 +125,8 @@ func storeDir(
 	log logging.Logger,
 	p pipelineFunc,
 	ls file.LoadSaver,
+	fileInfo fileinfo.Interface,
+	chunkInfo chunkinfo.Interface,
 	dirName,
 	indexFilename,
 	errorFilename string,
@@ -173,7 +168,7 @@ func storeDir(
 			manifest.EntryMetadataFilenameKey:    fileInfo.Name,
 		}
 		// add file entry to dir manifest
-		err = dirManifest.Add(ctx, fileInfo.Path, manifest.NewEntry(fileReference, fileMetadata))
+		err = dirManifest.Add(ctx, fileInfo.Path, manifest.NewEntry(fileReference, fileMetadata, nil, 0))
 		if err != nil {
 			return boson.ZeroAddress, fmt.Errorf("add to manifest: %w", err)
 		}
@@ -210,7 +205,7 @@ func storeDir(
 			}
 			metadata[manifest.WebsiteErrorDocumentPathKey] = realErrorFilename
 		}
-		rootManifestEntry := manifest.NewEntry(boson.ZeroAddress, metadata)
+		rootManifestEntry := manifest.NewEntry(boson.ZeroAddress, metadata, nil, 0)
 		err = dirManifest.Add(ctx, manifest.RootPath, rootManifestEntry)
 		if err != nil {
 			return boson.ZeroAddress, fmt.Errorf("add to manifest: %w", err)
@@ -224,6 +219,37 @@ func storeDir(
 	if err != nil {
 		return boson.ZeroAddress, fmt.Errorf("store manifest: %w", err)
 	}
+	fn := func(nodeType int, path, prefix, hash []byte, metadata map[string]string) error {
+		if nodeType == 0 {
+			if v, ok := metadata[contentTypeHeader]; ok && v != "" {
+				if strings.Contains(string(prefix), "._") {
+					return nil
+				}
+				fcid := boson.NewAddress(hash)
+				bitLen, err := fileInfo.GetFileSize(fcid)
+				if err != nil {
+					return err
+				}
+				if bitLen > 1 {
+					bitLen++
+				}
+				err = chunkInfo.OnFileUpload(ctx, fcid, bitLen)
+				if err != nil {
+					return err
+				}
+			}
+		}
+		return nil
+	}
+	ctx = sctx.SetRootHash(ctx, manifestReference)
+	err = dirManifest.IterateDirectories(ctx, []byte(""), 0, fn)
+	if err != nil {
+		return boson.ZeroAddress, err
+	}
+	//err = chunkInfo.OnFileUpload(ctx, manifestReference, int64(bitLen))
+	//if err != nil {
+	//	return boson.ZeroAddress, err
+	//}
 	logger.Tracef("finished uploaded dir with reference %v", manifestReference)
 
 	return manifestReference, nil
@@ -341,43 +367,7 @@ func (s *server) auroraDeleteHandler(w http.ResponseWriter, r *http.Request) {
 
 	r = r.WithContext(sctx.SetRootHash(r.Context(), hash))
 
-	del := func() error {
-		pyramid := s.chunkInfo.GetChunkPyramid(hash)
-		chunkHashes := make([]chunkinfo.PyramidCidNum, len(pyramid))
-
-		for i, chunk := range pyramid {
-			chunkHashes[i] = *chunk
-		}
-
-		var err error
-
-		for _, chunk := range chunkHashes {
-			if chunk.Cid.Equal(hash) {
-				continue
-			}
-
-			for i := 0; i < chunk.Number; i++ {
-				err = s.storer.Set(r.Context(), storage.ModeSetRemove, chunk.Cid)
-				if err != nil {
-					if errors.Is(err, driver.ErrNotFound) {
-						continue
-					}
-
-					return err
-				}
-			}
-		}
-
-		err = s.storer.Set(r.Context(), storage.ModeSetRemove, hash)
-		if err != nil {
-			if !errors.Is(err, driver.ErrNotFound) {
-				return err
-			}
-		}
-
-		return nil
-	}
-	err = s.chunkInfo.DelFile(hash, del)
+	err = s.fileInfo.DeleteFile(hash)
 	if err != nil {
 		s.logger.Errorf("dir delete: remove file: %w", err)
 		jsonhttp.InternalServerError(w, "dir deleting occur error")

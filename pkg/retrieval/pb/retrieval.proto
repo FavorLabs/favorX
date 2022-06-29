@@ -1,0 +1,22 @@
+
+
+syntax = "proto3";
+
+package retievalFavorx;
+
+option go_package = "pb";
+
+message Request {
+    bytes Addr = 1;
+}
+
+message Delivery {
+    bytes Data = 1;
+}
+
+message RequestChunk{
+    bytes TargetAddr = 1;
+    bytes RootAddr = 2;
+    bytes ChunkAddr = 3;
+    int64 Bit = 4;
+}

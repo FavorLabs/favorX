@@ -12,39 +12,40 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/FavorLabs/favorX/pkg/accounting"
+	"github.com/FavorLabs/favorX/pkg/addressbook"
 	"github.com/FavorLabs/favorX/pkg/api"
-	"github.com/gauss-project/aurorafs/pkg/accounting"
-	"github.com/gauss-project/aurorafs/pkg/addressbook"
+	"github.com/FavorLabs/favorX/pkg/auth"
+	"github.com/FavorLabs/favorX/pkg/chunkinfo"
+	"github.com/FavorLabs/favorX/pkg/crypto"
+	"github.com/FavorLabs/favorX/pkg/crypto/cert"
+	"github.com/FavorLabs/favorX/pkg/debugapi"
+	"github.com/FavorLabs/favorX/pkg/fileinfo"
+	"github.com/FavorLabs/favorX/pkg/hive2"
+	"github.com/FavorLabs/favorX/pkg/localstore"
+	"github.com/FavorLabs/favorX/pkg/multicast"
+	"github.com/FavorLabs/favorX/pkg/multicast/model"
+	"github.com/FavorLabs/favorX/pkg/netrelay"
+	"github.com/FavorLabs/favorX/pkg/netstore"
+	"github.com/FavorLabs/favorX/pkg/p2p/libp2p"
+	"github.com/FavorLabs/favorX/pkg/pinning"
+	"github.com/FavorLabs/favorX/pkg/retrieval"
+	"github.com/FavorLabs/favorX/pkg/routetab"
+	"github.com/FavorLabs/favorX/pkg/shed"
+	"github.com/FavorLabs/favorX/pkg/topology/kademlia"
+	"github.com/FavorLabs/favorX/pkg/traversal"
 	"github.com/gauss-project/aurorafs/pkg/aurora"
-	"github.com/gauss-project/aurorafs/pkg/auth"
 	"github.com/gauss-project/aurorafs/pkg/boson"
-	"github.com/gauss-project/aurorafs/pkg/chunkinfo"
-	"github.com/gauss-project/aurorafs/pkg/crypto"
-	"github.com/gauss-project/aurorafs/pkg/crypto/cert"
-	"github.com/gauss-project/aurorafs/pkg/debugapi"
-	"github.com/gauss-project/aurorafs/pkg/hive2"
-	"github.com/gauss-project/aurorafs/pkg/localstore"
 	"github.com/gauss-project/aurorafs/pkg/logging"
 	"github.com/gauss-project/aurorafs/pkg/metrics"
-	"github.com/gauss-project/aurorafs/pkg/multicast"
-	"github.com/gauss-project/aurorafs/pkg/multicast/model"
-	"github.com/gauss-project/aurorafs/pkg/netrelay"
-	"github.com/gauss-project/aurorafs/pkg/netstore"
 	"github.com/gauss-project/aurorafs/pkg/node"
-	"github.com/gauss-project/aurorafs/pkg/p2p/libp2p"
 	"github.com/gauss-project/aurorafs/pkg/pingpong"
-	"github.com/gauss-project/aurorafs/pkg/pinning"
 	"github.com/gauss-project/aurorafs/pkg/resolver/multiresolver"
-	"github.com/gauss-project/aurorafs/pkg/retrieval"
-	"github.com/gauss-project/aurorafs/pkg/routetab"
 	"github.com/gauss-project/aurorafs/pkg/rpc"
-	"github.com/gauss-project/aurorafs/pkg/shed"
 	"github.com/gauss-project/aurorafs/pkg/subscribe"
 	"github.com/gauss-project/aurorafs/pkg/topology/bootnode"
-	"github.com/gauss-project/aurorafs/pkg/topology/kademlia"
 	"github.com/gauss-project/aurorafs/pkg/topology/lightnode"
 	"github.com/gauss-project/aurorafs/pkg/tracing"
-	"github.com/gauss-project/aurorafs/pkg/traversal"
 	"github.com/gogf/gf/v2/util/gconv"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/sirupsen/logrus"
@@ -197,13 +198,13 @@ func NewNode(nodeMode aurora.Model, addr string, bosonAddress boson.Address, pub
 		b.debugAPIServer = debugAPIServer
 	}
 
-	stateStore, err := node.InitStateStore(logger, o.DataDir)
+	stateStore, err := InitStateStore(logger, o.DataDir)
 	if err != nil {
 		return nil, err
 	}
 	b.stateStoreCloser = stateStore
 
-	err = node.CheckOverlayWithStore(bosonAddress, stateStore)
+	err = CheckOverlayWithStore(bosonAddress, stateStore)
 	if err != nil {
 		return nil, err
 	}
@@ -343,9 +344,13 @@ func NewNode(nodeMode aurora.Model, addr string, bosonAddress boson.Address, pub
 		Capacity: o.CacheCapacity,
 		Driver:   o.DBDriver,
 	}
-	storer, err := localstore.New(path, bosonAddress.Bytes(), lo, logger)
+	storer, err := localstore.New(path, bosonAddress.Bytes(), stateStore, lo, logger)
 	if err != nil {
 		return nil, fmt.Errorf("localstore: %w", err)
+	}
+	err = storer.Init()
+	if err != nil {
+		return nil, err
 	}
 	b.localstoreCloser = storer
 
@@ -367,14 +372,12 @@ func NewNode(nodeMode aurora.Model, addr string, bosonAddress boson.Address, pub
 	)
 	b.resolverCloser = multiResolver
 
-	chunkInfo := chunkinfo.New(bosonAddress, p2ps, logger, traversalService, stateStore, ns, route, oracleChain, multiResolver, subPub)
-	if err := chunkInfo.InitChunkInfo(); err != nil {
-		return nil, fmt.Errorf("chunk info init: %w", err)
-	}
+	fileInfo := fileinfo.New(bosonAddress, storer, logger, multiResolver)
+	chunkInfo := chunkinfo.New(bosonAddress, p2ps, logger, storer, route, oracleChain, fileInfo, subPub)
+
 	if err = p2ps.AddProtocol(chunkInfo.Protocol()); err != nil {
 		return nil, fmt.Errorf("chunkInfo service: %w", err)
 	}
-	storer.SetChunkInfo(chunkInfo)
 	ns.SetChunkInfo(chunkInfo)
 	retrieve.Config(chunkInfo)
 
@@ -407,8 +410,8 @@ func NewNode(nodeMode aurora.Model, addr string, bosonAddress boson.Address, pub
 	var apiService api.Service
 	if o.APIAddr != "" {
 		// API server
-		apiService = api.New(ns, multiResolver, bosonAddress, chunkInfo, traversalService, pinningService,
-			authenticator, logger, tracer, apiInterface, commonChain, oracleChain, relay, group, kad, route,
+		apiService = api.New(ns, multiResolver, bosonAddress, chunkInfo, fileInfo, traversalService, pinningService,
+			authenticator, logger, kad, tracer, apiInterface, commonChain, oracleChain, relay, group, route,
 			api.Options{
 				CORSAllowedOrigins: o.CORSAllowedOrigins,
 				GatewayMode:        o.GatewayMode,
@@ -476,7 +479,7 @@ func NewNode(nodeMode aurora.Model, addr string, bosonAddress boson.Address, pub
 		// }
 
 		// inject dependencies and configure full debug api http path routes
-		debugAPIService.Configure(p2ps, pingPong, group, kad, lightNodes, bootNodes, storer, route, chunkInfo, retrieve)
+		debugAPIService.Configure(p2ps, pingPong, group, kad, lightNodes, bootNodes, storer, route, chunkInfo, fileInfo, retrieve)
 		if apiInterface != nil {
 			debugAPIService.MustRegisterTraffic(apiInterface)
 		}
@@ -502,18 +505,18 @@ func NewNode(nodeMode aurora.Model, addr string, bosonAddress boson.Address, pub
 		// HTTPModules: []string{"debug", "api"},
 		WSAddr:    o.WSAddr,
 		WSOrigins: o.CORSAllowedOrigins,
-		WSModules: []string{"group", "p2p", "chunkInfo", "traffic", "retrieval", "oracle"},
+		WSModules: []string{"group", "p2p", "chunkInfo", "retrieval", "oracle"},
 	})
 	if err != nil {
 		return nil, err
 	}
 	stack.RegisterAPIs([]rpc.API{
-		group.API(),        // group
-		kad.API(),          // p2p
-		chunkInfo.API(),    // chunkInfo
-		apiInterface.API(), // traffic
-		retrieve.API(),     // retrieval
-		oracleChain.API(),  // oracle
+		group.API(),     // group
+		kad.API(),       // p2p
+		chunkInfo.API(), // chunkInfo
+		// apiInterface.API(), // traffic
+		retrieve.API(),    // retrieval
+		oracleChain.API(), // oracle
 	})
 	if err = stack.Start(); err != nil {
 		return nil, err

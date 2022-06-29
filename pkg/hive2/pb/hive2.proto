@@ -1,0 +1,23 @@
+
+
+syntax = "proto3";
+
+package hiveFavorX;
+
+option go_package = "pb";
+
+message Peers {
+    repeated AuroraAddress peers = 1;
+}
+
+message AuroraAddress {
+    bytes Underlay = 1;
+    bytes Signature = 2;
+    bytes Overlay = 3;
+}
+
+message FindNodeReq {
+    bytes Target = 1;
+    repeated int32 Pos = 2;
+    int32 Limit = 3;
+}
