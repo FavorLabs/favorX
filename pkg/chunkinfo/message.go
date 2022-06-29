@@ -15,7 +15,7 @@ import (
 
 const (
 	protocolName            = "chunkinfo"
-	protocolVersion         = "3.0.0"
+	protocolVersion         = "4.0.0"
 	streamChunkInfoReqName  = "chunkinforeq"
 	streamChunkInfoRespName = "chunkinforesp"
 	totalRouteCount         = 3

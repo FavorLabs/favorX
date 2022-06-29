@@ -29,7 +29,7 @@ type requestSourceContextKey struct{}
 
 const (
 	protocolName    = "retrieval"
-	protocolVersion = "1.0.0"
+	protocolVersion = "2.0.0"
 	streamName      = "retrieval"
 )
 
