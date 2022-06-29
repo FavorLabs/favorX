@@ -46,6 +46,16 @@ type ChunkInfo struct {
 	queue map[string]chunkinfo.Pull
 }
 
+func (ci *ChunkInfo) ManifestView(ctx context.Context, nameOrHex, pathVar string, depth int) (*chunkinfo.ManifestNode, error) {
+	// TODO implement me
+	panic("implement me")
+}
+
+func (ci *ChunkInfo) GetManifest(rootCid, pathVar string, depth int) (maniFest *chunkinfo.ManifestNode) {
+	// TODO implement me
+	panic("implement me")
+}
+
 func New(route mock.MockRouteTable) *ChunkInfo {
 	chunkMap = make(map[string][]aco.Route)
 	return &ChunkInfo{

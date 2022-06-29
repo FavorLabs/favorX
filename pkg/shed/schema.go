@@ -19,7 +19,7 @@ package shed
 import (
 	"errors"
 
-	"github.com/FavorLabs/favorX/pkg/shed/driver"
+	"github.com/gauss-project/aurorafs/pkg/shed/driver"
 )
 
 var (

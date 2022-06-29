@@ -21,7 +21,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/FavorLabs/favorX/pkg/shed/driver"
+	"github.com/gauss-project/aurorafs/pkg/shed/driver"
 )
 
 // Uint64Field provides a way to have a simple counter in the database.

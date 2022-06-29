@@ -19,7 +19,7 @@ package shed
 import (
 	"testing"
 
-	"github.com/FavorLabs/favorX/pkg/shed/driver"
+	"github.com/gauss-project/aurorafs/pkg/shed/driver"
 )
 
 // TestStructField validates put and get operations

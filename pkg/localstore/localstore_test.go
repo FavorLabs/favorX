@@ -20,22 +20,24 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"github.com/FavorLabs/favorX/pkg/shed"
-	"github.com/FavorLabs/favorX/pkg/shed/driver"
-	"github.com/FavorLabs/favorX/pkg/shed/leveldb"
-	mockstate "github.com/FavorLabs/favorX/pkg/statestore/mock"
-	"github.com/FavorLabs/favorX/pkg/storage"
 	"io"
 	"math/rand"
+	"os"
 	"runtime"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/FavorLabs/favorX/pkg/shed"
+	mockstate "github.com/FavorLabs/favorX/pkg/statestore/mock"
+	"github.com/FavorLabs/favorX/pkg/storage"
 	chunktesting "github.com/FavorLabs/favorX/pkg/storage/testing"
 	"github.com/gauss-project/aurorafs/pkg/boson"
 	"github.com/gauss-project/aurorafs/pkg/logging"
+	"github.com/gauss-project/aurorafs/pkg/shed/driver"
 )
+
+var dbDriver = "wiredtiger"
 
 func init() {
 	// Some of the tests in localstore package rely on the same ordering of
@@ -156,13 +158,18 @@ func newTestDB(t testing.TB, o *Options) *DB {
 	if _, err := rand.Read(baseKey); err != nil {
 		t.Fatal(err)
 	}
-	if o == nil {
-		o = &Options{Driver: "leveldb", Capacity: 1000}
-	}
-	s := mockstate.NewStateStore()
-	shed.Register("leveldb", leveldb.Driver{})
 	logger := logging.New(io.Discard, 0)
-	db, err := New("", baseKey, s, o, logger)
+	var path string
+	switch dbDriver {
+	case "leveldb":
+	case "wiredtiger":
+		dir, err := os.MkdirTemp("", "localstore-test")
+		if err != nil {
+			t.Fatal(err)
+		}
+		path = dir
+	}
+	db, err := New(path, baseKey, mockstate.NewStateStore(), o, logger)
 	if err != nil {
 		t.Fatal(err)
 	}

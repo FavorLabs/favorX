@@ -21,6 +21,8 @@ import (
 	"testing"
 )
 
+var TestDriver = "wiredtiger"
+
 // TestNewDB constructs a new DB
 // and validates if the schema is initialized properly.
 func TestNewDB(t *testing.T) {

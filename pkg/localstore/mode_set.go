@@ -19,13 +19,13 @@ package localstore
 import (
 	"context"
 	"errors"
-	"github.com/FavorLabs/favorX/pkg/shed"
-	"github.com/FavorLabs/favorX/pkg/shed/driver"
-	"github.com/FavorLabs/favorX/pkg/storage"
 	"time"
 
 	"github.com/FavorLabs/favorX/pkg/sctx"
+	"github.com/FavorLabs/favorX/pkg/shed"
+	"github.com/FavorLabs/favorX/pkg/storage"
 	"github.com/gauss-project/aurorafs/pkg/boson"
+	"github.com/gauss-project/aurorafs/pkg/shed/driver"
 )
 
 // Set updates database indexes for

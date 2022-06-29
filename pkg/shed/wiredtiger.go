@@ -1,13 +1,11 @@
-//go:build wiredtiger
-// +build wiredtiger
+//go:build !leveldb
+// +build !leveldb
 
 package shed
 
-import "github.com/FavorLabs/favorX/pkg/shed/wiredtiger"
+import "github.com/gauss-project/aurorafs/pkg/shed/wiredtiger"
 
 const WIREDTIGER = "wiredtiger"
-
-var TestDriver = WIREDTIGER
 
 func init() {
 	Register(WIREDTIGER, wiredtiger.Driver{})
