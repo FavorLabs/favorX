@@ -1,0 +1,181 @@
+// Package storage provides implementation contracts and notions
+// used across storage-aware components in aurora.
+package storage
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"github.com/FavorLabs/favorX/pkg/shed/driver"
+	"io"
+
+	"github.com/gauss-project/aurorafs/pkg/boson"
+)
+
+var (
+	ErrNotFound        = errors.New("storage: not found")
+	ErrInvalidChunk    = errors.New("storage: invalid chunk")
+	ErrReferenceLength = errors.New("invalid reference length")
+)
+
+// ModeGet enumerates different Getter modes.
+type ModeGet int
+
+func (m ModeGet) String() string {
+	switch m {
+	case ModeGetRequest:
+		return "Request"
+	case ModeGetSync:
+		return "Sync"
+	case ModeGetLookup:
+		return "Lookup"
+	case ModeGetPin:
+		return "PinLookup"
+	case ModeGetChain:
+		return "Chain"
+	default:
+		return "Unknown"
+	}
+}
+
+// Getter modes.
+const (
+	// ModeGetRequest: when accessed for retrieval
+	ModeGetRequest ModeGet = iota
+	// ModeGetSync: when accessed for syncing or proof of custody request
+	ModeGetSync
+	// ModeGetLookup: when accessed to lookup a a chunk in feeds or other places
+	ModeGetLookup
+	// ModeGetPin: used when a pinned chunk is accessed
+	ModeGetPin
+	ModeGetChain
+)
+
+type ModeHas int
+
+// Hasser modes.
+const (
+	// ModeHasPin: when checked for pin files
+	ModeHasPin ModeHas = iota
+	// ModeHasChunk: when checked for chunk data
+	ModeHasChunk
+)
+
+// ModePut enumerates different Putter modes.
+type ModePut int
+
+func (m ModePut) String() string {
+	switch m {
+	case ModePutRequest:
+		return "Request"
+	case ModePutRequestPin:
+		return "RequestPin"
+	case ModePutUpload:
+		return "Upload"
+	case ModePutUploadPin:
+		return "UploadPin"
+	case ModePutChain:
+		return "Chain"
+	default:
+		return "Unknown"
+	}
+}
+
+// Putter modes.
+const (
+	// ModePutRequest: when a chunk is received as a result of retrieve request and delivery
+	ModePutRequest ModePut = iota
+	// ModePutUpload: when a chunk is created by local upload
+	ModePutUpload
+	// ModePutUploadPin: the same as ModePutUpload but also pin the chunk atomically with the put
+	ModePutUploadPin
+	// ModePutRequestPin: the same as ModePutRequest but also pin the chunk with the put
+	ModePutRequestPin
+
+	ModePutChain
+)
+
+// ModeSet enumerates different Setter modes.
+type ModeSet int
+
+func (m ModeSet) String() string {
+	switch m {
+	case ModeSetSync:
+		return "Sync"
+	case ModeSetRemove:
+		return "Remove"
+	case ModeSetPin:
+		return "ModeSetPin"
+	case ModeSetUnpin:
+		return "ModeSetUnpin"
+	default:
+		return "Unknown"
+	}
+}
+
+// Setter modes.
+const (
+	// ModeSetSync: when a push sync receipt is received for a chunk
+	ModeSetSync ModeSet = iota
+	// ModeSetRemove: when a chunk is removed
+	ModeSetRemove
+	// ModeSetPin: when a chunk is pinned during upload or separately
+	ModeSetPin
+	// ModeSetUnpin: when a chunk is unpinned using a command locally
+	ModeSetUnpin
+)
+
+// Descriptor holds information required for Pull syncing. This struct
+// is provided by subscribing to pull index.
+type Descriptor struct {
+	Address boson.Address
+	BinID   uint64
+}
+
+func (d *Descriptor) String() string {
+	if d == nil {
+		return ""
+	}
+	return fmt.Sprintf("%s bin id %v", d.Address, d.BinID)
+}
+
+type Storer interface {
+	Getter
+	Putter
+	GetMulti(ctx context.Context, mode ModeGet, addrs ...boson.Address) (ch []boson.Chunk, err error)
+	Hasser
+	Setter
+	io.Closer
+}
+
+type Putter interface {
+	Put(ctx context.Context, mode ModePut, chs ...boson.Chunk) (exist []bool, err error)
+}
+
+type Getter interface {
+	Get(ctx context.Context, mode ModeGet, addr boson.Address, index int64) (ch boson.Chunk, err error)
+}
+
+type Setter interface {
+	Set(ctx context.Context, mode ModeSet, addrs ...boson.Address) (err error)
+}
+
+type Hasser interface {
+	Has(ctx context.Context, hasMode ModeHas, addr boson.Address) (yes bool, err error)
+	HasMulti(ctx context.Context, hasMode ModeHas, addrs ...boson.Address) (yes []bool, err error)
+}
+
+// StateStorer defines methods required to get, set, delete values for different keys
+// and close the underlying resources.
+type StateStorer interface {
+	Get(key string, i interface{}) (err error)
+	Put(key string, i interface{}) (err error)
+	Delete(key string) (err error)
+	Iterate(prefix string, iterFunc StateIterFunc) (err error)
+	// DB returns the underlying DB storage.
+	DB() driver.BatchDB
+	io.Closer
+}
+
+// StateIterFunc is used when iterating through StateStorer key/value pairs
+type StateIterFunc func(key, value []byte) (stop bool, err error)

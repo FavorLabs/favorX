@@ -1,0 +1,31 @@
+
+
+syntax = "proto3";
+
+package chunkinfo;
+
+option go_package = "pb";
+
+message ChunkPyramidReq {
+  bytes RootCid = 1;
+  bytes target = 2;
+}
+
+message ChunkPyramidResp{
+  bytes Chunk = 1;
+  bytes Hash = 2;
+  bool Ok =3;
+}
+
+message ChunkInfoReq {
+  bytes RootCid = 1;
+  bytes target = 2;
+  bytes req = 3;
+}
+
+message ChunkInfoResp {
+  bytes RootCid = 1;
+  bytes target = 2;
+  bytes req = 3;
+  map<string, bytes> Presence = 4;
+}

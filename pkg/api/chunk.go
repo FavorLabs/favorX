@@ -7,12 +7,12 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/FavorLabs/favorX/pkg/sctx"
+	"github.com/FavorLabs/favorX/pkg/storage"
 	"github.com/gauss-project/aurorafs/pkg/boson"
 	"github.com/gauss-project/aurorafs/pkg/cac"
 	"github.com/gauss-project/aurorafs/pkg/jsonhttp"
 	"github.com/gauss-project/aurorafs/pkg/netstore"
-	"github.com/gauss-project/aurorafs/pkg/sctx"
-	"github.com/gauss-project/aurorafs/pkg/storage"
 	"github.com/gorilla/mux"
 )
 
@@ -89,7 +89,7 @@ func (s *server) chunkGetHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	chunk, err := s.storer.Get(ctx, storage.ModeGetRequest, address)
+	chunk, err := s.storer.Get(ctx, storage.ModeGetRequest, address, 0)
 	if err != nil {
 		if errors.Is(err, storage.ErrNotFound) {
 			s.logger.Tracef("chunk: chunk not found. addr %s", address)
