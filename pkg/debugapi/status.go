@@ -3,7 +3,7 @@ package debugapi
 import (
 	"net/http"
 
-	"github.com/gauss-project/aurorafs"
+	favor "github.com/FavorLabs/favorX"
 	"github.com/gauss-project/aurorafs/pkg/jsonhttp"
 )
 
@@ -18,7 +18,7 @@ type statusResponse struct {
 func (s *Service) statusHandler(w http.ResponseWriter, r *http.Request) {
 	jsonhttp.OK(w, statusResponse{
 		Status:       "ok",
-		Version:      aufs.Version,
+		Version:      favor.Version,
 		FullNode:     s.nodeOptions.NodeMode.IsFull(),
 		BootNodeMode: s.nodeOptions.NodeMode.IsBootNode(),
 		Auth:         s.restricted,

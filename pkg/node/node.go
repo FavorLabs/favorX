@@ -411,7 +411,7 @@ func NewNode(nodeMode aurora.Model, addr string, bosonAddress boson.Address, pub
 	if o.APIAddr != "" {
 		// API server
 		apiService = api.New(ns, multiResolver, bosonAddress, chunkInfo, fileInfo, traversalService, pinningService,
-			authenticator, logger, tracer, apiInterface, commonChain, oracleChain, relay, group,
+			authenticator, logger, kad, tracer, apiInterface, commonChain, oracleChain, relay, group, route,
 			api.Options{
 				CORSAllowedOrigins: o.CORSAllowedOrigins,
 				GatewayMode:        o.GatewayMode,
@@ -514,7 +514,7 @@ func NewNode(nodeMode aurora.Model, addr string, bosonAddress boson.Address, pub
 		group.API(),     // group
 		kad.API(),       // p2p
 		chunkInfo.API(), // chunkInfo
-		//apiInterface.API(), // traffic
+		// apiInterface.API(), // traffic
 		retrieve.API(),    // retrieval
 		oracleChain.API(), // oracle
 	})
