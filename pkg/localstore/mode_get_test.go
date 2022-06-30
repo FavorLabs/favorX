@@ -299,8 +299,46 @@ func TestGetChunks(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	chs, _ := db.getChunk(rootChunk.Address())
+	chs, _ := db.getChunk(rootChunk.Address(), 2)
 	if len(chs) != 3 {
 		t.Errorf("chs len %v, want 3", len(chs))
 	}
+}
+
+func TestChainChunks(t *testing.T) {
+	db := newTestDB(t, nil)
+
+	ch := generateTestRandomChunk()
+	ch1 := generateTestRandomChunk()
+
+	_, err := db.Put(context.Background(), storage.ModePutChain, ch)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = db.Put(context.Background(), storage.ModePutRequest, ch1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = db.Put(context.Background(), storage.ModePutChain, ch1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = db.Get(context.Background(), storage.ModeGetRequest, ch.Address(), 0)
+	if err == nil {
+		t.Error("ch is not nil")
+	}
+
+	ch, err = db.Get(context.Background(), storage.ModeGetChain, ch.Address(), 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ch, err = db.Get(context.Background(), storage.ModeGetRequest, ch1.Address(), 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ch, err = db.Get(context.Background(), storage.ModeGetChain, ch1.Address(), 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 }

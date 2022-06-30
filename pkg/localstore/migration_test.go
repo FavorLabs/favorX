@@ -17,7 +17,7 @@
 package localstore
 
 import (
-	"github.com/gauss-project/aurorafs/pkg/statestore/mock"
+	"github.com/FavorLabs/favorX/pkg/statestore/mock"
 	"io"
 	"math/rand"
 	"os"

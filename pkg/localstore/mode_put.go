@@ -181,8 +181,8 @@ func (db *DB) putUpload(batch driver.Batching, binIDs map[uint8]uint64, item she
 		return
 	}
 	if exists {
-		item, err = db.retrievalDataIndex.Get(item)
 		t := item.Type
+		item, err = db.retrievalDataIndex.Get(item)
 		if t != item.Type {
 			item.Type = 0
 		}
