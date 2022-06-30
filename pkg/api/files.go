@@ -13,7 +13,6 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/FavorLabs/favorX/pkg/file/joiner"
@@ -255,7 +254,11 @@ func (s *server) auroraDownloadHandler(w http.ResponseWriter, r *http.Request) {
 		jsonhttp.NotFound(w, nil)
 		return
 	}
+	chunks := 0
 	fn := func(nodeType int, path, prefix, hash []byte, metadata map[string]string) error {
+		if nodeType == 0 {
+			chunks++
+		}
 		return nil
 	}
 	err = m.IterateDirectories(ctx, []byte(""), 0, fn)
@@ -269,7 +272,7 @@ func (s *server) auroraDownloadHandler(w http.ResponseWriter, r *http.Request) {
 		if indexDocumentSuffixKey, ok := manifestMetadataLoad(ctx, m, manifest.RootPath, manifest.WebsiteIndexDocumentSuffixKey); ok {
 			pathVar = path.Join(pathVar, indexDocumentSuffixKey)
 			indexDocumentManifestEntry, err := m.Lookup(ctx, pathVar)
-			if err == nil {
+			if err == nil && chunks == 1 {
 
 				// index document exists
 				logger.Debugf("download: serving path: %s", pathVar)
@@ -344,6 +347,12 @@ func (s *server) auroraDownloadHandler(w http.ResponseWriter, r *http.Request) {
 	me = manifest.NewEntry(me.Reference(), me.Metadata(), me.Prefix(), 0)
 	prefix := me.Prefix()
 	if prefix != nil && len(prefix) > 0 {
+		err = s.fileInfo.AddFile(address)
+		if err != nil {
+			s.logger.Error(err.Error())
+			jsonhttp.BadRequest(w, "add file error")
+			return
+		}
 		p := make([]string, 0, len(prefix))
 		for _, f := range prefix {
 			p = append(p, string(f))
@@ -449,8 +458,6 @@ func (s *server) downloadHandler(w http.ResponseWriter, r *http.Request, rootCid
 
 type auroraListResponse struct {
 	RootCid   boson.Address          `json:"rootCid"`
-	Size      int                    `json:"size"`
-	FileSize  int                    `json:"fileSize"`
 	PinState  bool                   `json:"pinState"`
 	BitVector aurora.BitVectorApi    `json:"bitVector"`
 	Register  bool                   `json:"register"`
@@ -463,7 +470,6 @@ type auroraPageResponse struct {
 }
 
 func (s *server) auroraListHandler(w http.ResponseWriter, r *http.Request) {
-	var wg sync.WaitGroup
 	var reqs aurora.ApiBody
 	isBody := true
 	isPage := false
@@ -532,10 +538,6 @@ func (s *server) auroraListHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	//if r.URL.Query().Get("recursive") != "" {
-	//	depth = -1
-	//}
-
 	var filePage filestore.Page
 	var fileFilter []filestore.Filter
 	var fileSort filestore.Sort
@@ -571,7 +573,6 @@ func (s *server) auroraListHandler(w http.ResponseWriter, r *http.Request) {
 				B:   fileListInfo[i].Bv,
 			},
 			Register: fileListInfo[i].Registered,
-			FileSize: fileListInfo[i].Size,
 			Manifest: &fileinfo.ManifestNode{
 				Type:      fileListInfo[i].Type,
 				Hash:      fileListInfo[i].Hash,
@@ -582,55 +583,6 @@ func (s *server) auroraListHandler(w http.ResponseWriter, r *http.Request) {
 			},
 		})
 	}
-	wg.Add(len(responseList))
-	type ordHash struct {
-		ord  int
-		hash boson.Address
-	}
-	var l sync.Mutex
-	ch := make(chan ordHash, len(responseList))
-	getChainState := func(ctx context.Context, i int, rootCid boson.Address, workLoad chan struct{}) {
-		defer wg.Done()
-		defer func() {
-			<-workLoad
-		}()
-		if v, ok := s.auroraChainSate.Load(rootCid.String()); ok {
-			l.Lock()
-			responseList[i].Register = v.(bool)
-			l.Unlock()
-			return
-		}
-
-		b, err := s.oracleChain.GetRegisterState(r.Context(), rootCid, s.overlay)
-		if err != nil {
-			s.logger.Errorf("file list: GetRegisterState failed %v", err.Error())
-		}
-
-		if err == nil && b {
-			s.auroraChainSate.Store(rootCid.String(), true)
-			l.Lock()
-			responseList[i].Register = true
-			l.Unlock()
-		} else {
-			s.auroraChainSate.Store(rootCid.String(), false)
-		}
-	}
-
-	workLoad := make(chan struct{}, 30)
-	go func() {
-		for v := range ch {
-			workLoad <- struct{}{}
-			go getChainState(r.Context(), v.ord, v.hash, workLoad)
-		}
-	}()
-
-	for i, v := range responseList {
-		hashChain := ordHash{ord: i, hash: v.RootCid}
-		ch <- hashChain
-	}
-
-	wg.Wait()
-	close(ch)
 	if !isPage {
 		zeroAddress := boson.NewAddress([]byte{31: 0})
 		sort.Slice(responseList, func(i, j int) bool {
@@ -723,10 +675,6 @@ func (s *server) fileRegister(w http.ResponseWriter, r *http.Request) {
 		logger.Errorf("fileRegister failed: %v ", err)
 		jsonhttp.InternalServerError(w, fmt.Sprintf("fileRegister failed: %v ", err))
 		return
-	}
-	err = s.fileInfo.RegisterFile(address, true)
-	if err != nil {
-		logger.Errorf("fileRegister update info:%v", err)
 	}
 
 	trans := TransactionResponse{
