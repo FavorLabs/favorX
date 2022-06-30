@@ -12,6 +12,7 @@ import (
 	"sync"
 	"time"
 
+	au "github.com/FavorLabs/favorX"
 	"github.com/FavorLabs/favorX/pkg/addressbook"
 	beecrypto "github.com/FavorLabs/favorX/pkg/crypto"
 	"github.com/FavorLabs/favorX/pkg/p2p/libp2p/internal/blocklist"
@@ -20,7 +21,6 @@ import (
 	"github.com/FavorLabs/favorX/pkg/p2p/libp2p/internal/reacher"
 	"github.com/FavorLabs/favorX/pkg/routetab"
 	"github.com/FavorLabs/favorX/pkg/storage"
-	au "github.com/gauss-project/aurorafs"
 	"github.com/gauss-project/aurorafs/pkg/aurora"
 	"github.com/gauss-project/aurorafs/pkg/boson"
 	"github.com/gauss-project/aurorafs/pkg/logging"
