@@ -96,10 +96,6 @@ func (fs *fileStore) Update(file FileView) error {
 }
 
 func (fs *fileStore) Put(file FileView) error {
-	exists := fs.Has(file.RootCid)
-	if exists {
-		return nil
-	}
 	fs.files[file.RootCid.String()] = file
 	if err := fs.stateStore.Put(keyPrefix+"-"+file.RootCid.String(), file); err != nil {
 		return err

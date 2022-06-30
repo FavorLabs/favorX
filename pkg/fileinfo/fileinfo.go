@@ -106,7 +106,6 @@ func (f *FileInfo) AddFile(rootCid boson.Address) error {
 		}
 		manifest.Type = maniFestNode.Type
 		manifest.Hash = maniFestNode.Hash
-		manifest.Name = maniFestNode.Name
 		manifest.Size = fileSize
 		manifest.Extension = maniFestNode.Extension
 		manifest.MimeType = maniFestNode.MimeType

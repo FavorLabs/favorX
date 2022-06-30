@@ -255,7 +255,11 @@ func (s *server) auroraDownloadHandler(w http.ResponseWriter, r *http.Request) {
 		jsonhttp.NotFound(w, nil)
 		return
 	}
+	chunks := 0
 	fn := func(nodeType int, path, prefix, hash []byte, metadata map[string]string) error {
+		if nodeType == 0 {
+			chunks++
+		}
 		return nil
 	}
 	err = m.IterateDirectories(ctx, []byte(""), 0, fn)
@@ -269,7 +273,7 @@ func (s *server) auroraDownloadHandler(w http.ResponseWriter, r *http.Request) {
 		if indexDocumentSuffixKey, ok := manifestMetadataLoad(ctx, m, manifest.RootPath, manifest.WebsiteIndexDocumentSuffixKey); ok {
 			pathVar = path.Join(pathVar, indexDocumentSuffixKey)
 			indexDocumentManifestEntry, err := m.Lookup(ctx, pathVar)
-			if err == nil {
+			if err == nil && chunks == 1 {
 
 				// index document exists
 				logger.Debugf("download: serving path: %s", pathVar)
@@ -449,8 +453,6 @@ func (s *server) downloadHandler(w http.ResponseWriter, r *http.Request, rootCid
 
 type auroraListResponse struct {
 	RootCid   boson.Address          `json:"rootCid"`
-	Size      int                    `json:"size"`
-	FileSize  int                    `json:"fileSize"`
 	PinState  bool                   `json:"pinState"`
 	BitVector aurora.BitVectorApi    `json:"bitVector"`
 	Register  bool                   `json:"register"`
@@ -571,7 +573,6 @@ func (s *server) auroraListHandler(w http.ResponseWriter, r *http.Request) {
 				B:   fileListInfo[i].Bv,
 			},
 			Register: fileListInfo[i].Registered,
-			FileSize: fileListInfo[i].Size,
 			Manifest: &fileinfo.ManifestNode{
 				Type:      fileListInfo[i].Type,
 				Hash:      fileListInfo[i].Hash,
