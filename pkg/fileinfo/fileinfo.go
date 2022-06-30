@@ -120,9 +120,7 @@ func (f *FileInfo) AddFile(rootCid boson.Address) error {
 		Extension:  manifest.Extension,
 		MimeType:   manifest.MimeType,
 	}
-	if f.localStore.HasFile(rootCid) {
 
-	}
 	err = f.localStore.PutFile(fileInfo)
 	if err != nil {
 		return fmt.Errorf("fileStore put new fileinfo %s:%s", rootCid.String(), err.Error())

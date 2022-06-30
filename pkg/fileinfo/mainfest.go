@@ -130,9 +130,7 @@ func (f *FileInfo) ManifestView(ctx context.Context, nameOrHex string, pathVar s
 			pathVar += "/"
 		}
 
-		if err = m.IterateDirectories(ctx, []byte(pathVar), depth, fn); err != nil {
-			return nil, ErrServerError
-		}
+		_ = m.IterateDirectories(ctx, []byte(pathVar), depth, fn)
 	} else {
 		e, err := m.Lookup(ctx, pathVar)
 		if err != nil {

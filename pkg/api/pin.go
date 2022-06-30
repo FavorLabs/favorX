@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"errors"
 	"net/http"
 
@@ -33,7 +34,7 @@ func (s *server) pinRootHash(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	switch err = s.pinning.CreatePin(r.Context(), ref, true); {
+	switch err = s.pinning.CreatePin(context.TODO(), ref, true); {
 	case errors.Is(err, storage.ErrNotFound):
 		jsonhttp.NotFound(w, nil)
 		return
@@ -73,7 +74,7 @@ func (s *server) unpinRootHash(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	switch err := s.pinning.DeletePin(r.Context(), ref); {
+	switch err := s.pinning.DeletePin(context.TODO(), ref); {
 	case errors.Is(err, pinning.ErrTraversal):
 		s.logger.Debugf("unpin root hash: deletion of pin for %q failed: %v", ref, err)
 		jsonhttp.InternalServerError(w, nil)

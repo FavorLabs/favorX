@@ -111,7 +111,6 @@ type server struct {
 
 	wsWg            sync.WaitGroup // wait for all websockets to close on exit
 	quit            chan struct{}
-	auroraChainSate sync.Map
 	tranProcess     sync.Map
 	transactionChan chan TransactionResponse
 	multicast       multicast.GroupInterface
@@ -381,21 +380,15 @@ func (s *server) transactionReceiptUpdate() {
 			return receipt.Status, nil
 		}
 
-		tranUpdate := func(trans TransactionResponse) error {
-			s.auroraChainSate.Store(trans.Address.String(), trans.Register)
-			return nil
-		}
-
 		for trans := range s.transactionChan {
 			status, err := tranReceipt(trans.Address, trans.Hash)
 			if err != nil {
 				continue
 			}
 			if status == 1 {
-				err := tranUpdate(trans)
+				err = s.fileInfo.RegisterFile(trans.Address, true)
 				if err != nil {
-					s.logger.Errorf("api:tranUpdate - %v ", err.Error())
-					continue
+					s.logger.Errorf("fileRegister update info:%v", err)
 				}
 			}
 		}
