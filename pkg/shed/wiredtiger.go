@@ -3,7 +3,7 @@
 
 package shed
 
-import "github.com/gauss-project/aurorafs/pkg/shed/wiredtiger"
+import "github.com/FavorLabs/favorX/pkg/shed/wiredtiger"
 
 const WIREDTIGER = "wiredtiger"
 
