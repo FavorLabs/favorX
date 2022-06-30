@@ -4,7 +4,7 @@ package wiredtiger
 #cgo !windows CFLAGS: -I/usr/local/include
 #cgo !windows LDFLAGS: -L/usr/local/lib -lwiredtiger
 #cgo windows CFLAGS: -Ic:/wiredtiger/include
-#cgo windows LDFLAGS: -Lc:/wiredtiger -lwiredtiger
+#cgo windows LDFLAGS: -Lc:/wiredtiger/lib -lwiredtiger
 
 #include <errno.h>
 #include <stdlib.h>
