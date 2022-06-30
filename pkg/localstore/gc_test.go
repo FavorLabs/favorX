@@ -36,9 +36,9 @@ import (
 	"github.com/FavorLabs/favorX/pkg/file/loadsave"
 	"github.com/FavorLabs/favorX/pkg/file/pipeline"
 	"github.com/FavorLabs/favorX/pkg/file/pipeline/builder"
+	"github.com/FavorLabs/favorX/pkg/manifest"
 	"github.com/gauss-project/aurorafs/pkg/boson"
 	"github.com/gauss-project/aurorafs/pkg/logging"
-	"github.com/gauss-project/aurorafs/pkg/manifest"
 )
 
 // TestDB_collectGarbageWorker tests garbage collection runs
@@ -695,7 +695,7 @@ func addRandomFile(t *testing.T, count int, db *DB, pin bool) (reference boson.A
 		manifest.EntryMetadataFilenameKey:    fr.String(),
 		manifest.EntryMetadataContentTypeKey: "text/plain; charset=utf-8",
 	}
-	err = m.Add(ctx, fr.String(), manifest.NewEntry(fr, fileMtdt))
+	err = m.Add(ctx, fr.String(), manifest.NewEntry(fr, fileMtdt, nil, 0))
 	if err != nil {
 		t.Fatal(err)
 	}
