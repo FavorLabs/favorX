@@ -14,6 +14,7 @@ import (
 	"time"
 
 	favor "github.com/FavorLabs/favorX"
+	"github.com/FavorLabs/favorX/pkg/keystore/p2pkey"
 	"github.com/FavorLabs/favorX/pkg/node"
 	"github.com/gauss-project/aurorafs/pkg/aurora"
 	"github.com/gauss-project/aurorafs/pkg/boson"
@@ -24,6 +25,7 @@ import (
 	"github.com/gauss-project/aurorafs/pkg/logging"
 	"github.com/gauss-project/aurorafs/pkg/resolver/multiresolver"
 	"github.com/kardianos/service"
+	crypto2 "github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/spf13/cobra"
 )
 
@@ -236,16 +238,18 @@ type signerConfig struct {
 	signer           crypto.Signer
 	address          boson.Address
 	publicKey        *ecdsa.PublicKey
-	libp2pPrivateKey *ecdsa.PrivateKey
+	libp2pPrivateKey crypto2.PrivKey
 }
 
 func (c *command) configureSigner(cmd *cobra.Command, logger logging.Logger) (config *signerConfig, err error) {
 	var kt keystore.Service
+	var path string
 	if c.config.GetString(optionNameDataDir) == "" {
 		kt = memkeystore.New()
 		logger.Warning("data directory not provided, keys are not persisted")
 	} else {
-		kt = filekeystore.New(filepath.Join(c.config.GetString(optionNameDataDir), "keys"))
+		path = filepath.Join(c.config.GetString(optionNameDataDir), "keys")
+		kt = filekeystore.New(path)
 	}
 
 	var signer crypto.Signer
@@ -302,7 +306,7 @@ func (c *command) configureSigner(cmd *cobra.Command, logger logging.Logger) (co
 
 	logger.Infof("boson public key %x", crypto.EncodeSecp256k1PublicKey(publicKey))
 
-	libp2pPrivateKey, created, err := kt.Key("libp2p", password)
+	libp2pPrivateKey, created, err := p2pkey.New(path).Key("libp2p", password)
 	if err != nil {
 		return nil, fmt.Errorf("libp2p key: %w", err)
 	}

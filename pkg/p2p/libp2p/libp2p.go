@@ -3,7 +3,6 @@ package libp2p
 import (
 	"bytes"
 	"context"
-	"crypto/ecdsa"
 	"errors"
 	"fmt"
 	"net"
@@ -97,7 +96,7 @@ type Service struct {
 }
 
 type Options struct {
-	PrivateKey     *ecdsa.PrivateKey
+	PrivateKey     crypto.PrivKey
 	NATAddr        string
 	EnableWS       bool
 	EnableQUIC     bool
@@ -176,7 +175,7 @@ func New(ctx context.Context, signer beecrypto.Signer, networkID uint64, overlay
 
 	if o.PrivateKey != nil {
 		opts = append(opts,
-			libp2p.Identity((*crypto.Secp256k1PrivateKey)(o.PrivateKey)),
+			libp2p.Identity(o.PrivateKey),
 		)
 	}
 
