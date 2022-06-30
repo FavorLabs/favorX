@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/FavorLabs/favorX/pkg/keystore/p2pkey"
 	"github.com/FavorLabs/favorX/pkg/node"
 	aufs "github.com/gauss-project/aurorafs"
 	"github.com/gauss-project/aurorafs/pkg/aurora"
@@ -16,6 +17,7 @@ import (
 	"github.com/gauss-project/aurorafs/pkg/crypto"
 	filekeystore "github.com/gauss-project/aurorafs/pkg/keystore/file"
 	"github.com/gauss-project/aurorafs/pkg/logging"
+	crypto2 "github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/sirupsen/logrus"
 )
 
@@ -29,7 +31,7 @@ type signerConfig struct {
 	signer           crypto.Signer
 	address          boson.Address
 	publicKey        *ecdsa.PublicKey
-	libp2pPrivateKey *ecdsa.PrivateKey
+	libp2pPrivateKey crypto2.PrivKey
 }
 
 func Version() string {
@@ -104,7 +106,7 @@ func configureSigner(path, password string, networkID uint64, logger logging.Log
 
 	logger.Infof("boson public key %x", crypto.EncodeSecp256k1PublicKey(publicKey))
 
-	libp2pPrivateKey, created, err := keystore.Key("libp2p", password)
+	libp2pPrivateKey, created, err := p2pkey.New(path).Key("libp2p", password)
 	if err != nil {
 		return nil, fmt.Errorf("libp2p key: %w", err)
 	}
