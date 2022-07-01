@@ -695,7 +695,7 @@ func addRandomFile(t *testing.T, count int, db *DB, pin bool) (reference boson.A
 		manifest.EntryMetadataFilenameKey:    fr.String(),
 		manifest.EntryMetadataContentTypeKey: "text/plain; charset=utf-8",
 	}
-	err = m.Add(ctx, fr.String(), manifest.NewEntry(fr, fileMtdt, nil, 0))
+	err = m.Add(ctx, fr.String(), manifest.NewEntry(fr, fileMtdt, 0))
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -75,7 +75,7 @@ func (m *simpleManifest) Lookup(_ context.Context, path string) (Entry, error) {
 		return nil, fmt.Errorf("parse boson address: %w", err)
 	}
 
-	entry := NewEntry(address, n.Metadata(), nil, 0)
+	entry := NewEntry(address, n.Metadata(), 0)
 
 	return entry, nil
 }
