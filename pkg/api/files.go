@@ -656,18 +656,17 @@ func (s *server) fileRegister(w http.ResponseWriter, r *http.Request) {
 	}
 
 	hash, err := s.oracleChain.RegisterCidAndNode(r.Context(), address, s.overlay)
+	if err != nil {
+		logger.Errorf("fileRegister failed: %v ", err)
+		jsonhttp.InternalServerError(w, fmt.Sprintf("fileRegister failed: %v ", err))
+		return
+	}
 	trans := TransactionResponse{
 		Hash:     hash,
 		Address:  address,
 		Register: true,
 	}
 	s.transactionChan <- trans
-	if err != nil {
-		logger.Errorf("fileRegister failed: %v ", err)
-		jsonhttp.InternalServerError(w, fmt.Sprintf("fileRegister failed: %v ", err))
-		return
-	}
-
 	jsonhttp.OK(w,
 		auroraRegisterResponse{
 			Hash: hash,
