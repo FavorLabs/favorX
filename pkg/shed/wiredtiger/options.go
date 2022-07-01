@@ -285,7 +285,7 @@ type DebugMode struct {
 }
 
 func (c *Configuration) SetDebugMode(m DebugMode) driver.Option {
-	o := driver.NewOption(optionDebugMode, DebugMode{}, false)
+	o := driver.NewOption(optionDebugMode, DebugMode{}, true)
 	if m.CheckpointRetention < 0 || m.CheckpointRetention > 1024 {
 		m.CheckpointRetention = 0
 	}
@@ -299,7 +299,7 @@ type Eviction struct {
 }
 
 func (c *Configuration) SetEviction(e Eviction) driver.Option {
-	o := driver.NewOption(optionEviction, Eviction{}, false)
+	o := driver.NewOption(optionEviction, Eviction{}, true)
 	if e.ThreadsMax < 1 || e.ThreadsMax > 20 {
 		e.ThreadsMax = 8
 	}
@@ -320,7 +320,7 @@ type FileManger struct {
 }
 
 func (c *Configuration) SetFileManager(f FileManger) driver.Option {
-	o := driver.NewOption(optionFileManager, FileManger{}, false)
+	o := driver.NewOption(optionFileManager, FileManger{}, true)
 	if f.CloseHandleMinimum < 0 {
 		f.CloseHandleMinimum = 250
 	}
@@ -352,7 +352,7 @@ const (
 )
 
 func (c *Configuration) SetLog(l Log) driver.Option {
-	o := driver.NewOption(optionLog, Log{}, false)
+	o := driver.NewOption(optionLog, Log{}, true)
 	if strings.HasPrefix(l.Path, string(os.PathSeparator)) {
 		panic("log path should be a relative path under database home")
 	}
@@ -378,7 +378,7 @@ const (
 )
 
 func (c *Configuration) SetStatistics(s []StatisticsPolicy) driver.Option {
-	o := driver.NewOption(optionStatistics, []StatisticsPolicy{StatisticsAll}, false)
+	o := driver.NewOption(optionStatistics, []StatisticsPolicy{StatisticsAll}, true)
 	o.Set(s)
 	return o
 }
@@ -388,7 +388,7 @@ type StatisticsLog struct {
 }
 
 func (c *Configuration) SetStatisticsLog(l StatisticsLog) driver.Option {
-	o := driver.NewOption(optionStatisticsLog, StatisticsLog{}, false)
+	o := driver.NewOption(optionStatisticsLog, StatisticsLog{}, true)
 	if l.Wait < 0 || l.Wait > 100000 {
 		l.Wait = 0
 	}
@@ -397,7 +397,7 @@ func (c *Configuration) SetStatisticsLog(l StatisticsLog) driver.Option {
 }
 
 func (c *Configuration) SetExtensions(s string) driver.Option {
-	o := driver.NewOption(optionExtensions, "", false)
+	o := driver.NewOption(optionExtensions, "[]", true)
 	if len(s) != 0 {
 		o.Set(s)
 	}
@@ -405,7 +405,7 @@ func (c *Configuration) SetExtensions(s string) driver.Option {
 }
 
 func (c *Configuration) SetVerbose(s string) driver.Option {
-	o := driver.NewOption(optionVerbose, "", false)
+	o := driver.NewOption(optionVerbose, "[]", true)
 	if len(s) != 0 {
 		o.Set(s)
 	}

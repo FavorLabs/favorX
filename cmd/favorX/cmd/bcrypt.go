@@ -32,7 +32,7 @@ OK: password hash matches provided plain text`,
 
 			if isCheck {
 				if len(args) != 2 {
-					fmt.Println("Usage:", "bee bcrypt", "--check", "your-plain-text-password", "'password-hash'")
+					fmt.Println("Usage:", "favorX bcrypt", "--check", "your-plain-text-password", "'password-hash'")
 					return nil
 				}
 
