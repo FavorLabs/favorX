@@ -168,7 +168,7 @@ func storeDir(
 			manifest.EntryMetadataFilenameKey:    fileInfo.Name,
 		}
 		// add file entry to dir manifest
-		err = dirManifest.Add(ctx, fileInfo.Path, manifest.NewEntry(fileReference, fileMetadata, nil, 0))
+		err = dirManifest.Add(ctx, fileInfo.Path, manifest.NewEntry(fileReference, fileMetadata, 0))
 		if err != nil {
 			return boson.ZeroAddress, fmt.Errorf("add to manifest: %w", err)
 		}
@@ -205,7 +205,7 @@ func storeDir(
 			}
 			metadata[manifest.WebsiteErrorDocumentPathKey] = realErrorFilename
 		}
-		rootManifestEntry := manifest.NewEntry(boson.ZeroAddress, metadata, nil, 0)
+		rootManifestEntry := manifest.NewEntry(boson.ZeroAddress, metadata, 0)
 		err = dirManifest.Add(ctx, manifest.RootPath, rootManifestEntry)
 		if err != nil {
 			return boson.ZeroAddress, fmt.Errorf("add to manifest: %w", err)

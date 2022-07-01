@@ -29,6 +29,7 @@ type FileView struct {
 	Type       string
 	Name       string
 	Extension  string
+	Default    string
 	MimeType   string
 }
 

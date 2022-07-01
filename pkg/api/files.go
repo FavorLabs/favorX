@@ -138,7 +138,7 @@ func (s *server) fileUploadHandler(w http.ResponseWriter, r *http.Request) {
 		rootMtdt[manifest.EntryMetadataDirnameKey] = realDirName
 	}
 
-	err = m.Add(ctx, manifest.RootPath, manifest.NewEntry(boson.ZeroAddress, rootMtdt, nil, 0))
+	err = m.Add(ctx, manifest.RootPath, manifest.NewEntry(boson.ZeroAddress, rootMtdt, 0))
 	if err != nil {
 		logger.Debugf("upload file: adding metadata to manifest, file %q: %v", fileName, err)
 		logger.Errorf("upload file: adding metadata to manifest, file %q", fileName)
@@ -151,7 +151,7 @@ func (s *server) fileUploadHandler(w http.ResponseWriter, r *http.Request) {
 		manifest.EntryMetadataFilenameKey:    realIndexFilename,
 	}
 
-	err = m.Add(ctx, fileName, manifest.NewEntry(fr, fileMtdt, nil, 0))
+	err = m.Add(ctx, fileName, manifest.NewEntry(fr, fileMtdt, 0))
 	if err != nil {
 		logger.Debugf("upload file: adding file to manifest, file %q: %v", fileName, err)
 		logger.Errorf("upload file: adding file to manifest, file %q", fileName)
@@ -344,23 +344,7 @@ func (s *server) auroraDownloadHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	me = manifest.NewEntry(me.Reference(), me.Metadata(), me.Prefix(), 0)
-	prefix := me.Prefix()
-	if prefix != nil && len(prefix) > 0 {
-		err = s.fileInfo.AddFile(address)
-		if err != nil {
-			s.logger.Error(err.Error())
-			jsonhttp.BadRequest(w, "add file error")
-			return
-		}
-		p := make([]string, 0, len(prefix))
-		for _, f := range prefix {
-			p = append(p, string(f))
-		}
-		sort.Strings(p)
-		jsonhttp.Created(w, dirs{Dirs: p})
-		return
-	}
+	me = manifest.NewEntry(me.Reference(), me.Metadata(), 0)
 
 	if !s.chunkInfo.Discover(r.Context(), nil, me.Reference()) {
 		logger.Debugf("download: chunkInfo init %s: %v", nameOrHex, err)
@@ -579,6 +563,7 @@ func (s *server) auroraListHandler(w http.ResponseWriter, r *http.Request) {
 				Name:      fileListInfo[i].Name,
 				Size:      uint64(fileListInfo[i].Size),
 				Extension: fileListInfo[i].Extension,
+				Default:   fileListInfo[i].Default,
 				MimeType:  fileListInfo[i].MimeType,
 			},
 		})
@@ -676,14 +661,12 @@ func (s *server) fileRegister(w http.ResponseWriter, r *http.Request) {
 		jsonhttp.InternalServerError(w, fmt.Sprintf("fileRegister failed: %v ", err))
 		return
 	}
-
 	trans := TransactionResponse{
 		Hash:     hash,
 		Address:  address,
 		Register: true,
 	}
 	s.transactionChan <- trans
-
 	jsonhttp.OK(w,
 		auroraRegisterResponse{
 			Hash: hash,

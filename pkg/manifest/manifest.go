@@ -95,7 +95,6 @@ type Entry interface {
 	// Metadata returns the metadata of the file.
 	Metadata() map[string]string
 	Index() int64
-	Prefix() [][]byte
 }
 
 // NewDefaultManifest creates a new manifest with default type.
@@ -154,12 +153,11 @@ type manifestEntry struct {
 }
 
 // NewEntry creates a new manifest entry.
-func NewEntry(reference boson.Address, metadata map[string]string, prefix [][]byte, index int64) Entry {
+func NewEntry(reference boson.Address, metadata map[string]string, index int64) Entry {
 	return &manifestEntry{
 		reference: reference,
 		metadata:  metadata,
 		index:     index,
-		prefix:    prefix,
 	}
 }
 
@@ -173,8 +171,4 @@ func (e *manifestEntry) Metadata() map[string]string {
 
 func (e *manifestEntry) Index() int64 {
 	return e.index
-}
-
-func (e *manifestEntry) Prefix() [][]byte {
-	return e.prefix
 }

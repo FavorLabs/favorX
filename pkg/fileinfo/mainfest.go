@@ -23,6 +23,7 @@ type ManifestNode struct {
 	Name      string                   `json:"name,omitempty"`
 	Size      uint64                   `json:"size,omitempty"`
 	Extension string                   `json:"ext,omitempty"`
+	Default   string                   `json:"default,omitempty"`
 	MimeType  string                   `json:"mime,omitempty"`
 	Nodes     map[string]*ManifestNode `json:"sub,omitempty"`
 }
@@ -172,7 +173,7 @@ func (f *FileInfo) ManifestView(ctx context.Context, nameOrHex string, pathVar s
 			logger.Debugf("manifest view: invalid index %s/%s: %v", address, indexDocumentSuffixKey, err)
 			logger.Error("manifest view: invalid index")
 		}
-
+		rootNode.Default = indexDocumentSuffixKey
 		indexNode, ok := rootNode.Nodes[indexDocumentSuffixKey]
 		if ok && indexNode.Type == manifest.File.String() {
 			indexNode.Type = manifest.IndexItem.String()
