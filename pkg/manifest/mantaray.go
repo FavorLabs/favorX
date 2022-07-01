@@ -86,9 +86,11 @@ func (m *mantarayManifest) Lookup(ctx context.Context, path string) (Entry, erro
 		}
 		return nil, err
 	}
+	if !node.IsValueType() {
+		return nil, ErrNotFound
+	}
 	address := boson.NewAddress(node.Entry())
-
-	entry := NewEntry(address, node.Metadata(), node.Prefix(), node.Index())
+	entry := NewEntry(address, node.Metadata(), node.Index())
 
 	return entry, nil
 }
