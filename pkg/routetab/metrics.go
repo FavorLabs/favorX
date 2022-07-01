@@ -24,43 +24,36 @@ func newMetrics() metrics {
 
 	return metrics{
 		FindRouteReqSentCount: prometheus.NewCounter(prometheus.CounterOpts{
-			Namespace: m.Namespace,
 			Subsystem: subsystem,
 			Name:      "route_req_sent_count",
 			Help:      "Number of route requests sent.",
 		}),
 		FindRouteRespSentCount: prometheus.NewCounter(prometheus.CounterOpts{
-			Namespace: m.Namespace,
 			Subsystem: subsystem,
 			Name:      "route_resp_sent_count",
 			Help:      "Number of route responses sent.",
 		}),
 		FindRouteReqReceivedCount: prometheus.NewCounter(prometheus.CounterOpts{
-			Namespace: m.Namespace,
 			Subsystem: subsystem,
 			Name:      "route_req_received_count",
 			Help:      "Number of route requests received.",
 		}),
 		FindRouteRespReceivedCount: prometheus.NewCounter(prometheus.CounterOpts{
-			Namespace: m.Namespace,
 			Subsystem: subsystem,
 			Name:      "route_resp_received_count",
 			Help:      "Number of route responses received.",
 		}),
 		TotalErrors: prometheus.NewCounter(prometheus.CounterOpts{
-			Namespace: m.Namespace,
 			Subsystem: subsystem,
 			Name:      "route_errors_total_count",
 			Help:      "Number of route errors total.",
 		}),
 		TotalOutboundConnections: prometheus.NewCounter(prometheus.CounterOpts{
-			Namespace: m.Namespace,
 			Subsystem: subsystem,
 			Name:      "total_outbound_connection",
 			Help:      "Total outbound connection made.",
 		}),
 		TotalOutboundConnectionFailedAttempts: prometheus.NewCounter(prometheus.CounterOpts{
-			Namespace: m.Namespace,
 			Subsystem: subsystem,
 			Name:      "total_outbound_connection_failed_attempts",
 			Help:      "Total outbound connection failed attempts made.",
