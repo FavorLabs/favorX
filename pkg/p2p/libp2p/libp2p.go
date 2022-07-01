@@ -12,7 +12,7 @@ import (
 	"sync"
 	"time"
 
-	au "github.com/FavorLabs/favorX"
+	fx "github.com/FavorLabs/favorX"
 	"github.com/FavorLabs/favorX/pkg/addressbook"
 	beecrypto "github.com/FavorLabs/favorX/pkg/crypto"
 	"github.com/FavorLabs/favorX/pkg/p2p/libp2p/internal/blocklist"
@@ -1330,7 +1330,7 @@ func appendSpace(s string) string {
 
 // userAgent returns a User Agent string passed to the libp2p host to identify peer node.
 func userAgent() string {
-	return fmt.Sprintf("aurora/%s %s %s/%s", au.Version, runtime.Version(), runtime.GOOS, runtime.GOARCH)
+	return fmt.Sprintf("favorX/%s %s %s/%s", fx.Version, runtime.Version(), runtime.GOOS, runtime.GOARCH)
 }
 
 func newConnMetricNotify(m metrics) *connectionNotifier {
