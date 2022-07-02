@@ -22,6 +22,7 @@ type Interface interface {
 	Init() error
 	Put(chunkType ChunkType, reference boson.Address, providers []Provider) error
 	Get(chunkType ChunkType, reference boson.Address) ([]Consumer, error)
+	GetByOverlay(chunkType ChunkType, reference, overlay boson.Address) (Consumer, error)
 	GetAll(chunkType ChunkType) (map[string][]Consumer, error)
 	Remove(chunkType ChunkType, reference, overlay boson.Address) error
 	RemoveAll(chunkType ChunkType, reference boson.Address) error
@@ -145,7 +146,43 @@ func (cs *chunkStore) Get(chunkType ChunkType, reference boson.Address) ([]Consu
 		return nil, TypeError
 	}
 }
-
+func (cs *chunkStore) GetByOverlay(chunkType ChunkType, reference, overlay boson.Address) (Consumer, error) {
+	switch chunkType {
+	case DISCOVER:
+		v, ok := cs.getDiscoverByOverlay(reference, overlay)
+		if !ok {
+			return Consumer{}, nil
+		}
+		return Consumer{
+			Overlay: overlay,
+			Len:     v.bit.Len(),
+			B:       v.bit.Bytes(),
+			Time:    v.time,
+		}, nil
+	case SOURCE:
+		v, ok := cs.getChunkSourceByOverlay(reference, overlay)
+		if !ok {
+			return Consumer{}, nil
+		}
+		return Consumer{
+			Overlay: overlay,
+			Len:     v.Len(),
+			B:       v.Bytes(),
+		}, nil
+	case SERVICE:
+		v, ok := cs.getChunkServiceByOverlay(reference, overlay)
+		if !ok {
+			return Consumer{}, nil
+		}
+		return Consumer{
+			Overlay: overlay,
+			Len:     v.Len(),
+			B:       v.Bytes(),
+		}, nil
+	default:
+		return Consumer{}, TypeError
+	}
+}
 func (cs *chunkStore) GetAll(chunkType ChunkType) (map[string][]Consumer, error) {
 	switch chunkType {
 	case DISCOVER:

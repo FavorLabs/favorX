@@ -134,14 +134,12 @@ func (ci *ChunkInfo) OnRetrieved(ctx context.Context, rootCid boson.Address, ind
 	length := sctx.GetRootLen(ctx)
 	if length == 0 {
 		length = index + 1
-	} else {
-
 	}
 	err := ci.updateService(rootCid, index, length, ci.addr)
 	if err != nil {
 		return err
 	}
-	err = ci.updateSource(rootCid, index, length, overlay)
+	err = ci.updateSource(rootCid, index, index+1, overlay)
 	if err != nil {
 		return err
 	}

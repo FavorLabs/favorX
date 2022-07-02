@@ -34,6 +34,13 @@ func (cs *chunkStore) getChunkSource(rootCid boson.Address) map[string]*bitvecto
 	return cs.source[r]
 }
 
+func (cs *chunkStore) getChunkSourceByOverlay(rootCid, overlay boson.Address) (*bitvector.BitVector, bool) {
+	r := rootCid.String()
+	o := overlay.String()
+	v, ok := cs.source[r][o]
+	return v, ok
+}
+
 func (cs *chunkStore) getAllChunkSource() map[string]map[string]*bitvector.BitVector {
 	return cs.source
 }

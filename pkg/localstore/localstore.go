@@ -566,6 +566,12 @@ func (db *DB) GetChunk(chunkType chunkstore.ChunkType, reference boson.Address) 
 	return db.chunkstore.Get(chunkType, reference)
 }
 
+func (db *DB) GetChunkByOverlay(chunkType chunkstore.ChunkType, reference, overlay boson.Address) (chunkstore.Consumer, error) {
+	db.fileMu.RLock()
+	defer db.fileMu.RUnlock()
+	return db.chunkstore.GetByOverlay(chunkType, reference, overlay)
+}
+
 func (db *DB) GetAllChunk(ChunkType chunkstore.ChunkType) (map[string][]chunkstore.Consumer, error) {
 	db.fileMu.RLock()
 	defer db.fileMu.RUnlock()
