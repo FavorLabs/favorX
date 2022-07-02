@@ -2,6 +2,8 @@ package filestore
 
 import (
 	"fmt"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 	"reflect"
 	"strconv"
 	"strings"
@@ -32,7 +34,9 @@ func filterFile(list map[string]FileView, filter []Filter) (filterList []FileVie
 		defer func() {
 			recover()
 		}()
-		value := reflect.ValueOf(file).FieldByName(filter.Key).Interface()
+		c := cases.Title(language.Und, cases.NoLower)
+		key := c.String(filter.Key)
+		value := reflect.ValueOf(file).FieldByName(key).Interface()
 		v, _ := filterCalculate(value, filter)
 		return v
 	}
