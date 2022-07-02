@@ -21,6 +21,7 @@ type FileView struct {
 }
 
 type ChunkInfoSource struct {
+	Len         int                     `json:"len"`
 	ChunkSource []aurora.ChunkSourceApi `json:"chunkSource"`
 }
 
@@ -208,6 +209,8 @@ func (f *FileInfo) GetChunkInfoSource(rootCid boson.Address) ChunkInfoSource {
 		}
 		res.ChunkSource = append(res.ChunkSource, source)
 	}
+	c, err := f.localStore.GetChunkByOverlay(chunkstore.SERVICE, rootCid, f.addr)
+	res.Len = c.Len
 	return res
 }
 

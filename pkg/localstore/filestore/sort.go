@@ -3,6 +3,8 @@ package filestore
 import (
 	"fmt"
 	"github.com/gauss-project/aurorafs/pkg/boson"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 	"reflect"
 	"sort"
 	"strconv"
@@ -79,6 +81,8 @@ func sortFile(list []FileView, sortName, sortType string) (sortList []FileView) 
 	}
 
 	if sortName != "" && sortType != "" {
+		c := cases.Title(language.Und, cases.NoLower)
+		sortName = c.String(sortName)
 		sort.Slice(list, func(i, j int) bool {
 			defer func() {
 				recover()
