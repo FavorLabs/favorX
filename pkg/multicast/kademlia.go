@@ -63,8 +63,8 @@ type Service struct {
 	close          chan struct{}
 	sessionStream  sync.Map // key= sessionID, value= *WsStream
 
-	//logSig    []chan LogContent
-	//logSigMtx sync.Mutex
+	// logSig    []chan LogContent
+	// logSigMtx sync.Mutex
 
 	subPub subscribe.SubPub
 }
@@ -840,7 +840,7 @@ func (s *Service) GetOptimumPeer(groupName string) (peer boson.Address, err erro
 
 func (s *Service) getStream(ctx context.Context, dest boson.Address, streamName string) (stream p2p.Stream, err error) {
 	if !s.route.IsNeighbor(dest) {
-		stream, err = s.stream.NewRelayStream(ctx, dest, nil, protocolName, protocolVersion, streamName, false)
+		stream, err = s.stream.NewConnChainRelayStream(ctx, dest, nil, protocolName, protocolVersion, streamName)
 	} else {
 		stream, err = s.stream.NewStream(ctx, dest, nil, protocolName, protocolVersion, streamName)
 	}
