@@ -19,6 +19,7 @@ package localstore
 import (
 	"bytes"
 	"context"
+	"encoding/binary"
 	"errors"
 	"time"
 
@@ -183,8 +184,11 @@ func (db *DB) putUpload(batch driver.Batching, binIDs map[uint8]uint64, item she
 	if exists {
 		t := item.Type
 		item, err = db.retrievalDataIndex.Get(item)
-		if t != item.Type {
-			item.Type = 0
+		b := make([]byte, 8)
+		binary.LittleEndian.PutUint64(b, item.Type)
+		if b[0]&(0x1<<uint((t-1)%8)) == 0 {
+			b[0] ^= 0x1 << uint8((t-1)%8)
+			item.Type = binary.LittleEndian.Uint64(b)
 		}
 		item.Counter++
 		if err != nil {

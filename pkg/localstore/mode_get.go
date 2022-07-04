@@ -62,6 +62,8 @@ func (db *DB) get(mode storage.ModeGet, addr, rootAddr boson.Address) (out shed.
 	if err != nil {
 		return out, err
 	}
+	b := make([]byte, 8)
+	binary.LittleEndian.PutUint64(b, out.Type)
 	switch mode {
 	// update the access timestamp and gc index
 	case storage.ModeGetRequest:
@@ -70,7 +72,7 @@ func (db *DB) get(mode storage.ModeGet, addr, rootAddr boson.Address) (out shed.
 		} else {
 			db.updateGCItems(out)
 		}
-		if out.Type != 1 && out.Type != 0 {
+		if b[0]&(0x1<<uint(0%8)) == 0 {
 			return out, storage.ErrNotFound
 		}
 
@@ -81,7 +83,7 @@ func (db *DB) get(mode storage.ModeGet, addr, rootAddr boson.Address) (out shed.
 		}
 		return pinnedItem, nil
 	case storage.ModeGetChain:
-		if out.Type != 2 && out.Type != 0 {
+		if b[0]&(0x1<<uint(1%8)) == 0 {
 			return out, storage.ErrNotFound
 		}
 	// no updates to indexes
