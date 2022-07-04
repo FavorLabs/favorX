@@ -92,6 +92,9 @@ func (s *Service) newRouter() *mux.Router {
 	handle("/peers", jsonhttp.MethodHandler{
 		"GET": http.HandlerFunc(s.peersHandler),
 	})
+	handle("/peers/all", jsonhttp.MethodHandler{
+		"GET": http.HandlerFunc(s.peersAllHandler),
+	})
 	handle("/peers/{address}", jsonhttp.MethodHandler{
 		"DELETE": http.HandlerFunc(s.peerDisconnectHandler),
 	})

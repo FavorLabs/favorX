@@ -2,6 +2,7 @@ package debugapi
 
 import (
 	"errors"
+	"net"
 	"net/http"
 	"time"
 
@@ -11,6 +12,7 @@ import (
 	"github.com/gauss-project/aurorafs/pkg/topology/model"
 	"github.com/gorilla/mux"
 	"github.com/multiformats/go-multiaddr"
+	manet "github.com/multiformats/go-multiaddr/net"
 )
 
 type peerConnectResponse struct {
@@ -188,4 +190,44 @@ func (s *Service) peerRemoveBlockingHandler(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	jsonhttp.OK(w, nil)
+}
+
+func (s *Service) peersAllHandler(w http.ResponseWriter, r *http.Request) {
+	type Out struct {
+		Overlay string `json:"overlay"`
+		IPV4    string `json:"ipv4"`
+		IPV6    string `json:"ipv6"`
+	}
+	list := []Out{}
+
+	err := s.addressBook.IterateOverlays(func(v boson.Address) (bool, error) {
+		addr, err := s.addressBook.Get(v)
+		if err != nil {
+			return false, err
+		}
+		if manet.IsPrivateAddr(addr.Underlay) {
+			return false, err
+		}
+		lo := Out{Overlay: addr.Overlay.String()}
+		multiaddr.ForEach(addr.Underlay, func(c multiaddr.Component) bool {
+			switch c.Protocol().Code {
+			case multiaddr.P_IP6ZONE:
+				return true
+			case multiaddr.P_IP4:
+				ip := net.IP(c.RawValue())
+				lo.IPV4 = ip.String()
+			case multiaddr.P_IP6:
+				ip := net.IP(c.RawValue())
+				lo.IPV6 = ip.String()
+			}
+			return false
+		})
+		list = append(list, lo)
+		return false, nil
+	})
+	if err != nil {
+		s.logger.Errorf("debug api: get all peers %s", err.Error())
+	}
+
+	jsonhttp.OK(w, list)
 }
