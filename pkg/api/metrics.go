@@ -24,13 +24,11 @@ func newMetrics() metrics {
 
 	return metrics{
 		RequestCount: prometheus.NewCounter(prometheus.CounterOpts{
-			Namespace: m.Namespace,
 			Subsystem: subsystem,
 			Name:      "request_count",
 			Help:      "Number of API requests.",
 		}),
 		ResponseDuration: prometheus.NewHistogram(prometheus.HistogramOpts{
-			Namespace: m.Namespace,
 			Subsystem: subsystem,
 			Name:      "response_duration_seconds",
 			Help:      "Histogram of API response durations.",
@@ -38,7 +36,6 @@ func newMetrics() metrics {
 		}),
 		ResponseCodeCounts: prometheus.NewCounterVec(
 			prometheus.CounterOpts{
-				Namespace: m.Namespace,
 				Subsystem: subsystem,
 				Name:      "response_code_count",
 				Help:      "Response count grouped by status code",

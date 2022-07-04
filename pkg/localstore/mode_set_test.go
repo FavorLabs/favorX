@@ -19,9 +19,10 @@ package localstore
 import (
 	"context"
 	"errors"
-	"github.com/FavorLabs/favorX/pkg/shed/driver"
-	"github.com/FavorLabs/favorX/pkg/storage"
 	"testing"
+
+	"github.com/FavorLabs/favorX/pkg/storage"
+	"github.com/gauss-project/aurorafs/pkg/shed/driver"
 )
 
 // TestModeSetRemove validates ModeSetRemove index values on the provided DB.

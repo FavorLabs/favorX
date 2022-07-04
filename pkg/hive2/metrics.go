@@ -18,31 +18,26 @@ func newMetrics() metrics {
 
 	return metrics{
 		DoFindNode: prometheus.NewCounter(prometheus.CounterOpts{
-			Namespace: m.Namespace,
 			Subsystem: subsystem,
 			Name:      "do_find_node_count",
 			Help:      "Number of peers do find node",
 		}),
 		DoFindNodePeers: prometheus.NewCounter(prometheus.CounterOpts{
-			Namespace: m.Namespace,
 			Subsystem: subsystem,
 			Name:      "do_find_node_peers_count",
 			Help:      "Number of peers received in peer messages.",
 		}),
 		OnFindNode: prometheus.NewCounter(prometheus.CounterOpts{
-			Namespace: m.Namespace,
 			Subsystem: subsystem,
 			Name:      "on_find_node_count",
 			Help:      "Number of peer messages received.",
 		}),
 		OnFindNodePeers: prometheus.NewCounter(prometheus.CounterOpts{
-			Namespace: m.Namespace,
 			Subsystem: subsystem,
 			Name:      "on_find_node_peers_count",
 			Help:      "Number of peers to be sent.",
 		}),
 		UnreachablePeers: prometheus.NewCounter(prometheus.CounterOpts{
-			Namespace: m.Namespace,
 			Subsystem: subsystem,
 			Name:      "unreachable_peers_count",
 			Help:      "Number of peers that are unreachable.",

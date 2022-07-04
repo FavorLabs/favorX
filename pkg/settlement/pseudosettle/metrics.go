@@ -18,13 +18,11 @@ func newMetrics() metrics {
 
 	return metrics{
 		TotalReceivedPseudoSettlements: prometheus.NewCounter(prometheus.CounterOpts{
-			Namespace: m.Namespace,
 			Subsystem: subsystem,
 			Name:      "total_received_pseudosettlements",
 			Help:      "Amount of pseudotokens received from peers (income of the node)",
 		}),
 		TotalSentPseudoSettlements: prometheus.NewCounter(prometheus.CounterOpts{
-			Namespace: m.Namespace,
 			Subsystem: subsystem,
 			Name:      "total_sent_pseudosettlements",
 			Help:      "Amount of pseudotokens sent to peers (costs paid by the node)",
