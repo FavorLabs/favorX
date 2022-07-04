@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"math"
 	"net/http"
 	"strings"
 	"sync"
@@ -38,15 +37,14 @@ import (
 )
 
 const (
-	AuroraPinHeader            = "Aurora-Pin"
-	AuroraTagHeader            = "Aurora-Tag"
-	AuroraEncryptHeader        = "Aurora-Encrypt"
-	AuroraIndexDocumentHeader  = "Aurora-Index-Document"
-	AuroraErrorDocumentHeader  = "Aurora-Error-Document"
-	AuroraFeedIndexHeader      = "Aurora-Feed-Index"
-	AuroraFeedIndexNextHeader  = "Aurora-Feed-Index-Next"
-	AuroraCollectionHeader     = "Aurora-Collection"
-	AuroraCollectionNameHeader = "Aurora-Collection-Name"
+	AuroraPinHeader            = "Pin"
+	AuroraEncryptHeader        = "Encrypt"
+	AuroraIndexDocumentHeader  = "Index-Document"
+	AuroraErrorDocumentHeader  = "Error-Document"
+	AuroraCollectionHeader     = "Collection"
+	AuroraCollectionNameHeader = "Collection-Name"
+	// TargetsRecoveryHeader defines the Header for Recovery targets in Global Pinning
+	TargetsRecoveryHeader = "recovery-targets"
 )
 
 // The size of buffer used for prefetching content with Langos.
@@ -71,7 +69,7 @@ const (
 )
 
 var (
-	errInvalidNameOrAddress = errors.New("invalid name or aurora address")
+	errInvalidNameOrAddress = errors.New("invalid name or file address")
 	errNoResolver           = errors.New("no resolver connected")
 	invalidRequest          = errors.New("could not validate request")
 	invalidContentType      = errors.New("invalid content-type")
@@ -135,11 +133,6 @@ type TransactionResponse struct {
 	Address  boson.Address
 	Register bool
 }
-
-const (
-	// TargetsRecoveryHeader defines the Header for Recovery targets in Global Pinning
-	TargetsRecoveryHeader = "aurora-recovery-targets"
-)
 
 // New will create a and initialize a new API service.
 func New(storer storage.Storer, resolver resolver.Interface, addr boson.Address, chunkInfo chunkinfo.Interface, fileInfo fileinfo.Interface,
@@ -471,33 +464,3 @@ func requestPipelineFactory(ctx context.Context, s storage.Putter, r *http.Reque
 		return builder.NewPipelineBuilder(ctx, s, mode, encrypt)
 	}
 }
-
-// calculateNumberOfChunks calculates the number of chunks in an arbitrary
-// content length.
-func calculateNumberOfChunks(contentLength int64, isEncrypted bool) int64 {
-	if contentLength <= boson.ChunkSize {
-		return 1
-	}
-	branchingFactor := boson.Branches
-	if isEncrypted {
-		branchingFactor = boson.EncryptedBranches
-	}
-
-	dataChunks := math.Ceil(float64(contentLength) / float64(boson.ChunkSize))
-	totalChunks := dataChunks
-	intermediate := dataChunks / float64(branchingFactor)
-
-	for intermediate > 1 {
-		totalChunks += math.Ceil(intermediate)
-		intermediate = intermediate / float64(branchingFactor)
-	}
-
-	return int64(totalChunks) + 1
-}
-
-// func requestCalculateNumberOfChunks(r *http.Request) int64 {
-//	if !strings.Contains(r.Header.Get(contentTypeHeader), "multipart") && r.ContentLength > 0 {
-//		return calculateNumberOfChunks(r.ContentLength, requestEncrypt(r))
-//	}
-//	return 0
-// }

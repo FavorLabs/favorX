@@ -21,37 +21,31 @@ func newMetrics() metrics {
 
 	return metrics{
 		SynRx: prometheus.NewCounter(prometheus.CounterOpts{
-			Namespace: m.Namespace,
 			Subsystem: subsystem,
 			Name:      "syn_rx",
 			Help:      "The number of syn messages that were successfully read.",
 		}),
 		SynRxFailed: prometheus.NewCounter(prometheus.CounterOpts{
-			Namespace: m.Namespace,
 			Subsystem: subsystem,
 			Name:      "syn_rx_failed",
 			Help:      "The number of syn messages that were unsuccessfully read.",
 		}),
 		SynAckTx: prometheus.NewCounter(prometheus.CounterOpts{
-			Namespace: m.Namespace,
 			Subsystem: subsystem,
 			Name:      "syn_ack_tx",
 			Help:      "The number of syn-ack messages that were successfully written.",
 		}),
 		SynAckTxFailed: prometheus.NewCounter(prometheus.CounterOpts{
-			Namespace: m.Namespace,
 			Subsystem: subsystem,
 			Name:      "syn_ack_tx_failed",
 			Help:      "The number of syn-ack messages that were unsuccessfully written.",
 		}),
 		AckRx: prometheus.NewCounter(prometheus.CounterOpts{
-			Namespace: m.Namespace,
 			Subsystem: subsystem,
 			Name:      "ack_rx",
 			Help:      "The number of ack messages that were successfully read.",
 		}),
 		AckRxFailed: prometheus.NewCounter(prometheus.CounterOpts{
-			Namespace: m.Namespace,
 			Subsystem: subsystem,
 			Name:      "ack_rx_failed",
 			Help:      "The number of ack messages that were unsuccessfully read.",

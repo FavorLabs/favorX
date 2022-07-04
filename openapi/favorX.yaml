@@ -210,10 +210,10 @@ paths:
     post:
       summary: "Upload file or a collection of files"
       description: "In order to upload a collection, user can send a multipart request with all the files populated in the form data with appropriate headers.\n\n
-              User can also upload a tar file along with the aurora-collection header. This will upload the tar file after extracting the entire directory structure.\n\n
-              If the aurora-collection header is absent, all requests (including tar files) are considered as single file uploads.\n\n
-              A multipart request is treated as a collection regardless of whether the aurora-collection header is present. This means in order to serve single files
-              uploaded as a multipart request, the aurora-index-document header should be used with the name of the file."
+              User can also upload a tar file along with the collection header. This will upload the tar file after extracting the entire directory structure.\n\n
+              If the collection header is absent, all requests (including tar files) are considered as single file uploads.\n\n
+              A multipart request is treated as a collection regardless of whether the collection header is present. This means in order to serve single files
+              uploaded as a multipart request, the index-document header should be used with the name of the file."
       tags:
         - File
         - Collection

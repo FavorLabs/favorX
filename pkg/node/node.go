@@ -37,7 +37,6 @@ import (
 	"github.com/gauss-project/aurorafs/pkg/aurora"
 	"github.com/gauss-project/aurorafs/pkg/boson"
 	"github.com/gauss-project/aurorafs/pkg/logging"
-	"github.com/gauss-project/aurorafs/pkg/metrics"
 	"github.com/gauss-project/aurorafs/pkg/node"
 	"github.com/gauss-project/aurorafs/pkg/pingpong"
 	"github.com/gauss-project/aurorafs/pkg/resolver/multiresolver"
@@ -457,12 +456,8 @@ func NewNode(nodeMode aurora.Model, addr string, bosonAddress boson.Address, pub
 	if debugAPIService != nil {
 		// register metrics from components
 		debugAPIService.MustRegisterMetrics(p2ps.Metrics()...)
-		debugAPIService.MustRegisterMetrics(pingPong.Metrics()...)
-		// debugAPIService.MustRegisterMetrics(acc.Metrics()...)
 		debugAPIService.MustRegisterMetrics(storer.Metrics()...)
 		debugAPIService.MustRegisterMetrics(kad.Metrics()...)
-		debugAPIService.MustRegisterMetrics(lightNodes.Metrics()...)
-		debugAPIService.MustRegisterMetrics(bootNodes.Metrics()...)
 		debugAPIService.MustRegisterMetrics(hiveObj.Metrics()...)
 		debugAPIService.MustRegisterMetrics(chunkInfo.Metrics()...)
 		debugAPIService.MustRegisterMetrics(route.Metrics()...)
@@ -471,13 +466,6 @@ func NewNode(nodeMode aurora.Model, addr string, bosonAddress boson.Address, pub
 		if apiService != nil {
 			debugAPIService.MustRegisterMetrics(apiService.Metrics()...)
 		}
-		if l, ok := logger.(metrics.Collector); ok {
-			debugAPIService.MustRegisterMetrics(l.Metrics()...)
-		}
-
-		// if l, ok := settlement.(metrics.Collector); ok {
-		//	debugAPIService.MustRegisterMetrics(l.Metrics()...)
-		// }
 
 		// inject dependencies and configure full debug api http path routes
 		debugAPIService.Configure(p2ps, pingPong, group, kad, lightNodes, bootNodes, storer, route, chunkInfo, fileInfo, retrieve)

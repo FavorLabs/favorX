@@ -1,8 +1,7 @@
 package debugapi
 
 import (
-	"github.com/gauss-project/aurorafs"
-	"github.com/gauss-project/aurorafs/pkg/metrics"
+	favor "github.com/FavorLabs/favorX"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
 )
@@ -13,15 +12,15 @@ func newMetricsRegistry() (r *prometheus.Registry) {
 	// register standard metrics
 	r.MustRegister(
 		collectors.NewProcessCollector(collectors.ProcessCollectorOpts{
-			Namespace: metrics.Namespace,
+			Namespace: "system",
 		}),
 		collectors.NewGoCollector(),
 		prometheus.NewGauge(prometheus.GaugeOpts{
-			Namespace: metrics.Namespace,
+			Namespace: "system",
 			Name:      "info",
-			Help:      "favorX information.",
+			Help:      "file system information.",
 			ConstLabels: prometheus.Labels{
-				"version": aufs.Version,
+				"version": favor.Version,
 			},
 		}),
 	)

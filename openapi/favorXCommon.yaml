@@ -620,7 +620,7 @@ components:
 
     AuroraPinParameter:
       in: header
-      name: aurora-pin
+      name: pin
       schema:
         type: boolean
       required: false
@@ -628,7 +628,7 @@ components:
 
     AuroraEncryptParameter:
       in: header
-      name: aurora-encrypt
+      name: encrypt
       schema:
         type: boolean
       required: false
@@ -643,7 +643,7 @@ components:
 
     AuroraIndexDocumentParameter:
       in: header
-      name: aurora-index-document
+      name: index-document
       schema:
         type: string
         example: index.html
@@ -652,7 +652,7 @@ components:
 
     AuroraErrorDocumentParameter:
       in: header
-      name: aurora-error-document
+      name: error-document
       schema:
         type: string
         example: error.html
@@ -661,7 +661,7 @@ components:
 
     AuroraCollectionParameter:
       in: header
-      name: aurora-collection
+      name: collection
       schema:
         type: boolean
       required: false
