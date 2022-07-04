@@ -106,9 +106,6 @@ paths:
       responses:
         "201":
           description: Ok
-          #          headers:
-          #            "Aurora-tag":
-          #              $ref: "favorXCommon.yaml#/components/headers/AuroraTag"
           content:
             application/json:
               schema:
