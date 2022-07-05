@@ -99,9 +99,10 @@ func (cs *chunkStore) putInitDiscover(rootCid, overlay boson.Address, b []byte, 
 	cs.discover[r] = v
 }
 
-func (cs *chunkStore) getDiscover(rootCid boson.Address) map[string]*discoverBitVector {
+func (cs *chunkStore) getDiscover(rootCid boson.Address) (map[string]*discoverBitVector, bool) {
 	r := rootCid.String()
-	return cs.discover[r]
+	v, ok := cs.discover[r]
+	return v, ok
 }
 
 func (cs *chunkStore) getDiscoverByOverlay(rootCid, overlay boson.Address) (*discoverBitVector, bool) {

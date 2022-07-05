@@ -109,7 +109,10 @@ func (cs *chunkStore) Put(chunkType ChunkType, reference boson.Address, provider
 func (cs *chunkStore) Get(chunkType ChunkType, reference boson.Address) ([]Consumer, error) {
 	switch chunkType {
 	case DISCOVER:
-		d := cs.getDiscover(reference)
+		d, ok := cs.getDiscover(reference)
+		if !ok {
+			return nil, storage.ErrNotFound
+		}
 		p := make([]Consumer, 0, len(d))
 		for k, v := range d {
 			p = append(p, Consumer{
@@ -121,7 +124,10 @@ func (cs *chunkStore) Get(chunkType ChunkType, reference boson.Address) ([]Consu
 		}
 		return p, nil
 	case SOURCE:
-		d := cs.getChunkSource(reference)
+		d, ok := cs.getChunkSource(reference)
+		if !ok {
+			return nil, storage.ErrNotFound
+		}
 		p := make([]Consumer, 0, len(d))
 		for k, v := range d {
 			p = append(p, Consumer{
@@ -132,7 +138,10 @@ func (cs *chunkStore) Get(chunkType ChunkType, reference boson.Address) ([]Consu
 		}
 		return p, nil
 	case SERVICE:
-		d := cs.getChunkService(reference)
+		d, ok := cs.getChunkService(reference)
+		if !ok {
+			return nil, storage.ErrNotFound
+		}
 		p := make([]Consumer, 0, len(d))
 		for k, v := range d {
 			p = append(p, Consumer{

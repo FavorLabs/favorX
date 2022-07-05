@@ -30,9 +30,10 @@ func (cs *chunkStore) initService() error {
 	return nil
 }
 
-func (cs *chunkStore) getChunkService(rootCid boson.Address) map[string]*bitvector.BitVector {
+func (cs *chunkStore) getChunkService(rootCid boson.Address) (map[string]*bitvector.BitVector, bool) {
 	r := rootCid.String()
-	return cs.service[r]
+	v, ok := cs.service[r]
+	return v, ok
 }
 func (cs *chunkStore) getChunkServiceByOverlay(rootCid, overlay boson.Address) (*bitvector.BitVector, bool) {
 	r := rootCid.String()

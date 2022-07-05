@@ -29,9 +29,10 @@ func (cs *chunkStore) initSource() error {
 	}
 	return nil
 }
-func (cs *chunkStore) getChunkSource(rootCid boson.Address) map[string]*bitvector.BitVector {
+func (cs *chunkStore) getChunkSource(rootCid boson.Address) (map[string]*bitvector.BitVector, bool) {
 	r := rootCid.String()
-	return cs.source[r]
+	v, ok := cs.source[r]
+	return v, ok
 }
 
 func (cs *chunkStore) getChunkSourceByOverlay(rootCid, overlay boson.Address) (*bitvector.BitVector, bool) {
