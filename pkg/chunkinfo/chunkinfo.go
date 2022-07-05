@@ -29,6 +29,8 @@ type Interface interface {
 	OnTransferred(ctx context.Context, rootCid boson.Address, bit int64, overlay boson.Address) error
 
 	OnFileUpload(ctx context.Context, rootCid boson.Address, bitLen int64) error
+
+	CancelFindChunkInfo(rootCid boson.Address)
 }
 
 type ChunkInfo struct {
@@ -159,6 +161,11 @@ func (ci *ChunkInfo) OnFileUpload(ctx context.Context, rootCid boson.Address, le
 		}
 	}
 	return nil
+}
+
+func (ci *ChunkInfo) CancelFindChunkInfo(rootCid boson.Address) {
+	ci.queues.Delete(rootCid.String())
+	ci.pendingFinder.cancelPendingFinder(rootCid)
 }
 
 func (ci *ChunkInfo) SubscribeDownloadProgress(notifier *rpc.Notifier, sub *rpc.Subscription, rootCids []boson.Address) {
