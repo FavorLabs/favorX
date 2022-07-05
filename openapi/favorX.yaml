@@ -128,7 +128,7 @@ paths:
           schema:
             $ref: "favorXCommon.yaml#/components/schemas/BosonReference"
           required: true
-          description: Aurora address reference to content
+          description: Address reference to content
       responses:
         "200":
           description: Retrieved content specified by reference

@@ -29,7 +29,7 @@ type ManifestNode struct {
 }
 
 var (
-	ErrInvalidNameOrAddress = errors.New("invalid name or aurora address")
+	ErrInvalidNameOrAddress = errors.New("invalid name or address")
 	ErrNoResolver           = errors.New("no resolver connected")
 	ErrNotFound             = errors.New("manifest: not found")
 	ErrServerError          = errors.New("manifest: ServerError")
@@ -203,7 +203,7 @@ func (f *FileInfo) resolveNameOrAddress(str string) (boson.Address, error) {
 	// Try and parse the name as a boson address.
 	addr, err := boson.ParseHexAddress(str)
 	if err == nil {
-		log.Tracef("name resolve: valid aurora address %q", str)
+		log.Tracef("name resolve: valid address %q", str)
 		return addr, nil
 	}
 
@@ -213,7 +213,7 @@ func (f *FileInfo) resolveNameOrAddress(str string) (boson.Address, error) {
 	}
 
 	// Try and resolve the name using the provided resolver.
-	log.Debugf("name resolve: attempting to resolve %s to aurora address", str)
+	log.Debugf("name resolve: attempting to resolve %s to address", str)
 	addr, err = f.resolver.Resolve(str)
 	if err == nil {
 		log.Tracef("name resolve: resolved name %s to %s", str, addr)
