@@ -368,6 +368,7 @@ func (s *server) auroraDeleteHandler(w http.ResponseWriter, r *http.Request) {
 	r = r.WithContext(sctx.SetRootHash(r.Context(), hash))
 
 	err = s.fileInfo.DeleteFile(hash)
+	s.chunkInfo.CancelFindChunkInfo(hash)
 	if err != nil {
 		s.logger.Errorf("dir delete: remove file: %w", err)
 		jsonhttp.InternalServerError(w, "dir deleting occur error")
