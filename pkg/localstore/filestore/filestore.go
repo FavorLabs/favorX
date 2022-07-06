@@ -30,6 +30,7 @@ type FileView struct {
 	Name          string
 	Extension     string
 	Default       string
+	ErrDefault    string
 	MimeType      string
 	ReferenceLink string
 }

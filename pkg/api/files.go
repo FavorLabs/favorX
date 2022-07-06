@@ -47,7 +47,7 @@ func (s *server) auroraUploadHandler(w http.ResponseWriter, r *http.Request) {
 		jsonhttp.BadRequest(w, invalidContentType)
 		return
 	}
-	isDir := r.Header.Get(AuroraCollectionHeader)
+	isDir := r.Header.Get(CollectionHeader)
 	if strings.ToLower(isDir) == StringTrue || mediaType == multiPartFormData {
 		s.dirUploadHandler(w, r)
 		return
@@ -79,7 +79,7 @@ func (s *server) fileUploadHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	fileName = r.URL.Query().Get("name")
-	dirName = r.Header.Get(AuroraCollectionNameHeader)
+	dirName = r.Header.Get(CollectionNameHeader)
 	referenceLink := r.Header.Get(ReferenceLinkHeader)
 	reader = r.Body
 
@@ -188,7 +188,7 @@ func (s *server) fileUploadHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if strings.ToLower(r.Header.Get(AuroraPinHeader)) == StringTrue {
+	if strings.ToLower(r.Header.Get(PinHeader)) == StringTrue {
 		if err := s.pinning.CreatePin(ctx, manifestReference, false); err != nil {
 			logger.Debugf("upload file: creation of pin for %q failed: %v", manifestReference, err)
 			logger.Error("upload file: creation of pin failed")
@@ -566,6 +566,7 @@ func (s *server) auroraListHandler(w http.ResponseWriter, r *http.Request) {
 				Size:          uint64(fileListInfo[i].Size),
 				Extension:     fileListInfo[i].Extension,
 				Default:       fileListInfo[i].Default,
+				ErrDefault:    fileListInfo[i].ErrDefault,
 				MimeType:      fileListInfo[i].MimeType,
 				ReferenceLink: fileListInfo[i].ReferenceLink,
 			},

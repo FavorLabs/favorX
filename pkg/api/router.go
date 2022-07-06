@@ -278,12 +278,12 @@ func (s *server) gatewayModeForbidEndpointHandler(h http.Handler) http.Handler {
 func (s *server) gatewayModeForbidHeadersHandler(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if s.GatewayMode {
-			if strings.ToLower(r.Header.Get(AuroraPinHeader)) == "true" {
+			if strings.ToLower(r.Header.Get(PinHeader)) == "true" {
 				s.logger.Tracef("gateway mode: forbidden pinning %s", r.URL.String())
 				jsonhttp.Forbidden(w, "pinning is disabled")
 				return
 			}
-			if strings.ToLower(r.Header.Get(AuroraEncryptHeader)) == "true" {
+			if strings.ToLower(r.Header.Get(EncryptHeader)) == "true" {
 				s.logger.Tracef("gateway mode: forbidden encryption %s", r.URL.String())
 				jsonhttp.Forbidden(w, "encryption is disabled")
 				return

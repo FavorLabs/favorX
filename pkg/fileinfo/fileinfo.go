@@ -117,6 +117,7 @@ func (f *FileInfo) AddFile(rootCid boson.Address) error {
 		Registered:    false,
 		Size:          int(manifest.Size),
 		Default:       manifest.Default,
+		ErrDefault:    manifest.ErrDefault,
 		Type:          manifest.Type,
 		Name:          manifest.Name,
 		Extension:     manifest.Extension,

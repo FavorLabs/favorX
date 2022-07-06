@@ -37,13 +37,13 @@ import (
 )
 
 const (
-	AuroraPinHeader            = "Pin"
-	AuroraEncryptHeader        = "Encrypt"
-	AuroraIndexDocumentHeader  = "Index-Document"
-	AuroraErrorDocumentHeader  = "Error-Document"
-	AuroraCollectionHeader     = "Collection"
-	AuroraCollectionNameHeader = "Collection-Name"
-	ReferenceLinkHeader        = "Reference-Link"
+	PinHeader            = "Pin"
+	EncryptHeader        = "Encrypt"
+	IndexDocumentHeader  = "Index-Document"
+	ErrorDocumentHeader  = "Error-Document"
+	CollectionHeader     = "Collection"
+	CollectionNameHeader = "Collection-Name"
+	ReferenceLinkHeader  = "Reference-Link"
 	// TargetsRecoveryHeader defines the Header for Recovery targets in Global Pinning
 	TargetsRecoveryHeader = "recovery-targets"
 )
@@ -219,7 +219,7 @@ func (s *server) resolveNameOrAddress(str string) (boson.Address, error) {
 
 // requestModePut returns the desired storage.ModePut for this request based on the request headers.
 func requestModePut(r *http.Request) storage.ModePut {
-	if h := strings.ToLower(r.Header.Get(AuroraPinHeader)); h == StringTrue {
+	if h := strings.ToLower(r.Header.Get(PinHeader)); h == StringTrue {
 		return storage.ModePutUploadPin
 	}
 
@@ -227,7 +227,7 @@ func requestModePut(r *http.Request) storage.ModePut {
 }
 
 func requestEncrypt(r *http.Request) bool {
-	return strings.ToLower(r.Header.Get(AuroraEncryptHeader)) == StringTrue
+	return strings.ToLower(r.Header.Get(EncryptHeader)) == StringTrue
 }
 
 type securityTokenRsp struct {

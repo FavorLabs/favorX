@@ -24,6 +24,7 @@ type ManifestNode struct {
 	Size          uint64                   `json:"size,omitempty"`
 	Extension     string                   `json:"ext,omitempty"`
 	Default       string                   `json:"default,omitempty"`
+	ErrDefault    string                   `json:"errDefault,omitempty"`
 	MimeType      string                   `json:"mime,omitempty"`
 	ReferenceLink string                   `json:"referenceLink,omitempty"`
 	Nodes         map[string]*ManifestNode `json:"sub,omitempty"`
@@ -179,6 +180,10 @@ func (f *FileInfo) ManifestView(ctx context.Context, nameOrHex string, pathVar s
 		if ok && indexNode.Type == manifest.File.String() {
 			indexNode.Type = manifest.IndexItem.String()
 		}
+	}
+
+	if errorDocumentSuffixKey, ok := manifestMetadataLoad(ctx, m, manifest.RootPath, manifest.WebsiteErrorDocumentPathKey); ok {
+		rootNode.ErrDefault = errorDocumentSuffixKey
 	}
 
 	return rootNode, nil

@@ -74,9 +74,9 @@ func (s *server) dirUploadHandler(w http.ResponseWriter, r *http.Request) {
 		loadsave.New(s.storer, factory),
 		s.fileInfo,
 		s.chunkInfo,
-		r.Header.Get(AuroraCollectionNameHeader),
-		r.Header.Get(AuroraIndexDocumentHeader),
-		r.Header.Get(AuroraErrorDocumentHeader),
+		r.Header.Get(CollectionNameHeader),
+		r.Header.Get(IndexDocumentHeader),
+		r.Header.Get(ErrorDocumentHeader),
 		r.Header.Get(ReferenceLinkHeader),
 	)
 	if err != nil {
@@ -86,7 +86,7 @@ func (s *server) dirUploadHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if strings.ToLower(r.Header.Get(AuroraPinHeader)) == StringTrue {
+	if strings.ToLower(r.Header.Get(PinHeader)) == StringTrue {
 		if err := s.pinning.CreatePin(r.Context(), reference, false); err != nil {
 			logger.Debugf("dir upload dir: creation of pin for %q failed: %v", reference, err)
 			logger.Error("dir upload dir: creation of pin failed")
