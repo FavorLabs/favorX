@@ -103,7 +103,7 @@ func (s *server) dirUploadHandler(w http.ResponseWriter, r *http.Request) {
 		jsonhttp.NotFound(w, "add file error")
 		return
 	}
-	jsonhttp.Created(w, auroraUploadResponse{
+	jsonhttp.Created(w, UploadResponse{
 		Reference: reference,
 	})
 }
@@ -360,7 +360,7 @@ func (m *multipartReader) Next() (*FileInfo, error) {
 	}, nil
 }
 
-func (s *server) auroraDeleteHandler(w http.ResponseWriter, r *http.Request) {
+func (s *server) fileDeleteHandler(w http.ResponseWriter, r *http.Request) {
 	addr := mux.Vars(r)["address"]
 	hash, err := boson.ParseHexAddress(addr)
 	if err != nil {

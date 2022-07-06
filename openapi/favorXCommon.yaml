@@ -354,7 +354,7 @@ components:
         sub:
           $ref: "#/components/schemas/ManifestViewResponse"
 
-    AuroraResponse:
+    FileResponse:
       type: object
       properties:
         rootCid:
@@ -372,7 +372,7 @@ components:
         manifest:
           $ref: "#/components/schemas/ManifestViewResponse"
 
-    AuroraPageResponse:
+    PageResponse:
       type: object
       properties:
         total:
@@ -380,7 +380,7 @@ components:
         list:
           type: array
           items:
-            $ref: "#/components/schemas/AuroraResponse"
+            $ref: "#/components/schemas/FileResponse"
 
     Response:
       type: object
@@ -584,17 +584,17 @@ components:
           nullable: false
 
   headers:
-    AuroraFeedIndex:
+    FeedIndex:
       description: "The index of the found update"
       schema:
         $ref: "#/components/schemas/HexString"
 
-    AuroraFeedIndexNext:
+    FeedIndexNext:
       description: "The index of the next possible update"
       schema:
         $ref: "#/components/schemas/HexString"
 
-    AuroraRecoveryTargets:
+    RecoveryTargets:
       description: "The targets provided for recovery"
       schema:
         type: string
@@ -610,7 +610,7 @@ components:
         type: string
 
   parameters:
-    AuroraRecoveryTargetsParameter:
+    RecoveryTargetsParameter:
       in: query
       name: targets
       schema:
@@ -618,7 +618,7 @@ components:
       required: false
       description: Global pinning targets prefix
 
-    AuroraPinParameter:
+    PinParameter:
       in: header
       name: pin
       schema:
@@ -626,7 +626,7 @@ components:
       required: false
       description: Represents the pinning state of the chunk
 
-    AuroraEncryptParameter:
+    EncryptParameter:
       in: header
       name: encrypt
       schema:
@@ -641,7 +641,7 @@ components:
         type: string
       description: The specified content-type is preserved for download of the asset
 
-    AuroraIndexDocumentParameter:
+    IndexDocumentParameter:
       in: header
       name: index-document
       schema:
@@ -650,7 +650,7 @@ components:
       required: false
       description: Default file to be referenced on path, if exists under that path
 
-    AuroraErrorDocumentParameter:
+    ErrorDocumentParameter:
       in: header
       name: error-document
       schema:
@@ -659,13 +659,21 @@ components:
       required: false
       description: Configure custom error document to be returned when a specified path can not be found in collection
 
-    AuroraCollectionParameter:
+    CollectionParameter:
       in: header
       name: collection
       schema:
         type: boolean
       required: false
       description: Upload file/files as a collection
+    ReferenceLinkParameter:
+      in: header
+      name: reference-link
+      schema:
+        type: string
+        example: xxx://xxx
+      required: false
+      description: Configure third-party storage reference links
 
   responses:
     "204":

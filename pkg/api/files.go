@@ -36,7 +36,7 @@ var (
 	ErrServerError = errors.New("manifest: ServerError")
 )
 
-func (s *server) auroraUploadHandler(w http.ResponseWriter, r *http.Request) {
+func (s *server) uploadHandler(w http.ResponseWriter, r *http.Request) {
 	logger := tracing.NewLoggerWithTraceID(r.Context(), s.logger)
 
 	contentType := r.Header.Get(contentTypeHeader)
@@ -55,12 +55,12 @@ func (s *server) auroraUploadHandler(w http.ResponseWriter, r *http.Request) {
 	s.fileUploadHandler(w, r)
 }
 
-// auroraUploadResponse is returned when an HTTP request to upload a file or collection is successful
-type auroraUploadResponse struct {
+// UploadResponse is returned when an HTTP request to upload a file or collection is successful
+type UploadResponse struct {
 	Reference boson.Address `json:"reference"`
 }
 
-type auroraRegisterResponse struct {
+type RegisterResponse struct {
 	Hash common.Hash `json:"hash"`
 }
 
@@ -206,12 +206,12 @@ func (s *server) fileUploadHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("ETag", fmt.Sprintf("%q", manifestReference.String()))
-	jsonhttp.Created(w, auroraUploadResponse{
+	jsonhttp.Created(w, UploadResponse{
 		Reference: manifestReference,
 	})
 }
 
-func (s *server) auroraDownloadHandler(w http.ResponseWriter, r *http.Request) {
+func (s *server) fileDownloadHandler(w http.ResponseWriter, r *http.Request) {
 	logger := tracing.NewLoggerWithTraceID(r.Context(), s.logger)
 	ls := loadsave.NewReadonly(s.storer, storage.ModeGetRequest)
 
@@ -442,7 +442,7 @@ func (s *server) downloadHandler(w http.ResponseWriter, r *http.Request, rootCid
 	http.ServeContent(w, r, "", time.Now(), langos.NewBufferedLangos(reader, lookaheadBufferSize(l)))
 }
 
-type auroraListResponse struct {
+type ListResponse struct {
 	RootCid   boson.Address          `json:"rootCid"`
 	PinState  bool                   `json:"pinState"`
 	BitVector aurora.BitVectorApi    `json:"bitVector"`
@@ -450,12 +450,12 @@ type auroraListResponse struct {
 	Manifest  *fileinfo.ManifestNode `json:"manifest"`
 }
 
-type auroraPageResponse struct {
-	Total int                  `json:"total"`
-	List  []auroraListResponse `json:"list"`
+type PageResponse struct {
+	Total int            `json:"total"`
+	List  []ListResponse `json:"list"`
 }
 
-func (s *server) auroraListHandler(w http.ResponseWriter, r *http.Request) {
+func (s *server) fileListHandler(w http.ResponseWriter, r *http.Request) {
 	var reqs aurora.ApiBody
 	isBody := true
 	isPage := false
@@ -548,10 +548,10 @@ func (s *server) auroraListHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	fileListInfo := s.fileInfo.GetFileList(filePage, fileFilter, fileSort)
 
-	responseList := make([]auroraListResponse, 0)
+	responseList := make([]ListResponse, 0)
 
 	for i := range fileListInfo {
-		responseList = append(responseList, auroraListResponse{
+		responseList = append(responseList, ListResponse{
 			RootCid:  fileListInfo[i].RootCid,
 			PinState: fileListInfo[i].Pinned,
 			BitVector: aurora.BitVectorApi{
@@ -580,7 +580,7 @@ func (s *server) auroraListHandler(w http.ResponseWriter, r *http.Request) {
 		})
 		jsonhttp.OK(w, responseList)
 	} else {
-		pageResponseList := auroraPageResponse{
+		pageResponseList := PageResponse{
 			Total: pageTotal,
 			List:  responseList,
 		}
@@ -672,7 +672,7 @@ func (s *server) fileRegister(w http.ResponseWriter, r *http.Request) {
 	}
 	s.transactionChan <- trans
 	jsonhttp.OK(w,
-		auroraRegisterResponse{
+		RegisterResponse{
 			Hash: hash,
 		})
 }
@@ -727,7 +727,7 @@ func (s *server) fileRegisterRemove(w http.ResponseWriter, r *http.Request) {
 	s.transactionChan <- trans
 
 	jsonhttp.OK(w,
-		auroraRegisterResponse{
+		RegisterResponse{
 			Hash: hash,
 		})
 }
