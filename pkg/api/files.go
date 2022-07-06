@@ -80,6 +80,7 @@ func (s *server) fileUploadHandler(w http.ResponseWriter, r *http.Request) {
 
 	fileName = r.URL.Query().Get("name")
 	dirName = r.Header.Get(AuroraCollectionNameHeader)
+	referenceLink := r.Header.Get(ReferenceLinkHeader)
 	reader = r.Body
 
 	p := requestPipelineFn(s.storer, r)
@@ -125,6 +126,7 @@ func (s *server) fileUploadHandler(w http.ResponseWriter, r *http.Request) {
 
 	rootMtdt := map[string]string{
 		manifest.WebsiteIndexDocumentSuffixKey: realIndexFilename,
+		manifest.ReferenceLinkKey:              referenceLink,
 	}
 
 	if dirName != "" {
@@ -558,13 +560,14 @@ func (s *server) auroraListHandler(w http.ResponseWriter, r *http.Request) {
 			},
 			Register: fileListInfo[i].Registered,
 			Manifest: &fileinfo.ManifestNode{
-				Type:      fileListInfo[i].Type,
-				Hash:      fileListInfo[i].Hash,
-				Name:      fileListInfo[i].Name,
-				Size:      uint64(fileListInfo[i].Size),
-				Extension: fileListInfo[i].Extension,
-				Default:   fileListInfo[i].Default,
-				MimeType:  fileListInfo[i].MimeType,
+				Type:          fileListInfo[i].Type,
+				Hash:          fileListInfo[i].Hash,
+				Name:          fileListInfo[i].Name,
+				Size:          uint64(fileListInfo[i].Size),
+				Extension:     fileListInfo[i].Extension,
+				Default:       fileListInfo[i].Default,
+				MimeType:      fileListInfo[i].MimeType,
+				ReferenceLink: fileListInfo[i].ReferenceLink,
 			},
 		})
 	}

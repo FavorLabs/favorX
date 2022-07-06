@@ -77,6 +77,7 @@ func (s *server) dirUploadHandler(w http.ResponseWriter, r *http.Request) {
 		r.Header.Get(AuroraCollectionNameHeader),
 		r.Header.Get(AuroraIndexDocumentHeader),
 		r.Header.Get(AuroraErrorDocumentHeader),
+		r.Header.Get(ReferenceLinkHeader),
 	)
 	if err != nil {
 		logger.Debugf("dir upload dir: store dir err: %v", err)
@@ -129,7 +130,8 @@ func storeDir(
 	chunkInfo chunkinfo.Interface,
 	dirName,
 	indexFilename,
-	errorFilename string,
+	errorFilename,
+	referenceLink string,
 ) (boson.Address, error) {
 	logger := tracing.NewLoggerWithTraceID(ctx, log)
 
@@ -204,6 +206,9 @@ func storeDir(
 				return boson.ZeroAddress, err
 			}
 			metadata[manifest.WebsiteErrorDocumentPathKey] = realErrorFilename
+		}
+		if referenceLink != "" {
+			metadata[manifest.ReferenceLinkKey] = referenceLink
 		}
 		rootManifestEntry := manifest.NewEntry(boson.ZeroAddress, metadata, 0)
 		err = dirManifest.Add(ctx, manifest.RootPath, rootManifestEntry)

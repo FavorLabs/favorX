@@ -18,14 +18,15 @@ var defaultPathVar = ""
 var defaultDepth = 1
 
 type ManifestNode struct {
-	Type      string                   `json:"type"`
-	Hash      string                   `json:"hash,omitempty"`
-	Name      string                   `json:"name,omitempty"`
-	Size      uint64                   `json:"size,omitempty"`
-	Extension string                   `json:"ext,omitempty"`
-	Default   string                   `json:"default,omitempty"`
-	MimeType  string                   `json:"mime,omitempty"`
-	Nodes     map[string]*ManifestNode `json:"sub,omitempty"`
+	Type          string                   `json:"type"`
+	Hash          string                   `json:"hash,omitempty"`
+	Name          string                   `json:"name,omitempty"`
+	Size          uint64                   `json:"size,omitempty"`
+	Extension     string                   `json:"ext,omitempty"`
+	Default       string                   `json:"default,omitempty"`
+	MimeType      string                   `json:"mime,omitempty"`
+	ReferenceLink string                   `json:"referenceLink,omitempty"`
+	Nodes         map[string]*ManifestNode `json:"sub,omitempty"`
 }
 
 var (
@@ -89,7 +90,7 @@ func (f *FileInfo) ManifestView(ctx context.Context, nameOrHex string, pathVar s
 		fn := func(nodeType int, path, prefix, hash []byte, metadata map[string]string) error {
 			if bytes.Equal(path, []byte("/")) {
 				rootNode.Name = metadata[manifest.EntryMetadataDirnameKey]
-
+				rootNode.ReferenceLink = metadata[manifest.ReferenceLinkKey]
 				return nil
 			}
 

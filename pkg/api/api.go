@@ -43,6 +43,7 @@ const (
 	AuroraErrorDocumentHeader  = "Error-Document"
 	AuroraCollectionHeader     = "Collection"
 	AuroraCollectionNameHeader = "Collection-Name"
+	ReferenceLinkHeader        = "Reference-Link"
 	// TargetsRecoveryHeader defines the Header for Recovery targets in Global Pinning
 	TargetsRecoveryHeader = "recovery-targets"
 )
