@@ -53,10 +53,7 @@ func (ci *ChunkInfo) updateService(rootCid boson.Address, index, len int64, over
 	}
 
 	var consumer chunkstore.Consumer
-	consumerList, err := ci.chunkStore.GetChunk(chunkstore.SERVICE, rootCid)
-	if err != nil {
-		return err
-	}
+	consumerList, _ := ci.chunkStore.GetChunk(chunkstore.SERVICE, rootCid)
 
 	for i := range consumerList {
 		if consumerList[i].Overlay.Equal(overlay) {

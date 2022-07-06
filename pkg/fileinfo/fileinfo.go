@@ -112,15 +112,17 @@ func (f *FileInfo) AddFile(rootCid boson.Address) error {
 		manifest.MimeType = maniFestNode.MimeType
 	}
 	fileInfo := filestore.FileView{
-		RootCid:    rootCid,
-		Pinned:     false,
-		Registered: false,
-		Size:       int(manifest.Size),
-		Default:    manifest.Default,
-		Type:       manifest.Type,
-		Name:       manifest.Name,
-		Extension:  manifest.Extension,
-		MimeType:   manifest.MimeType,
+		RootCid:       rootCid,
+		Pinned:        false,
+		Registered:    false,
+		Size:          int(manifest.Size),
+		Default:       manifest.Default,
+		ErrDefault:    manifest.ErrDefault,
+		Type:          manifest.Type,
+		Name:          manifest.Name,
+		Extension:     manifest.Extension,
+		MimeType:      manifest.MimeType,
+		ReferenceLink: manifest.ReferenceLink,
 	}
 
 	err = f.localStore.PutFile(fileInfo)

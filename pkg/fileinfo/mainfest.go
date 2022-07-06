@@ -18,18 +18,20 @@ var defaultPathVar = ""
 var defaultDepth = 1
 
 type ManifestNode struct {
-	Type      string                   `json:"type"`
-	Hash      string                   `json:"hash,omitempty"`
-	Name      string                   `json:"name,omitempty"`
-	Size      uint64                   `json:"size,omitempty"`
-	Extension string                   `json:"ext,omitempty"`
-	Default   string                   `json:"default,omitempty"`
-	MimeType  string                   `json:"mime,omitempty"`
-	Nodes     map[string]*ManifestNode `json:"sub,omitempty"`
+	Type          string                   `json:"type"`
+	Hash          string                   `json:"hash,omitempty"`
+	Name          string                   `json:"name,omitempty"`
+	Size          uint64                   `json:"size,omitempty"`
+	Extension     string                   `json:"ext,omitempty"`
+	Default       string                   `json:"default,omitempty"`
+	ErrDefault    string                   `json:"errDefault,omitempty"`
+	MimeType      string                   `json:"mime,omitempty"`
+	ReferenceLink string                   `json:"referenceLink,omitempty"`
+	Nodes         map[string]*ManifestNode `json:"sub,omitempty"`
 }
 
 var (
-	ErrInvalidNameOrAddress = errors.New("invalid name or aurora address")
+	ErrInvalidNameOrAddress = errors.New("invalid name or address")
 	ErrNoResolver           = errors.New("no resolver connected")
 	ErrNotFound             = errors.New("manifest: not found")
 	ErrServerError          = errors.New("manifest: ServerError")
@@ -89,7 +91,7 @@ func (f *FileInfo) ManifestView(ctx context.Context, nameOrHex string, pathVar s
 		fn := func(nodeType int, path, prefix, hash []byte, metadata map[string]string) error {
 			if bytes.Equal(path, []byte("/")) {
 				rootNode.Name = metadata[manifest.EntryMetadataDirnameKey]
-
+				rootNode.ReferenceLink = metadata[manifest.ReferenceLinkKey]
 				return nil
 			}
 
@@ -180,6 +182,10 @@ func (f *FileInfo) ManifestView(ctx context.Context, nameOrHex string, pathVar s
 		}
 	}
 
+	if errorDocumentSuffixKey, ok := manifestMetadataLoad(ctx, m, manifest.RootPath, manifest.WebsiteErrorDocumentPathKey); ok {
+		rootNode.ErrDefault = errorDocumentSuffixKey
+	}
+
 	return rootNode, nil
 }
 
@@ -203,7 +209,7 @@ func (f *FileInfo) resolveNameOrAddress(str string) (boson.Address, error) {
 	// Try and parse the name as a boson address.
 	addr, err := boson.ParseHexAddress(str)
 	if err == nil {
-		log.Tracef("name resolve: valid aurora address %q", str)
+		log.Tracef("name resolve: valid address %q", str)
 		return addr, nil
 	}
 
@@ -213,7 +219,7 @@ func (f *FileInfo) resolveNameOrAddress(str string) (boson.Address, error) {
 	}
 
 	// Try and resolve the name using the provided resolver.
-	log.Debugf("name resolve: attempting to resolve %s to aurora address", str)
+	log.Debugf("name resolve: attempting to resolve %s to address", str)
 	addr, err = f.resolver.Resolve(str)
 	if err == nil {
 		log.Tracef("name resolve: resolved name %s to %s", str, addr)

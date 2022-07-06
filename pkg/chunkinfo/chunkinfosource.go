@@ -7,10 +7,7 @@ import (
 )
 
 func (ci *ChunkInfo) updateSource(rootCid boson.Address, index, len int64, sourceOverlay boson.Address) error {
-	sources, err := ci.chunkStore.GetChunk(chunkstore.SOURCE, rootCid)
-	if err != nil {
-		return err
-	}
+	sources, _ := ci.chunkStore.GetChunk(chunkstore.SOURCE, rootCid)
 	for _, s := range sources {
 		if int64(s.Len) <= index {
 			continue

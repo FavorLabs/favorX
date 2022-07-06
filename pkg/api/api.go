@@ -37,12 +37,13 @@ import (
 )
 
 const (
-	AuroraPinHeader            = "Pin"
-	AuroraEncryptHeader        = "Encrypt"
-	AuroraIndexDocumentHeader  = "Index-Document"
-	AuroraErrorDocumentHeader  = "Error-Document"
-	AuroraCollectionHeader     = "Collection"
-	AuroraCollectionNameHeader = "Collection-Name"
+	PinHeader            = "Pin"
+	EncryptHeader        = "Encrypt"
+	IndexDocumentHeader  = "Index-Document"
+	ErrorDocumentHeader  = "Error-Document"
+	CollectionHeader     = "Collection"
+	CollectionNameHeader = "Collection-Name"
+	ReferenceLinkHeader  = "Reference-Link"
 	// TargetsRecoveryHeader defines the Header for Recovery targets in Global Pinning
 	TargetsRecoveryHeader = "recovery-targets"
 )
@@ -196,7 +197,7 @@ func (s *server) resolveNameOrAddress(str string) (boson.Address, error) {
 	// Try and parse the name as a boson address.
 	addr, err := boson.ParseHexAddress(str)
 	if err == nil {
-		log.Infof("name resolve: valid aurora address %q", str)
+		log.Infof("name resolve: valid address %q", str)
 		return addr, nil
 	}
 
@@ -206,7 +207,7 @@ func (s *server) resolveNameOrAddress(str string) (boson.Address, error) {
 	}
 
 	// Try and resolve the name using the provided resolver.
-	log.Debugf("name resolve: attempting to resolve %s to aurora address", str)
+	log.Debugf("name resolve: attempting to resolve %s to address", str)
 	addr, err = s.resolver.Resolve(str)
 	if err == nil {
 		log.Tracef("name resolve: resolved name %s to %s", str, addr)
@@ -218,7 +219,7 @@ func (s *server) resolveNameOrAddress(str string) (boson.Address, error) {
 
 // requestModePut returns the desired storage.ModePut for this request based on the request headers.
 func requestModePut(r *http.Request) storage.ModePut {
-	if h := strings.ToLower(r.Header.Get(AuroraPinHeader)); h == StringTrue {
+	if h := strings.ToLower(r.Header.Get(PinHeader)); h == StringTrue {
 		return storage.ModePutUploadPin
 	}
 
@@ -226,7 +227,7 @@ func requestModePut(r *http.Request) storage.ModePut {
 }
 
 func requestEncrypt(r *http.Request) bool {
-	return strings.ToLower(r.Header.Get(AuroraEncryptHeader)) == StringTrue
+	return strings.ToLower(r.Header.Get(EncryptHeader)) == StringTrue
 }
 
 type securityTokenRsp struct {

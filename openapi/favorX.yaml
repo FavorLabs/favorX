@@ -94,9 +94,9 @@ paths:
       tags:
         - Bytes
       parameters:
-        #        - $ref: "favorXCommon.yaml#/components/parameters/AuroraTagParameter"
-        - $ref: "favorXCommon.yaml#/components/parameters/AuroraPinParameter"
-        - $ref: "favorXCommon.yaml#/components/parameters/AuroraEncryptParameter"
+        #        - $ref: "favorXCommon.yaml#/components/parameters/TagParameter"
+        - $ref: "favorXCommon.yaml#/components/parameters/PinParameter"
+        - $ref: "favorXCommon.yaml#/components/parameters/EncryptParameter"
       requestBody:
         content:
           application/octet-stream:
@@ -128,7 +128,7 @@ paths:
           schema:
             $ref: "favorXCommon.yaml#/components/schemas/BosonReference"
           required: true
-          description: Aurora address reference to content
+          description: Address reference to content
       responses:
         "200":
           description: Retrieved content specified by reference
@@ -148,8 +148,8 @@ paths:
       tags:
         - Chunk
       parameters:
-        #        - $ref: "favorXCommon.yaml#/components/parameters/AuroraTagParameter"
-        - $ref: "favorXCommon.yaml#/components/parameters/AuroraPinParameter"
+        #        - $ref: "favorXCommon.yaml#/components/parameters/TagParameter"
+        - $ref: "favorXCommon.yaml#/components/parameters/PinParameter"
       requestBody:
         content:
           application/octet-stream:
@@ -176,7 +176,7 @@ paths:
       tags:
         - Chunk
       parameters:
-        - $ref: "favorXCommon.yaml#/components/parameters/AuroraRecoveryTargetsParameter"
+        - $ref: "favorXCommon.yaml#/components/parameters/RecoveryTargetsParameter"
         - in: path
           name: reference
           schema:
@@ -187,8 +187,8 @@ paths:
         "200":
           description: Retrieved chunk content
           headers:
-            "aurora-recovery-targets":
-              $ref: "favorXCommon.yaml#/components/headers/AuroraRecoveryTargets"
+            "recovery-targets":
+              $ref: "favorXCommon.yaml#/components/headers/RecoveryTargets"
           content:
             application/octet-stream:
               schema:
@@ -215,12 +215,13 @@ paths:
         - File
         - Collection
       parameters:
-        - $ref: "favorXCommon.yaml#/components/parameters/AuroraPinParameter"
-        - $ref: "favorXCommon.yaml#/components/parameters/AuroraEncryptParameter"
+        - $ref: "favorXCommon.yaml#/components/parameters/PinParameter"
+        - $ref: "favorXCommon.yaml#/components/parameters/EncryptParameter"
         - $ref: "favorXCommon.yaml#/components/parameters/ContentTypePreserved"
-        - $ref: "favorXCommon.yaml#/components/parameters/AuroraCollectionParameter"
-        - $ref: "favorXCommon.yaml#/components/parameters/AuroraIndexDocumentParameter"
-        - $ref: "favorXCommon.yaml#/components/parameters/AuroraErrorDocumentParameter"
+        - $ref: "favorXCommon.yaml#/components/parameters/CollectionParameter"
+        - $ref: "favorXCommon.yaml#/components/parameters/IndexDocumentParameter"
+        - $ref: "favorXCommon.yaml#/components/parameters/ErrorDocumentParameter"
+        - $ref: "favorXCommon.yaml#/components/parameters/ReferenceLinkParameter"
       requestBody:
         content:
           multipart/form-data:
@@ -287,7 +288,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "favorXCommon.yaml#/components/schemas/AuroraPageResponse"
+                $ref: "favorXCommon.yaml#/components/schemas/PageResponse"
         "400":
           $ref: "favorXCommon.yaml#/components/responses/400"
         "404":
@@ -310,15 +311,15 @@ paths:
             $ref: "favorXCommon.yaml#/components/schemas/BosonReference"
           required: true
           description: Boson address of content
-        - $ref: "favorXCommon.yaml#/components/parameters/AuroraRecoveryTargetsParameter"
+        - $ref: "favorXCommon.yaml#/components/parameters/RecoveryTargetsParameter"
       responses:
         "200":
           description: Ok
           headers:
-            "aurora-recovery-targets":
-              $ref: "favorXCommon.yaml#/components/headers/AuroraRecoveryTargets"
-          #           "aurora-feed-index":
-          #             $ref: "favorXCommon.yaml#/components/headers/AuroraFeedIndex"
+            "recovery-targets":
+              $ref: "favorXCommon.yaml#/components/headers/RecoveryTargets"
+          #           "feed-index":
+          #             $ref: "favorXCommon.yaml#/components/headers/FeedIndex"
           content:
             application/octet-stream:
               schema:
@@ -374,7 +375,7 @@ paths:
             type: string
           required: true
           description: Path to the file in the collection.
-        - $ref: "favorXCommon.yaml#/components/parameters/AuroraRecoveryTargetsParameter"
+        - $ref: "favorXCommon.yaml#/components/parameters/RecoveryTargetsParameter"
       responses:
         "200":
           description: Ok

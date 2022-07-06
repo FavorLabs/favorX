@@ -113,11 +113,10 @@ func (ci *ChunkInfo) findChunkInfo(ctx context.Context, authInfo []byte, rootCid
 		ci.newQueue(rootCid.String())
 	}
 	for _, overlay := range overlays {
-		if ci.getQueue(rootCid.String()).isExists(UnPull, overlay.Bytes()) || ci.getQueue(rootCid.String()).isExists(Pulling, overlay.Bytes()) {
+		if ci.getQueue(rootCid.String()).isExists(UnPull, overlay.Bytes()) ||
+			ci.getQueue(rootCid.String()).isExists(Pulling, overlay.Bytes()) ||
+			ci.getQueue(rootCid.String()).isExists(Pulled, overlay.Bytes()) {
 			continue
-		}
-		if ci.getQueue(rootCid.String()).isExists(Pulled, overlay.Bytes()) {
-			ci.getQueue(rootCid.String()).popNode(Pulled, overlay.Bytes())
 		}
 		ci.getQueue(rootCid.String()).push(UnPull, overlay.Bytes())
 	}

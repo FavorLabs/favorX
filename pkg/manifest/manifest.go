@@ -15,6 +15,7 @@ const DefaultManifestType = ManifestMantarayContentType
 
 const (
 	RootPath                      = "/"
+	ReferenceLinkKey              = "reference"
 	WebsiteIndexDocumentSuffixKey = "website-index-document"
 	WebsiteErrorDocumentPathKey   = "website-error-document"
 	EntryMetadataContentTypeKey   = "Content-Type"

@@ -21,16 +21,18 @@ type fileStore struct {
 }
 
 type FileView struct {
-	RootCid    boson.Address
-	Hash       string
-	Pinned     bool
-	Registered bool
-	Size       int
-	Type       string
-	Name       string
-	Extension  string
-	Default    string
-	MimeType   string
+	RootCid       boson.Address
+	Hash          string
+	Pinned        bool
+	Registered    bool
+	Size          int
+	Type          string
+	Name          string
+	Extension     string
+	Default       string
+	ErrDefault    string
+	MimeType      string
+	ReferenceLink string
 }
 
 type Page struct {

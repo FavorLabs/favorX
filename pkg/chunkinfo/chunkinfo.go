@@ -110,6 +110,7 @@ func (ci *ChunkInfo) Discover(ctx context.Context, authInfo []byte, rootCid boso
 				return false, nil
 			}
 		}
+		ci.CancelFindChunkInfo(rootCid)
 		return ci.FindChunkInfo(context.Background(), authInfo, rootCid, overlays), nil
 	})
 	if v == nil {

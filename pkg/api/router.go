@@ -106,11 +106,11 @@ func (s *server) setupRouting() {
 	handle("/file", jsonhttp.MethodHandler{
 		"GET": web.ChainHandlers(
 			s.newTracingHandler("file-list"),
-			web.FinalHandlerFunc(s.auroraListHandler),
+			web.FinalHandlerFunc(s.fileListHandler),
 		),
 		"POST": web.ChainHandlers(
 			s.newTracingHandler("file-upload"),
-			web.FinalHandlerFunc(s.auroraUploadHandler),
+			web.FinalHandlerFunc(s.uploadHandler),
 		),
 	})
 
@@ -122,14 +122,14 @@ func (s *server) setupRouting() {
 		}),
 		"DELETE": web.ChainHandlers(
 			s.newTracingHandler("file-delete"),
-			web.FinalHandlerFunc(s.auroraDeleteHandler),
+			web.FinalHandlerFunc(s.fileDeleteHandler),
 		),
 	})
 
 	handle("/file/{address}/{path:.*}", jsonhttp.MethodHandler{
 		"GET": web.ChainHandlers(
 			s.newTracingHandler("file-download"),
-			web.FinalHandlerFunc(s.auroraDownloadHandler),
+			web.FinalHandlerFunc(s.fileDownloadHandler),
 		),
 	})
 
@@ -194,11 +194,11 @@ func (s *server) setupRouting() {
 
 	handle("/fileRegister/{address}", jsonhttp.MethodHandler{
 		"POST": web.ChainHandlers(
-			s.newTracingHandler("aurora-Register"),
+			s.newTracingHandler("file-Register"),
 			web.FinalHandlerFunc(s.fileRegister),
 		),
 		"DELETE": web.ChainHandlers(
-			s.newTracingHandler("aurora-RegisterRemove"),
+			s.newTracingHandler("file-RegisterRemove"),
 			web.FinalHandlerFunc(s.fileRegisterRemove),
 		),
 	})
@@ -278,12 +278,12 @@ func (s *server) gatewayModeForbidEndpointHandler(h http.Handler) http.Handler {
 func (s *server) gatewayModeForbidHeadersHandler(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if s.GatewayMode {
-			if strings.ToLower(r.Header.Get(AuroraPinHeader)) == "true" {
+			if strings.ToLower(r.Header.Get(PinHeader)) == "true" {
 				s.logger.Tracef("gateway mode: forbidden pinning %s", r.URL.String())
 				jsonhttp.Forbidden(w, "pinning is disabled")
 				return
 			}
-			if strings.ToLower(r.Header.Get(AuroraEncryptHeader)) == "true" {
+			if strings.ToLower(r.Header.Get(EncryptHeader)) == "true" {
 				s.logger.Tracef("gateway mode: forbidden encryption %s", r.URL.String())
 				jsonhttp.Forbidden(w, "encryption is disabled")
 				return

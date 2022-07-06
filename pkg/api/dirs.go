@@ -74,9 +74,10 @@ func (s *server) dirUploadHandler(w http.ResponseWriter, r *http.Request) {
 		loadsave.New(s.storer, factory),
 		s.fileInfo,
 		s.chunkInfo,
-		r.Header.Get(AuroraCollectionNameHeader),
-		r.Header.Get(AuroraIndexDocumentHeader),
-		r.Header.Get(AuroraErrorDocumentHeader),
+		r.Header.Get(CollectionNameHeader),
+		r.Header.Get(IndexDocumentHeader),
+		r.Header.Get(ErrorDocumentHeader),
+		r.Header.Get(ReferenceLinkHeader),
 	)
 	if err != nil {
 		logger.Debugf("dir upload dir: store dir err: %v", err)
@@ -85,7 +86,7 @@ func (s *server) dirUploadHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if strings.ToLower(r.Header.Get(AuroraPinHeader)) == StringTrue {
+	if strings.ToLower(r.Header.Get(PinHeader)) == StringTrue {
 		if err := s.pinning.CreatePin(r.Context(), reference, false); err != nil {
 			logger.Debugf("dir upload dir: creation of pin for %q failed: %v", reference, err)
 			logger.Error("dir upload dir: creation of pin failed")
@@ -102,7 +103,7 @@ func (s *server) dirUploadHandler(w http.ResponseWriter, r *http.Request) {
 		jsonhttp.NotFound(w, "add file error")
 		return
 	}
-	jsonhttp.Created(w, auroraUploadResponse{
+	jsonhttp.Created(w, UploadResponse{
 		Reference: reference,
 	})
 }
@@ -129,7 +130,8 @@ func storeDir(
 	chunkInfo chunkinfo.Interface,
 	dirName,
 	indexFilename,
-	errorFilename string,
+	errorFilename,
+	referenceLink string,
 ) (boson.Address, error) {
 	logger := tracing.NewLoggerWithTraceID(ctx, log)
 
@@ -204,6 +206,9 @@ func storeDir(
 				return boson.ZeroAddress, err
 			}
 			metadata[manifest.WebsiteErrorDocumentPathKey] = realErrorFilename
+		}
+		if referenceLink != "" {
+			metadata[manifest.ReferenceLinkKey] = referenceLink
 		}
 		rootManifestEntry := manifest.NewEntry(boson.ZeroAddress, metadata, 0)
 		err = dirManifest.Add(ctx, manifest.RootPath, rootManifestEntry)
@@ -355,7 +360,7 @@ func (m *multipartReader) Next() (*FileInfo, error) {
 	}, nil
 }
 
-func (s *server) auroraDeleteHandler(w http.ResponseWriter, r *http.Request) {
+func (s *server) fileDeleteHandler(w http.ResponseWriter, r *http.Request) {
 	addr := mux.Vars(r)["address"]
 	hash, err := boson.ParseHexAddress(addr)
 	if err != nil {

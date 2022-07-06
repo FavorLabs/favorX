@@ -976,7 +976,7 @@ func (s *Service) saveUnderlay(uList []*pb.UnderlayResp) {
 	for _, v := range uList {
 		addr, err := aurora.ParseAddress(v.Underlay, v.Dest, v.Signature, s.networkID)
 		if err != nil {
-			s.logger.Errorf("route: parse aurora address %s", err.Error())
+			s.logger.Errorf("route: parse address %s", err.Error())
 		} else {
 			err = s.addressbook.Put(addr.Overlay, *addr)
 			if err != nil {
