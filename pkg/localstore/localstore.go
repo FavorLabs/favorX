@@ -520,6 +520,7 @@ func (db *DB) PutFile(file filestore.FileView) error {
 func (db *DB) DeleteFile(reference boson.Address) error {
 	db.fileMu.Lock()
 	defer db.fileMu.Unlock()
+	db.CancelFinder(reference)
 	return db.setRemoveAll(reference)
 }
 
