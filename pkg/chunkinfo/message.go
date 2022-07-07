@@ -181,7 +181,7 @@ func (ci *ChunkInfo) onFindChunkInfo(ctx context.Context, authInfo []byte, rootC
 	}
 
 	ov := overlay.String()
-	if chunkInfo[ov] != nil {
+	if chunkInfo[ov] != nil && ci.getPendingFinder(rootCid) {
 		err := ci.updateDiscover(rootCid, overlay, chunkInfo[ov])
 		if err != nil {
 			ci.logger.Errorf("chunkInfo update:%w", err)

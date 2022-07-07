@@ -146,7 +146,7 @@ func (ci *ChunkInfo) queueProcess(ctx context.Context, rootCid boson.Address) {
 	if q.len(Pulled)+q.len(Pulling) >= PullMax {
 		return
 	}
-	if !ci.pendingFinder.getPendingFinder(rootCid) {
+	if !ci.getPendingFinder(rootCid) {
 		return
 	}
 	pullingLen := q.len(Pulling)

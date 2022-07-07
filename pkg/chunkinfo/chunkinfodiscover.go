@@ -57,12 +57,17 @@ func (ci *ChunkInfo) addRoutes(routes []aco.Route) []aco.Route {
 	}
 	res := make([]aco.Route, 0)
 	ctx := context.Background()
+	exist := make(map[string]struct{})
 	for _, route := range routes {
 		overlays, errs := ci.route.GetTargetNeighbor(ctx, route.TargetNode, totalRouteCount)
 		if errs != nil || overlays == nil {
 			continue
 		}
 		for _, overlay := range overlays {
+			if _, ok := exist[overlay.String()]; ok {
+				continue
+			}
+			exist[overlay.String()] = struct{}{}
 			v := aco.NewRoute(overlay, route.TargetNode)
 			res = append(res, v)
 		}
@@ -70,15 +75,9 @@ func (ci *ChunkInfo) addRoutes(routes []aco.Route) []aco.Route {
 	if len(res) == 0 {
 		return routes
 	}
-	exist := make(map[string]struct{})
-	for _, overlay := range res {
-		for _, i := range routes {
-			if i.TargetNode.Equal(overlay.LinkNode) && i.TargetNode.Equal(i.LinkNode) {
-				continue
-			}
-			if _, e := exist[i.LinkNode.String()]; !e {
-				res = append(res, i)
-			}
+	for _, route := range routes {
+		if _, ok := exist[route.LinkNode.String()]; !ok {
+			res = append(res, route)
 		}
 	}
 	return res
@@ -108,7 +107,7 @@ func (ci *ChunkInfo) FindChunkInfo(ctx context.Context, authInfo []byte, rootCid
 }
 
 func (ci *ChunkInfo) findChunkInfo(ctx context.Context, authInfo []byte, rootCid boson.Address, overlays []boson.Address) {
-	ci.pendingFinder.updatePendingFinder(rootCid)
+	ci.updatePendingFinder(rootCid)
 	if ci.getQueue(rootCid.String()) == nil {
 		ci.newQueue(rootCid.String())
 	}
@@ -142,7 +141,7 @@ func (ci *ChunkInfo) cleanDiscoverTrigger() {
 				rootCid := boson.MustParseHexAddress(rCid)
 				if ci.isDownload(rootCid, ci.addr) {
 					ci.syncLk.Lock()
-					ci.cancelPendingFindInfo(rootCid)
+					ci.cancelPendingFinder(rootCid)
 					ci.queues.Delete(rootCid.String())
 					ci.syncLk.Unlock()
 					err = ci.chunkStore.DeleteAllChunk(chunkstore.DISCOVER, rootCid)
@@ -165,8 +164,4 @@ func (ci *ChunkInfo) cleanDiscoverTrigger() {
 			}
 		}
 	}()
-}
-
-func (ci *ChunkInfo) cancelPendingFindInfo(rootCid boson.Address) {
-	ci.pendingFinder.cancelPendingFinder(rootCid)
 }
