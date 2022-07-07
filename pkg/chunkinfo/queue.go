@@ -141,14 +141,18 @@ func (q *queue) isExists(pull Pull, overlay []byte) bool {
 func (ci *ChunkInfo) queueProcess(ctx context.Context, rootCid boson.Address) {
 	ci.queuesLk.Lock()
 	defer ci.queuesLk.Unlock()
+	if !ci.getPendingFinder(rootCid) {
+		return
+	}
 	q := ci.getQueue(rootCid.String())
+	if q == nil {
+		return
+	}
 	// pulled + pulling >= pullMax
 	if q.len(Pulled)+q.len(Pulling) >= PullMax {
 		return
 	}
-	if !ci.getPendingFinder(rootCid) {
-		return
-	}
+
 	pullingLen := q.len(Pulling)
 	if pullingLen >= PullingMax {
 		return
