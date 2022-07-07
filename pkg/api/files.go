@@ -232,14 +232,14 @@ func (s *server) fileDownloadHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		logger.Debugf("download: parse address %s: %v", nameOrHex, err)
 		logger.Error("download: parse address")
-		jsonhttp.NotFound(w, nil)
+		jsonhttp.NotFound(w, err)
 		return
 	}
 
 	r = r.WithContext(sctx.SetRootHash(r.Context(), address))
 	if !s.chunkInfo.Discover(r.Context(), nil, address) {
-		logger.Debugf("download: chunkInfo init %s: %v", nameOrHex, err)
-		jsonhttp.NotFound(w, nil)
+		logger.Debugf("download: chunkInfo init %s: false", nameOrHex)
+		jsonhttp.NotFound(w, "chunkInfo init false")
 		return
 	}
 
@@ -253,7 +253,7 @@ func (s *server) fileDownloadHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		logger.Debugf("download: not manifest %s: %v", address, err)
 		logger.Errorf("download: not manifest %s", address)
-		jsonhttp.NotFound(w, nil)
+		jsonhttp.NotFound(w, err)
 		return
 	}
 	chunks := 0
@@ -265,7 +265,8 @@ func (s *server) fileDownloadHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	err = m.IterateDirectories(ctx, []byte(""), 0, fn)
 	if err != nil {
-		jsonhttp.NotFound(w, "path address not found")
+		logger.Errorf("download: iterate directories %s: %v", address, err)
+		jsonhttp.NotFound(w, fmt.Errorf("iterate: %s", err))
 		return
 	}
 	if pathVar == "" {
@@ -291,66 +292,66 @@ func (s *server) fileDownloadHandler(w http.ResponseWriter, r *http.Request) {
 		logger.Debugf("download: invalid path %s/%s: %v", address, pathVar, err)
 		logger.Error("download: invalid path")
 
-		if errors.Is(err, manifest.ErrNotFound) {
+		if !errors.Is(err, manifest.ErrNotFound) {
+			jsonhttp.NotFound(w, err)
+			return
+		}
 
-			if !strings.HasPrefix(pathVar, "/") {
-				// check for directory
-				dirPath := pathVar + "/"
-				exists, err := m.HasPrefix(r.Context(), dirPath)
-				if err == nil && exists {
-					// redirect to directory
-					u := r.URL
-					u.Path += "/"
-					redirectURL := u.String()
+		if !strings.HasPrefix(pathVar, "/") {
+			// check for directory
+			dirPath := pathVar + "/"
+			exists, err := m.HasPrefix(r.Context(), dirPath)
+			if err == nil && exists {
+				// redirect to directory
+				u := r.URL
+				u.Path += "/"
+				redirectURL := u.String()
 
-					logger.Debugf("download: redirecting to %s: %v", redirectURL, err)
+				logger.Debugf("download: redirecting to %s: %v", redirectURL, err)
 
-					http.Redirect(w, r, redirectURL, http.StatusPermanentRedirect)
+				http.Redirect(w, r, redirectURL, http.StatusPermanentRedirect)
+				return
+			}
+		}
+
+		// check index suffix path
+		if indexDocumentSuffixKey, ok := manifestMetadataLoad(r.Context(), m, manifest.RootPath, manifest.WebsiteIndexDocumentSuffixKey); ok {
+			if !strings.HasSuffix(pathVar, indexDocumentSuffixKey) {
+				// check if path is directory with index
+				pathWithIndex := path.Join(pathVar, indexDocumentSuffixKey)
+				indexDocumentManifestEntry, err := m.Lookup(r.Context(), pathWithIndex)
+				if err == nil {
+					// index document exists
+					logger.Debugf("download: serving path: %s", pathWithIndex)
+
+					s.serveManifestEntry(w, r, address, indexDocumentManifestEntry, true)
 					return
 				}
 			}
-
-			// check index suffix path
-			if indexDocumentSuffixKey, ok := manifestMetadataLoad(r.Context(), m, manifest.RootPath, manifest.WebsiteIndexDocumentSuffixKey); ok {
-				if !strings.HasSuffix(pathVar, indexDocumentSuffixKey) {
-					// check if path is directory with index
-					pathWithIndex := path.Join(pathVar, indexDocumentSuffixKey)
-					indexDocumentManifestEntry, err := m.Lookup(r.Context(), pathWithIndex)
-					if err == nil {
-						// index document exists
-						logger.Debugf("download: serving path: %s", pathWithIndex)
-
-						s.serveManifestEntry(w, r, address, indexDocumentManifestEntry, true)
-						return
-					}
-				}
-			}
-
-			// check if error document is to be shown
-			if errorDocumentPath, ok := manifestMetadataLoad(r.Context(), m, manifest.RootPath, manifest.WebsiteErrorDocumentPathKey); ok {
-				if pathVar != errorDocumentPath {
-					errorDocumentManifestEntry, err := m.Lookup(r.Context(), errorDocumentPath)
-					if err == nil {
-						// error document exists
-						logger.Debugf("download: serving path: %s", errorDocumentPath)
-
-						s.serveManifestEntry(w, r, address, errorDocumentManifestEntry, true)
-						return
-					}
-				}
-			}
-
-			jsonhttp.NotFound(w, "path address not found")
-		} else {
-			jsonhttp.NotFound(w, nil)
 		}
+
+		// check if error document is to be shown
+		if errorDocumentPath, ok := manifestMetadataLoad(r.Context(), m, manifest.RootPath, manifest.WebsiteErrorDocumentPathKey); ok {
+			if pathVar != errorDocumentPath {
+				errorDocumentManifestEntry, err := m.Lookup(r.Context(), errorDocumentPath)
+				if err == nil {
+					// error document exists
+					logger.Debugf("download: serving path: %s", errorDocumentPath)
+
+					s.serveManifestEntry(w, r, address, errorDocumentManifestEntry, true)
+					return
+				}
+			}
+		}
+
+		jsonhttp.NotFound(w, "path address not found")
 		return
 	}
 	me = manifest.NewEntry(me.Reference(), me.Metadata(), 0)
 
 	if !s.chunkInfo.Discover(r.Context(), nil, me.Reference()) {
-		logger.Debugf("download: chunkInfo init %s: %v", nameOrHex, err)
-		jsonhttp.NotFound(w, nil)
+		logger.Debugf("download: chunkInfo init %s->%s: false", nameOrHex, me.Reference())
+		jsonhttp.NotFound(w, fmt.Errorf("chunkInfo init %s false", me.Reference()))
 		return
 	}
 	r = r.WithContext(sctx.SetRootHash(r.Context(), me.Reference()))
@@ -380,7 +381,7 @@ func (s *server) serveManifestEntry(
 	s.downloadHandler(w, r, rootCid, manifestEntry.Reference(), manifestEntry.Index(), additionalHeaders, etag)
 }
 
-// downloadHandler contains common logic for dowloading file from API
+// downloadHandler contains common logic for downloading file from API
 func (s *server) downloadHandler(w http.ResponseWriter, r *http.Request, rootCid, reference boson.Address, index int64, additionalHeaders http.Header, etag bool) {
 	logger := tracing.NewLoggerWithTraceID(r.Context(), s.logger)
 	targets := r.URL.Query().Get("targets")
@@ -390,7 +391,8 @@ func (s *server) downloadHandler(w http.ResponseWriter, r *http.Request, rootCid
 	_, _ = s.storer.Get(r.Context(), storage.ModeGetRequest, reference, index)
 	length, err := s.fileInfo.GetFileSize(reference)
 	if err != nil {
-		jsonhttp.BadRequest(w, "path address not found")
+		s.logger.Debugf("file %s index:%d get size %s", reference, index, err)
+		jsonhttp.BadRequest(w, fmt.Errorf("get %s size %s", reference, err))
 		return
 	}
 	if length > 1 && index == 0 {
@@ -407,12 +409,12 @@ func (s *server) downloadHandler(w http.ResponseWriter, r *http.Request, rootCid
 		if errors.Is(err, storage.ErrNotFound) {
 			logger.Debugf("api download: not found %s: %v", reference, err)
 			logger.Error("api download: not found")
-			jsonhttp.NotFound(w, nil)
+			jsonhttp.NotFound(w, err)
 			return
 		}
 		logger.Debugf("api download: unexpected error %s: %v", reference, err)
 		logger.Error("api download: unexpected error")
-		jsonhttp.InternalServerError(w, nil)
+		jsonhttp.InternalServerError(w, err)
 		return
 	}
 	err = s.fileInfo.AddFile(rootCid)
