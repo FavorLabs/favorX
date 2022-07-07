@@ -520,6 +520,7 @@ func (db *DB) PutFile(file filestore.FileView) error {
 func (db *DB) DeleteFile(reference boson.Address) error {
 	db.fileMu.Lock()
 	defer db.fileMu.Unlock()
+	db.CancelFinder(reference)
 	return db.setRemoveAll(reference)
 }
 
@@ -592,4 +593,22 @@ func (db *DB) HasChunk(chunkType chunkstore.ChunkType, reference, overlay boson.
 	db.fileMu.RLock()
 	defer db.fileMu.RUnlock()
 	return db.chunkstore.Has(chunkType, reference, overlay)
+}
+
+func (db *DB) StartFinder(rootCid boson.Address) {
+	db.fileMu.Lock()
+	defer db.fileMu.Unlock()
+	db.chunkstore.StartFinder(rootCid)
+}
+
+func (db *DB) CancelFinder(rootCid boson.Address) {
+	db.fileMu.Lock()
+	defer db.fileMu.Unlock()
+	db.chunkstore.CancelFinder(rootCid)
+}
+
+func (db *DB) IsFinder(rootCid boson.Address) bool {
+	db.fileMu.RLock()
+	defer db.fileMu.RUnlock()
+	return db.chunkstore.IsFinder(rootCid)
 }

@@ -27,6 +27,9 @@ type Interface interface {
 	Remove(chunkType ChunkType, reference, overlay boson.Address) error
 	RemoveAll(chunkType ChunkType, reference boson.Address) error
 	Has(chunkType ChunkType, reference, overlay boson.Address) (bool, error)
+	StartFinder(rootCid boson.Address)
+	CancelFinder(rootCid boson.Address)
+	IsFinder(rootCid boson.Address) bool
 }
 
 type Provider struct {
@@ -59,6 +62,7 @@ type chunkStore struct {
 	source     map[string]map[string]*bitvector.BitVector
 	service    map[string]map[string]*bitvector.BitVector
 	discover   map[string]map[string]*discoverBitVector
+	finder     map[string]struct{}
 }
 
 func New(stateStore storage.StateStorer) Interface {
@@ -67,6 +71,7 @@ func New(stateStore storage.StateStorer) Interface {
 		source:     make(map[string]map[string]*bitvector.BitVector),
 		service:    make(map[string]map[string]*bitvector.BitVector),
 		discover:   make(map[string]map[string]*discoverBitVector),
+		finder:     make(map[string]struct{}),
 	}
 }
 

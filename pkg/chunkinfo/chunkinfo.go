@@ -49,7 +49,6 @@ type ChunkInfo struct {
 	syncLk         sync.RWMutex
 	syncMsg        sync.Map // map[string]chan bool
 	timeoutTrigger *timeoutTrigger
-	pendingFinder  *pendingFinderInfo
 	chunkStore     *localstore.DB
 }
 
@@ -57,17 +56,15 @@ func New(addr boson.Address, streamer p2p.Streamer, logger logging.Logger,
 	chunkStore *localstore.DB, route routetab.RouteTab, oracleChain chain.Resolver, fileInfo fileinfo.Interface,
 	subPub subscribe.SubPub) *ChunkInfo {
 	chunkInfo := &ChunkInfo{
-		addr:        addr,
-		route:       route,
-		streamer:    streamer,
-		logger:      logger,
-		metrics:     newMetrics(),
-		oracleChain: oracleChain,
-		fileInfo:    fileInfo,
-		subPub:      subPub,
-
+		addr:           addr,
+		route:          route,
+		streamer:       streamer,
+		logger:         logger,
+		metrics:        newMetrics(),
+		oracleChain:    oracleChain,
+		fileInfo:       fileInfo,
+		subPub:         subPub,
 		timeoutTrigger: newTimeoutTrigger(),
-		pendingFinder:  newPendingFinderInfo(),
 		chunkStore:     chunkStore,
 	}
 	chunkInfo.triggerTimeOut()
@@ -90,9 +87,7 @@ func (ci *ChunkInfo) Discover(ctx context.Context, authInfo []byte, rootCid boso
 	key := fmt.Sprintf("%s%s", rootCid, "chunkinfo")
 	topCtx := ctx
 	v, _, _ := ci.singleflight.Do(ctx, key, func(ctx context.Context) (interface{}, error) {
-		if ci.isDiscover(rootCid) {
-			return true, nil
-		}
+
 		if ci.isDownload(rootCid, ci.addr) {
 			return true, nil
 		}
@@ -166,7 +161,7 @@ func (ci *ChunkInfo) OnFileUpload(ctx context.Context, rootCid boson.Address, le
 
 func (ci *ChunkInfo) CancelFindChunkInfo(rootCid boson.Address) {
 	ci.queues.Delete(rootCid.String())
-	ci.pendingFinder.cancelPendingFinder(rootCid)
+	ci.cancelPendingFinder(rootCid)
 }
 
 func (ci *ChunkInfo) SubscribeDownloadProgress(notifier *rpc.Notifier, sub *rpc.Subscription, rootCids []boson.Address) {
