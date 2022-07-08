@@ -507,7 +507,7 @@ func (db *DB) GetFile(reference boson.Address) (filestore.FileView, bool) {
 	return db.filestore.Get(reference)
 }
 
-func (db *DB) GetListFile(page filestore.Page, filter []filestore.Filter, sort filestore.Sort) []filestore.FileView {
+func (db *DB) GetListFile(page filestore.Page, filter []filestore.Filter, sort filestore.Sort) ([]filestore.FileView, int) {
 	db.fileMu.RLock()
 	defer db.fileMu.RUnlock()
 	return db.filestore.GetList(page, filter, sort)
@@ -520,7 +520,7 @@ func (db *DB) PutFile(file filestore.FileView) error {
 func (db *DB) DeleteFile(reference boson.Address) error {
 	db.fileMu.Lock()
 	defer db.fileMu.Unlock()
-	db.CancelFinder(reference)
+	db.chunkstore.CancelFinder(reference)
 	return db.setRemoveAll(reference)
 }
 

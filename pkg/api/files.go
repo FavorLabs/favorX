@@ -548,8 +548,8 @@ func (s *server) fileListHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 	}
-	fileListInfo := s.fileInfo.GetFileList(filePage, fileFilter, fileSort)
-
+	fileListInfo, total := s.fileInfo.GetFileList(filePage, fileFilter, fileSort)
+	pageTotal = total
 	responseList := make([]ListResponse, 0)
 
 	for i := range fileListInfo {
