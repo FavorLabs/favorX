@@ -242,6 +242,10 @@ func (db *DB) setGC(batch driver.Batching, item shed.Item) (gcSizeChange int64, 
 			return 0, err
 		}
 	}
+	if i.AccessTimestamp == 0 {
+		// todo
+		db.logger.Errorf("abc")
+	}
 	item.AccessTimestamp = i.AccessTimestamp
 	if item.BinID == 0 {
 		i, err = db.retrievalDataIndex.Get(item)

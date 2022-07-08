@@ -9,7 +9,7 @@ import (
 type Interface interface {
 	Init() error
 	Get(reference boson.Address) (FileView, bool)
-	GetList(page Page, filter []Filter, sort Sort) []FileView
+	GetList(page Page, filter []Filter, sort Sort) ([]FileView, int)
 	Put(file FileView) error
 	Delete(reference boson.Address) error
 	Has(reference boson.Address) bool
@@ -83,11 +83,12 @@ func (fs *fileStore) Get(reference boson.Address) (FileView, bool) {
 	return file, ok
 }
 
-func (fs *fileStore) GetList(page Page, filter []Filter, sort Sort) []FileView {
+func (fs *fileStore) GetList(page Page, filter []Filter, sort Sort) ([]FileView, int){
 	ff := filterFile(fs.files, filter)
 	sf := sortFile(ff, sort.Key, sort.Order)
 	pf := pageFile(sf, page)
-	return pf
+	total :=len(fs.files)
+	return pf, total
 }
 
 func (fs *fileStore) Update(file FileView) error {
