@@ -88,6 +88,10 @@ func (ci *ChunkInfo) Discover(ctx context.Context, authInfo []byte, rootCid boso
 	topCtx := ctx
 	v, _, _ := ci.singleflight.Do(ctx, key, func(ctx context.Context) (interface{}, error) {
 
+		if ci.isDiscover(rootCid) {
+			return true, nil
+		}
+
 		if ci.isDownload(rootCid, ci.addr) {
 			return true, nil
 		}

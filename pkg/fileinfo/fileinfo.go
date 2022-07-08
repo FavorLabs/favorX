@@ -26,7 +26,7 @@ type ChunkInfoSource struct {
 }
 
 type Interface interface {
-	GetFileList(page filestore.Page, filter []filestore.Filter, sort filestore.Sort) []FileView
+	GetFileList(page filestore.Page, filter []filestore.Filter, sort filestore.Sort) ([]FileView, int)
 	GetFileSize(rootCid boson.Address) (int64, error)
 	ManifestView(ctx context.Context, nameOrHex string, pathVar string, depth int) (*ManifestNode, error)
 	AddFile(rootCid boson.Address) error
@@ -66,8 +66,8 @@ func (f *FileInfo) GetFileSize(rootCid boson.Address) (int64, error) {
 	return size, nil
 }
 
-func (f *FileInfo) GetFileList(page filestore.Page, filter []filestore.Filter, sort filestore.Sort) []FileView {
-	list := f.localStore.GetListFile(page, filter, sort)
+func (f *FileInfo) GetFileList(page filestore.Page, filter []filestore.Filter, sort filestore.Sort) ([]FileView, int) {
+	list, total := f.localStore.GetListFile(page, filter, sort)
 	fileList := make([]FileView, 0, len(list))
 	for index := 0; index < len(list); index++ {
 		fv := FileView{
@@ -87,7 +87,7 @@ func (f *FileInfo) GetFileList(page filestore.Page, filter []filestore.Filter, s
 		}
 		fileList = append(fileList, fv)
 	}
-	return fileList
+	return fileList, total
 }
 
 func (f *FileInfo) AddFile(rootCid boson.Address) error {
