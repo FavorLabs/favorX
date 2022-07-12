@@ -140,10 +140,8 @@ func (ci *ChunkInfo) cleanDiscoverTrigger() {
 			for rCid, providerList := range discover {
 				rootCid := boson.MustParseHexAddress(rCid)
 				if ci.isDownload(rootCid, ci.addr) {
-					ci.syncLk.Lock()
 					ci.cancelPendingFinder(rootCid)
 					ci.queues.Delete(rootCid.String())
-					ci.syncLk.Unlock()
 					err = ci.chunkStore.DeleteAllChunk(chunkstore.DISCOVER, rootCid)
 					if err != nil {
 						ci.logger.Errorf("chunkInfo cleanDiscover remove discover:%w", err)
@@ -156,7 +154,7 @@ func (ci *ChunkInfo) cleanDiscoverTrigger() {
 						if err != nil {
 							ci.logger.Errorf("chunkInfo cleanDiscover remove discover:%w", err)
 						}
-						if q, ok := ci.queues.Load(rootCid); ok {
+						if q, ok := ci.queues.Load(rCid); ok {
 							q.(*queue).popNode(Pulled, provider.Overlay.Bytes())
 						}
 					}

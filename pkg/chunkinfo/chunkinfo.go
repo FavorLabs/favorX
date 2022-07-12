@@ -46,7 +46,6 @@ type ChunkInfo struct {
 	discover       sync.Map
 	queuesLk       sync.RWMutex
 	queues         sync.Map // map[string]*queue
-	syncLk         sync.RWMutex
 	syncMsg        sync.Map // map[string]chan bool
 	timeoutTrigger *timeoutTrigger
 	chunkStore     *localstore.DB
