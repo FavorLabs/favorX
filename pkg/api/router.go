@@ -224,6 +224,13 @@ func (s *server) setupRouting() {
 		"GET": http.HandlerFunc(s.peers),
 	})
 
+	handle("/buffer", jsonhttp.MethodHandler{
+		"POST": http.HandlerFunc(s.bufferUploadHandler),
+	})
+	handle("/buffer/{address}", jsonhttp.MethodHandler{
+		"GET": http.HandlerFunc(s.bufferGetHandler),
+	})
+
 	s.newLoopbackRouter(router)
 
 	s.Handler = web.ChainHandlers(
