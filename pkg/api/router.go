@@ -126,6 +126,41 @@ func (s *server) setupRouting() {
 		),
 	})
 
+	handle("/file/mv/{address}", jsonhttp.MethodHandler{
+		"POST": web.ChainHandlers(
+			s.newTracingHandler("file-move"),
+			web.FinalHandlerFunc(s.fileMoveHandler),
+		),
+	})
+
+	handle("/file/rm/{address}", jsonhttp.MethodHandler{
+		"POST": web.ChainHandlers(
+			s.newTracingHandler("file-remove"),
+			web.FinalHandlerFunc(s.fileRemoveHandler),
+		),
+	})
+
+	handle("/file/mkdir/{address}", jsonhttp.MethodHandler{
+		"POST": web.ChainHandlers(
+			s.newTracingHandler("file-mkdir"),
+			web.FinalHandlerFunc(s.fileMkdirHandler),
+		),
+	})
+
+	handle("/file/cp/{address}", jsonhttp.MethodHandler{
+		"POST": web.ChainHandlers(
+			s.newTracingHandler("file-copy"),
+			web.FinalHandlerFunc(s.fileCopyHandler),
+		),
+	})
+
+	handle("/file/write/{address}", jsonhttp.MethodHandler{
+		"POST": web.ChainHandlers(
+			s.newTracingHandler("file-write"),
+			web.FinalHandlerFunc(s.fileWriteHandler),
+		),
+	})
+
 	handle("/file/{address}/{path:.*}", jsonhttp.MethodHandler{
 		"GET": web.ChainHandlers(
 			s.newTracingHandler("file-download"),

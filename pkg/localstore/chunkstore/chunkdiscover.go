@@ -150,3 +150,19 @@ func (cs *chunkStore) hasDiscover(rootCid, overlay boson.Address) bool {
 	_, ok := cs.discover[r][o]
 	return ok
 }
+
+func (cs *chunkStore) hasDiscoverChunk(rootCid boson.Address, bit int) bool {
+	r := rootCid.String()
+	d, ok := cs.discover[r]
+	if !ok {
+		return ok
+	}
+	for _, v := range d {
+		if v.bit.Len() > bit {
+			if v.bit.Get(bit) {
+				return true
+			}
+		}
+	}
+	return false
+}

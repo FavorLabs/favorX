@@ -76,6 +76,43 @@ func (m *mantarayManifest) Remove(ctx context.Context, path string) error {
 	return nil
 }
 
+func (m *mantarayManifest) RemoveRef(ctx context.Context, path string) error {
+	p := []byte(path)
+
+	err := m.trie.Update(ctx, p, m.ls)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *mantarayManifest) Move(ctx context.Context, path, newPath string) error {
+	p := []byte(path)
+	np := []byte(newPath)
+	err := m.trie.Move(ctx, p, np, m.ls)
+	if err != nil {
+		if errors.Is(err, mantaray.ErrNotFound) {
+			return ErrNotFound
+		}
+		return err
+	}
+	return nil
+}
+
+func (m *mantarayManifest) Copy(ctx context.Context, path, newPath string) error {
+	p := []byte(path)
+	np := []byte(path)
+	err := m.trie.Copy(ctx, p, np, m.ls)
+	if err != nil {
+		if errors.Is(err, mantaray.ErrNotFound) {
+			return ErrNotFound
+		}
+		return err
+	}
+	return nil
+}
+
 func (m *mantarayManifest) Lookup(ctx context.Context, path string) (Entry, error) {
 	p := []byte(path)
 

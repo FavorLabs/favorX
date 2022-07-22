@@ -132,3 +132,19 @@ func (cs *chunkStore) hasSource(rootCid, overlay boson.Address) bool {
 	_, ok := cs.source[r][o]
 	return ok
 }
+
+func (cs *chunkStore) hasSourceChunk(rootCid boson.Address, bit int) bool {
+	r := rootCid.String()
+	s, ok := cs.source[r]
+	if !ok {
+		return ok
+	}
+	for _, v := range s {
+		if v.Len() > bit {
+			if v.Get(bit) {
+				return true
+			}
+		}
+	}
+	return false
+}

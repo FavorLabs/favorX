@@ -27,6 +27,7 @@ type Interface interface {
 	Remove(chunkType ChunkType, reference, overlay boson.Address) error
 	RemoveAll(chunkType ChunkType, reference boson.Address) error
 	Has(chunkType ChunkType, reference, overlay boson.Address) (bool, error)
+	HasChunk(chunkType ChunkType, reference boson.Address, bit int) (bool, error)
 	StartFinder(rootCid boson.Address)
 	CancelFinder(rootCid boson.Address)
 	IsFinder(rootCid boson.Address) bool
@@ -284,6 +285,19 @@ func (cs *chunkStore) Has(chunkType ChunkType, reference, overlay boson.Address)
 		return cs.hasSource(reference, overlay), nil
 	case SERVICE:
 		return cs.hasService(reference, overlay), nil
+	default:
+		return false, TypeError
+	}
+}
+
+func (cs *chunkStore) HasChunk(chunkType ChunkType, reference boson.Address, bit int) (bool, error) {
+	switch chunkType {
+	case DISCOVER:
+		return cs.hasDiscoverChunk(reference, bit), nil
+	case SOURCE:
+		return cs.hasSourceChunk(reference, bit), nil
+	case SERVICE:
+		return cs.hasServiceChunk(reference, bit), nil
 	default:
 		return false, TypeError
 	}

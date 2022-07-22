@@ -23,6 +23,11 @@ type simpleManifest struct {
 	ls        file.LoadSaver
 }
 
+func (m *simpleManifest) RemoveRef(ctx context.Context, s string) error {
+	//TODO implement me
+	panic("implement me")
+}
+
 // NewSimpleManifest creates a new simple manifest.
 func NewSimpleManifest(ls file.LoadSaver) (Interface, error) {
 	return &simpleManifest{
@@ -61,6 +66,14 @@ func (m *simpleManifest) Remove(_ context.Context, path string) error {
 		return err
 	}
 
+	return nil
+}
+
+func (m *simpleManifest) Move(_ context.Context, _, _ string) error {
+	return nil
+}
+
+func (m *simpleManifest) Copy(_ context.Context, _, _ string) error {
 	return nil
 }
 

@@ -1,6 +1,7 @@
 package api
 
 import (
+	"github.com/FavorLabs/favorX/pkg/sctx"
 	"github.com/FavorLabs/favorX/pkg/storage"
 	"github.com/gauss-project/aurorafs/pkg/boson"
 	"github.com/gauss-project/aurorafs/pkg/cac"
@@ -37,6 +38,7 @@ func (s *server) bufferUploadHandler(w http.ResponseWriter, r *http.Request) {
 		jsonhttp.InternalServerError(w, nil)
 		return
 	}
+	r = r.WithContext(sctx.SetRootHash(r.Context(), ch.Address()))
 	ctx := r.Context()
 	has, err := s.storer.Has(ctx, storage.ModeHasChunk, ch.Address())
 	if err != nil {
@@ -75,6 +77,7 @@ func (s *server) bufferGetHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	r = r.WithContext(sctx.SetRootHash(r.Context(), address))
 	ch, err := s.storer.Get(r.Context(), storage.ModeGetChain, address, 0)
 	if err != nil {
 		s.logger.Debugf("buffer upload: chunk read error: %v", err)
