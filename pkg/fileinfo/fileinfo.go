@@ -36,7 +36,7 @@ type Interface interface {
 	GetChunkInfoDiscoverOverlays(rootCid boson.Address) []aurora.ChunkInfoOverlay
 	GetChunkInfoServerOverlays(rootCid boson.Address) []aurora.ChunkInfoOverlay
 	GetChunkInfoSource(rootCid boson.Address) ChunkInfoSource
-	AddFileMirror(next boson.Address, ope filestore.Operation, rootCid boson.Address) error
+	AddFileMirror(next, rootCid boson.Address, ope filestore.Operation) error
 }
 
 type FileInfo struct {

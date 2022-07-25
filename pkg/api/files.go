@@ -792,7 +792,7 @@ func (s *server) fileMoveHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	err = m.IterateAddresses(ctx, fn)
 	err = s.chunkInfo.OnFileUpload(ctx, manifestReference, int64(bitLen))
-	if err = s.fileInfo.AddFileMirror(manifestReference, filestore.MOVE, address); err != nil {
+	if err = s.fileInfo.AddFileMirror(manifestReference, address, filestore.MOVE); err != nil {
 		logger.Debugf("move file: adding file mirror, error : %v", err)
 		logger.Error("move file:  adding file mirror, error")
 		jsonhttp.InternalServerError(w, nil)
@@ -846,7 +846,7 @@ func (s *server) fileCopyHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	err = m.IterateAddresses(ctx, fn)
 	err = s.chunkInfo.OnFileUpload(ctx, manifestReference, int64(bitLen))
-	if err = s.fileInfo.AddFileMirror(manifestReference, filestore.COPE, address); err != nil {
+	if err = s.fileInfo.AddFileMirror(manifestReference, address, filestore.COPE); err != nil {
 		logger.Debugf("copy file: adding file mirror, error : %v", err)
 		logger.Error("copy file:  adding file mirror, error")
 		jsonhttp.InternalServerError(w, nil)
@@ -910,7 +910,7 @@ func (s *server) fileMkdirHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	err = m.IterateAddresses(ctx, fn)
 	err = s.chunkInfo.OnFileUpload(ctx, manifestReference, int64(bitLen))
-	if err = s.fileInfo.AddFileMirror(manifestReference, filestore.MKDIR, address); err != nil {
+	if err = s.fileInfo.AddFileMirror(manifestReference, address, filestore.MKDIR); err != nil {
 		logger.Debugf("mkdir: adding file mirror, error : %v", err)
 		logger.Error("mkdir:  adding file mirror, error")
 		jsonhttp.InternalServerError(w, nil)
@@ -953,6 +953,13 @@ func (s *server) fileRemoveHandler(w http.ResponseWriter, r *http.Request) {
 		jsonhttp.InternalServerError(w, nil)
 		return
 	}
+	err = m.RemoveRef(ctx, target)
+	if err != nil {
+		logger.Debugf("mkdir: update ref to manifest, : %v", err)
+		logger.Errorf("mkdir: update ref to manifest")
+		jsonhttp.InternalServerError(w, nil)
+		return
+	}
 	var storeSizeFn []manifest.StoreSizeFunc
 	manifestReference, err := m.Store(ctx, storeSizeFn...)
 	bitLen := 0
@@ -962,7 +969,7 @@ func (s *server) fileRemoveHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	err = m.IterateAddresses(ctx, fn)
 	err = s.chunkInfo.OnFileUpload(ctx, manifestReference, int64(bitLen))
-	if err = s.fileInfo.AddFileMirror(manifestReference, filestore.MKDIR, address); err != nil {
+	if err = s.fileInfo.AddFileMirror(manifestReference, address, filestore.REMOVE); err != nil {
 		logger.Debugf("remove: adding file mirror, error : %v", err)
 		logger.Error("remove:  adding file mirror, error")
 		jsonhttp.InternalServerError(w, nil)
@@ -1059,7 +1066,7 @@ func (s *server) fileWriteHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	err = m.IterateAddresses(ctx, fn)
 	err = s.chunkInfo.OnFileUpload(ctx, manifestReference, bitLen)
-	if err = s.fileInfo.AddFileMirror(manifestReference, filestore.ADD, address); err != nil {
+	if err = s.fileInfo.AddFileMirror(manifestReference, address, filestore.ADD); err != nil {
 		logger.Debugf("write: adding file mirror, error : %v", err)
 		logger.Error("write:  adding file mirror, error")
 		jsonhttp.InternalServerError(w, nil)

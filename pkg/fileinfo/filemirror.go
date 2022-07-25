@@ -2,29 +2,11 @@ package fileinfo
 
 import (
 	"github.com/FavorLabs/favorX/pkg/localstore/filestore"
-	"github.com/FavorLabs/favorX/pkg/storage"
 	"github.com/gauss-project/aurorafs/pkg/boson"
 )
 
-func (f *FileInfo) AddFileMirror(next boson.Address, ope filestore.Operation, rootCid boson.Address) error {
-	file, ok := f.localStore.GetFile(rootCid)
-	if !ok {
-		return ErrNotFound
-	}
-	err := f.localStore.DeleteFile(rootCid)
-	if err != nil {
-		return err
-	}
-	m, err := f.localStore.GetMirror(rootCid)
-	pre := boson.ZeroAddress
-	if err != nil {
-		if err != storage.ErrNotFound {
-			return err
-		}
-	} else {
-		pre = m.RootCid
-	}
-	err = f.localStore.PutMirrorFile(pre, next, ope, file)
+func (f *FileInfo) AddFileMirror(next, rootCid boson.Address, ope filestore.Operation) error {
+	err := f.localStore.PutMirrorFile(next, rootCid, ope)
 	if err != nil {
 		return err
 	}

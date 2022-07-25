@@ -631,9 +631,26 @@ func (db *DB) GetMirrors(reference boson.Address) (fms []*filestore.FileMirror, 
 	return db.filestore.GetMirrors(reference)
 }
 
-func (db *DB) PutMirrorFile(pre, next boson.Address, ope filestore.Operation, file filestore.FileView) error {
+func (db *DB) PutMirrorFile(next, reference boson.Address, ope filestore.Operation) error {
 	db.fileMu.Lock()
 	defer db.fileMu.Unlock()
+	file, ok := db.filestore.Get(reference)
+	if !ok {
+		return storage.ErrNotFound
+	}
+	err := db.filestore.Delete(reference)
+	if err != nil {
+		return err
+	}
+	m, err := db.filestore.GetMirror(reference)
+	pre := boson.ZeroAddress
+	if err != nil {
+		if err != storage.ErrNotFound {
+			return err
+		}
+	} else {
+		pre = m.RootCid
+	}
 	return db.filestore.PutMirror(pre, next, ope, file)
 }
 
