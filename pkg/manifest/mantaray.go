@@ -76,17 +76,6 @@ func (m *mantarayManifest) Remove(ctx context.Context, path string) error {
 	return nil
 }
 
-func (m *mantarayManifest) RemoveRef(ctx context.Context, path string) error {
-	p := []byte(path)
-
-	err := m.trie.Update(ctx, p, m.ls)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 func (m *mantarayManifest) Move(ctx context.Context, path, newPath string) error {
 	p := []byte(path)
 	np := []byte(newPath)
