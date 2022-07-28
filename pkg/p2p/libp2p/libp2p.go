@@ -1,10 +1,10 @@
 package libp2p
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"os"
 	"runtime"
@@ -1028,50 +1028,62 @@ func (s *Service) NewConnChainRelayStream(ctx context.Context, target boson.Addr
 	return st, nil
 }
 
-func (s *Service) CallHandler(ctx context.Context, last p2p.Peer, stream p2p.Stream) (relayData *pb.RouteRelayReq, w *p2p.WriterChan, r *p2p.ReaderChan, forward bool, err error) {
-	defer func() {
-		if relayData == nil {
+func (s *Service) CallHandler(ctx context.Context, last p2p.Peer, stream p2p.Stream) (req *pb.RouteRelayReq, _ *p2p.WriterChan, _ *p2p.ReaderChan, forward bool, err error) {
+	req = &pb.RouteRelayReq{}
+	r := protobuf.NewReader(stream)
+	err = r.ReadMsgWithContext(ctx, req)
+	if err != nil {
+		err = fmt.Errorf("onRelay read syn err %s", err)
+		_ = stream.Reset()
+		return
+	}
+	buf := &BuffMessage{}
+	if len(req.Data) == 0 {
+		err = r.ReadMsgWithContext(ctx, buf)
+		if err != nil {
+			err = fmt.Errorf("onRelay read first err %s", err)
+			_ = stream.Reset()
 			return
 		}
-		if bytes.Equal(relayData.Dest, s.self.Bytes()) {
+		req.Data = buf.Bytes()
+	} else {
+		_, err = buf.Write(req.Data)
+		if err != nil {
+			_ = stream.Reset()
+			return
+		}
+	}
+	target := boson.NewAddress(req.Dest)
+	if !target.Equal(s.self) && !req.MidCall {
+		forward = true
+		return
+	}
+	defer func() {
+		if target.Equal(s.self) {
 			forward = false
-		} else {
 			if err != nil {
-				forward = true
+				_ = stream.Reset()
 			}
 		}
 	}()
-	reqCh := make(chan *pb.RouteRelayReq, 1)
-	vst := newVirtualStream(stream)
-	w = vst.writer
-	r = vst.reader
-	s.route.PackRelayResp(ctx, vst, reqCh)
-	select {
-	case relayData = <-reqCh:
-		if relayData == nil {
-			return
-		}
-		if !relayData.MidCall && !bytes.Equal(relayData.Dest, s.self.Bytes()) {
-			forward = true
-			return
-		}
-	case <-ctx.Done():
-		err = ctx.Err()
-		return
-	}
-	name := string(relayData.ProtocolName)
-	version := string(relayData.ProtocolVersion)
-	streamName := string(relayData.StreamName)
-	md, err := aurora.NewModelFromBytes(relayData.SrcMode)
+
+	md, err := aurora.NewModelFromBytes(req.SrcMode)
 	if err != nil {
+		_ = stream.Reset()
 		return
 	}
 	src := p2p.Peer{
-		Address: boson.NewAddress(relayData.Src),
+		Address: boson.NewAddress(req.Src),
 		Mode:    md,
 	}
+
+	name := string(req.ProtocolName)
+	version := string(req.ProtocolVersion)
+	streamName := string(req.StreamName)
+
 	spec, err := s.getProtocolHandler(name, version, streamName)
 	if err != nil {
+		forward = true
 		return
 	}
 
@@ -1088,6 +1100,21 @@ func (s *Service) CallHandler(ctx context.Context, last p2p.Peer, stream p2p.Str
 
 	s.metrics.HandledStreamCount.Inc()
 
+	vst := newVirtualStream(stream)
+	defer func() {
+		_ = vst.write.Close()
+		_ = vst.read.Close()
+	}()
+	go func() {
+		w := protobuf.NewWriter(vst.write)
+		err = w.WriteMsg(buf)
+		if err != nil {
+			forward = true
+			return
+		}
+		_, _ = io.Copy(vst.write, stream)
+	}()
+
 	err = spec.Handler(ctx, src, vst)
 	if err != nil {
 		var de *p2p.DisconnectError
@@ -1095,10 +1122,12 @@ func (s *Service) CallHandler(ctx context.Context, last p2p.Peer, stream p2p.Str
 			logger.Tracef("call libp2p handler(%s): disconnecting last %s", streamName, last.Address)
 			_ = stream.Reset()
 			_ = s.Disconnect(last.Address, de.Error())
-		}
-		// count unexpected requests
-		if errors.Is(err, p2p.ErrUnexpected) {
-			s.metrics.UnexpectedProtocolReqCount.Inc()
+		} else {
+			forward = true
+			if errors.Is(err, p2p.ErrUnexpected) {
+				// count unexpected requests
+				s.metrics.UnexpectedProtocolReqCount.Inc()
+			}
 		}
 		logger.Debugf("could not call handle protocol %s/%s: realy stream %s: peer %s: error: %v, forward=%v", name, version, streamName, src.Address, err, forward)
 	}
@@ -1125,18 +1154,22 @@ func (s *Service) NewRelayStream(ctx context.Context, target boson.Address, head
 	if err != nil {
 		return nil, err
 	}
-	relay := newVirtualStream(st)
-	s.route.PackRelayReq(ctx, relay, &pb.RouteRelayReq{
+	req := &pb.RouteRelayReq{
 		Src:             s.self.Bytes(),
 		SrcMode:         s.nodeMode.Bv.Bytes(),
 		Dest:            target.Bytes(),
 		ProtocolName:    []byte(protocolName),
 		ProtocolVersion: []byte(protocolVersion),
 		StreamName:      []byte(streamName),
-		Data:            nil,
 		MidCall:         midCall,
-	})
-	return relay, nil
+	}
+	w := protobuf.NewWriter(st)
+	err = w.WriteMsgWithContext(ctx, req)
+	if err != nil {
+		_ = st.Reset()
+		return nil, fmt.Errorf("send syn err %v", err)
+	}
+	return st, nil
 }
 
 func (s *Service) NewStream(ctx context.Context, overlay boson.Address, headers p2p.Headers, protocolName, protocolVersion, streamName string) (p2p.Stream, error) {
