@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/binary"
 	"errors"
+	"github.com/FavorLabs/favorX/pkg/localstore/chunkstore"
 	"time"
 
 	"github.com/FavorLabs/favorX/pkg/sctx"
@@ -34,7 +35,7 @@ import (
 // All required indexes will be updated required by the
 // Getter Mode. Get is required to implement chunk.Store
 // interface.
-func (db *DB) Get(ctx context.Context, mode storage.ModeGet, addr boson.Address, _ int64) (ch boson.Chunk, err error) {
+func (db *DB) Get(ctx context.Context, mode storage.ModeGet, addr boson.Address, index int64) (ch boson.Chunk, err error) {
 	db.metrics.ModeGet.Inc()
 	defer totalTimeMetric(db.metrics.TotalTimeGet, time.Now())
 
@@ -44,7 +45,7 @@ func (db *DB) Get(ctx context.Context, mode storage.ModeGet, addr boson.Address,
 		}
 	}()
 
-	out, err := db.get(mode, addr, sctx.GetRootHash(ctx))
+	out, err := db.get(mode, addr, sctx.GetRootHash(ctx), index)
 	if err != nil {
 		if errors.Is(err, driver.ErrNotFound) {
 			return nil, storage.ErrNotFound
@@ -56,7 +57,7 @@ func (db *DB) Get(ctx context.Context, mode storage.ModeGet, addr boson.Address,
 
 // get returns Item from the retrieval index
 // and updates other indexes.
-func (db *DB) get(mode storage.ModeGet, addr, rootAddr boson.Address) (out shed.Item, err error) {
+func (db *DB) get(mode storage.ModeGet, addr, rootAddr boson.Address, index int64) (out shed.Item, err error) {
 	item := addressToItem(addr)
 	out, err = db.retrievalDataIndex.Get(item)
 	if err != nil {
@@ -67,13 +68,23 @@ func (db *DB) get(mode storage.ModeGet, addr, rootAddr boson.Address) (out shed.
 	switch mode {
 	// update the access timestamp and gc index
 	case storage.ModeGetRequest:
-		if !rootAddr.IsZero() {
-			db.updateGCItems(addressToItem(rootAddr))
-		} else {
-			db.updateGCItems(out)
-		}
 		if b[0]&(0x1<<uint(0%8)) == 0 {
 			return out, storage.ErrNotFound
+		}
+		if !rootAddr.IsZero() {
+			db.updateGCItems(addressToItem(rootAddr))
+			if ok, _ := db.HasChunkBit(chunkstore.SOURCE, rootAddr, int(index)); !ok {
+				batch := db.shed.NewBatch()
+				binIDs := make(map[uint8]uint64)
+				db.batchMu.Lock()
+				_, _, err = db.putUpload(batch, binIDs, out)
+				if err != nil {
+					return out, err
+				}
+				db.batchMu.Unlock()
+			}
+		} else {
+			db.updateGCItems(out)
 		}
 
 	case storage.ModeGetPin:

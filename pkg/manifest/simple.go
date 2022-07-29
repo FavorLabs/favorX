@@ -64,6 +64,14 @@ func (m *simpleManifest) Remove(_ context.Context, path string) error {
 	return nil
 }
 
+func (m *simpleManifest) Move(_ context.Context, _, _ string) error {
+	return nil
+}
+
+func (m *simpleManifest) Copy(_ context.Context, _, _ string) error {
+	return nil
+}
+
 func (m *simpleManifest) Lookup(_ context.Context, path string) (Entry, error) {
 	n, err := m.manifest.Lookup(path)
 	if err != nil {

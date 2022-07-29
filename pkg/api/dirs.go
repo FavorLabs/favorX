@@ -226,22 +226,20 @@ func storeDir(
 	}
 	fn := func(nodeType int, path, prefix, hash []byte, metadata map[string]string) error {
 		if nodeType == 0 {
-			if v, ok := metadata[contentTypeHeader]; ok && v != "" {
-				if strings.Contains(string(prefix), "._") {
-					return nil
-				}
-				fcid := boson.NewAddress(hash)
-				bitLen, err := fileInfo.GetFileSize(fcid)
-				if err != nil {
-					return err
-				}
-				if bitLen > 1 {
-					bitLen++
-				}
-				err = chunkInfo.OnFileUpload(ctx, fcid, bitLen)
-				if err != nil {
-					return err
-				}
+			if strings.Contains(string(prefix), "._") {
+				return nil
+			}
+			fcid := boson.NewAddress(hash)
+			bitLen, err := fileInfo.GetFileSize(fcid)
+			if err != nil {
+				return err
+			}
+			if bitLen > 1 {
+				bitLen++
+			}
+			err = chunkInfo.OnFileUpload(ctx, fcid, bitLen)
+			if err != nil {
+				return err
 			}
 		}
 		return nil

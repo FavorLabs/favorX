@@ -3,7 +3,7 @@ module github.com/FavorLabs/favorX
 go 1.17
 
 require (
-	github.com/FavorLabs/manifest v1.0.0
+	github.com/FavorLabs/manifest v1.1.0
 	github.com/btcsuite/btcd v0.22.1
 	github.com/casbin/casbin/v2 v2.35.0
 	github.com/coreos/go-semver v0.3.0

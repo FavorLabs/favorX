@@ -595,6 +595,12 @@ func (db *DB) HasChunk(chunkType chunkstore.ChunkType, reference, overlay boson.
 	return db.chunkstore.Has(chunkType, reference, overlay)
 }
 
+func (db *DB) HasChunkBit(chunkType chunkstore.ChunkType, reference boson.Address, bit int) (bool, error) {
+	db.fileMu.RLock()
+	defer db.fileMu.RUnlock()
+	return db.chunkstore.HasChunk(chunkType, reference, bit)
+}
+
 func (db *DB) StartFinder(rootCid boson.Address) {
 	db.fileMu.Lock()
 	defer db.fileMu.Unlock()
@@ -611,4 +617,45 @@ func (db *DB) IsFinder(rootCid boson.Address) bool {
 	db.fileMu.RLock()
 	defer db.fileMu.RUnlock()
 	return db.chunkstore.IsFinder(rootCid)
+}
+
+func (db *DB) GetMirror(reference boson.Address) (*filestore.FileMirror, error) {
+	db.fileMu.RLock()
+	defer db.fileMu.RUnlock()
+	return db.filestore.GetMirror(reference)
+}
+
+func (db *DB) GetMirrors(reference boson.Address) (fms []*filestore.FileMirror, err error) {
+	db.fileMu.RLock()
+	defer db.fileMu.RUnlock()
+	return db.filestore.GetMirrors(reference)
+}
+
+func (db *DB) PutMirrorFile(next, reference boson.Address, ope filestore.Operation) error {
+	db.fileMu.Lock()
+	defer db.fileMu.Unlock()
+	file, ok := db.filestore.Get(reference)
+	if !ok {
+		return storage.ErrNotFound
+	}
+	err := db.filestore.Delete(reference)
+	if err != nil {
+		return err
+	}
+	m, err := db.filestore.GetMirror(reference)
+	pre := boson.ZeroAddress
+	if err != nil {
+		if err != storage.ErrNotFound {
+			return err
+		}
+	} else {
+		pre = m.RootCid
+	}
+	return db.filestore.PutMirror(pre, next, ope, file)
+}
+
+func (db *DB) DeleteMirror(reference boson.Address) error {
+	db.fileMu.Lock()
+	defer db.fileMu.Unlock()
+	return db.filestore.DeleteMirror(reference)
 }

@@ -139,6 +139,10 @@ func (s *server) setupRouting() {
 			u.Path += "/"
 			http.Redirect(w, r, u.String(), http.StatusPermanentRedirect)
 		}),
+		"POST": web.ChainHandlers(
+			s.newTracingHandler("manifest-operation"),
+			web.FinalHandlerFunc(s.manifestOperationHandler),
+		),
 	})
 
 	handle("/manifest/{address}/{path:.*}", jsonhttp.MethodHandler{

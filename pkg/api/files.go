@@ -64,6 +64,13 @@ type RegisterResponse struct {
 	Hash common.Hash `json:"hash"`
 }
 
+type ManifestOperation struct {
+	Target    string              `json:"target"`
+	Source    string              `json:"source"`
+	Fcid      string              `json:"fcid"`
+	Operation filestore.Operation `json:"operation"`
+}
+
 // fileUploadHandler uploads the file and its metadata supplied in the file body and
 // the headers
 func (s *server) fileUploadHandler(w http.ResponseWriter, r *http.Request) {
@@ -732,4 +739,288 @@ func (s *server) fileRegisterRemove(w http.ResponseWriter, r *http.Request) {
 		RegisterResponse{
 			Hash: hash,
 		})
+}
+
+func (s *server) manifestOperationHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	nameOrHex := mux.Vars(r)["address"]
+	address, err := s.resolveNameOrAddress(nameOrHex)
+	if err != nil {
+		s.logger.Errorf("file: parse address")
+		jsonhttp.NotFound(w, nil)
+		return
+	}
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		if jsonhttp.HandleBodyReadError(err, w) {
+			return
+		}
+		s.logger.Debugf("manifest: read transaction data error: %v", err)
+		s.logger.Error("manifest: read transaction data error")
+		jsonhttp.InternalServerError(w, "cannot read data")
+		return
+	}
+	var manifest ManifestOperation
+	if err = json.Unmarshal(body, &manifest); err != nil {
+		s.logger.Debugf("api: manifest handler: unmarshal request body: %v", err)
+		s.logger.Error("api: manifset handler: unmarshal request body")
+		jsonhttp.BadRequest(w, "Unmarshal json body")
+		return
+	}
+
+	switch manifest.Operation {
+	case filestore.ADD:
+		fcid, err1 := s.resolveNameOrAddress(manifest.Fcid)
+		if err1 != nil {
+			s.logger.Errorf("file: parse address")
+			jsonhttp.NotFound(w, err1)
+			return
+		}
+		address, err = s.fileAdd(ctx, address, fcid, manifest.Target, r)
+	case filestore.MOVE:
+		address, err = s.fileMove(ctx, address, manifest.Target, manifest.Source, r)
+
+	case filestore.COPY:
+		address, err = s.fileCopy(ctx, address, manifest.Target, manifest.Source, r)
+
+	case filestore.REMOVE:
+		address, err = s.fileRemove(ctx, address, manifest.Target, r)
+	}
+	if err != nil {
+		jsonhttp.BadRequest(w, err)
+		return
+	}
+	jsonhttp.Created(w, UploadResponse{
+		Reference: address,
+	})
+}
+
+func (s *server) fileMove(ctx context.Context, address boson.Address, target, source string, r *http.Request) (boson.Address, error) {
+	logger := tracing.NewLoggerWithTraceID(ctx, s.logger)
+	factory := requestPipelineFactory(ctx, s.storer, r)
+	ls := loadsave.New(s.storer, factory)
+	m, err := manifest.NewDefaultManifestReference(address, ls)
+	if err != nil {
+		logger.Debugf("move: not manifest %s: %v", address, err)
+		logger.Errorf("move: not manifest %s", address)
+		return boson.ZeroAddress, err
+	}
+	fn := func(reference boson.Address) error {
+		return nil
+	}
+	err = m.IterateAddresses(ctx, fn)
+	if err != nil {
+		return boson.ZeroAddress, err
+	}
+	err = m.Move(r.Context(), source, target)
+	if err != nil {
+		logger.Debugf("move file: move  manifest,error: %v", err)
+		logger.Error("move file: move  manifest, error")
+		return boson.ZeroAddress, err
+	}
+	var storeSizeFn []manifest.StoreSizeFunc
+	manifestReference, err := m.Store(ctx, storeSizeFn...)
+	if err != nil {
+		logger.Debugf("move: store manifest: %v", err)
+		logger.Error("move: store manifest")
+		return boson.ZeroAddress, fmt.Errorf("store manifest: %w", err)
+	}
+	bitLen := 0
+	fn = func(reference boson.Address) error {
+		bitLen++
+		return nil
+	}
+	err = m.IterateAddresses(ctx, fn)
+	if err != nil {
+		return boson.ZeroAddress, err
+	}
+	err = s.chunkInfo.OnFileUpload(ctx, manifestReference, int64(bitLen))
+	if err = s.fileInfo.AddFileMirror(manifestReference, address, filestore.MOVE); err != nil {
+		logger.Debugf("move file: adding file mirror, error : %v", err)
+		logger.Error("move file:  adding file mirror, error")
+		return boson.ZeroAddress, err
+	}
+	return manifestReference, nil
+}
+
+func (s *server) fileCopy(ctx context.Context, address boson.Address, target, source string, r *http.Request) (boson.Address, error) {
+	logger := tracing.NewLoggerWithTraceID(ctx, s.logger)
+	factory := requestPipelineFactory(ctx, s.storer, r)
+	ls := loadsave.New(s.storer, factory)
+	m, err := manifest.NewDefaultManifestReference(address, ls)
+	if err != nil {
+		logger.Debugf("copy: not manifest %s: %v", address, err)
+		logger.Errorf("copy: not manifest %s", address)
+		return boson.ZeroAddress, err
+	}
+	fn := func(reference boson.Address) error {
+		return nil
+	}
+	err = m.IterateAddresses(ctx, fn)
+	if err != nil {
+		return boson.ZeroAddress, err
+	}
+	err = m.Copy(r.Context(), source, target)
+	if err != nil {
+		logger.Debugf("copy file: move  manifest,error: %v", err)
+		logger.Error("copy file: move  manifest, error")
+		return boson.ZeroAddress, err
+	}
+	var storeSizeFn []manifest.StoreSizeFunc
+	manifestReference, err := m.Store(ctx, storeSizeFn...)
+	if err != nil {
+		logger.Debugf("copy: store manifest: %v", err)
+		logger.Error("copy: store manifest")
+		return boson.ZeroAddress, fmt.Errorf("store manifest: %w", err)
+	}
+	bitLen := 0
+	fn = func(reference boson.Address) error {
+		bitLen++
+		return nil
+	}
+	err = m.IterateAddresses(ctx, fn)
+	if err != nil {
+		return boson.ZeroAddress, err
+	}
+	err = s.chunkInfo.OnFileUpload(ctx, manifestReference, int64(bitLen))
+	if err = s.fileInfo.AddFileMirror(manifestReference, address, filestore.COPY); err != nil {
+		logger.Debugf("copy file: adding file mirror, error : %v", err)
+		logger.Error("copy file:  adding file mirror, error")
+		return boson.ZeroAddress, err
+	}
+	return manifestReference, nil
+}
+
+func (s *server) fileRemove(ctx context.Context, address boson.Address, target string, r *http.Request) (boson.Address, error) {
+	logger := tracing.NewLoggerWithTraceID(ctx, s.logger)
+	factory := requestPipelineFactory(ctx, s.storer, r)
+	ls := loadsave.New(s.storer, factory)
+	m, err := manifest.NewDefaultManifestReference(address, ls)
+	if err != nil {
+		logger.Debugf("remove: not manifest %s: %v", address, err)
+		logger.Errorf("remove: not manifest %s", address)
+		return boson.ZeroAddress, err
+	}
+	fn := func(reference boson.Address) error {
+		return nil
+	}
+	err = m.IterateAddresses(ctx, fn)
+	if err != nil {
+		return boson.ZeroAddress, err
+	}
+	err = m.Remove(ctx, target)
+	if err != nil {
+		logger.Debugf("remove: remove metadata to manifest, error : %v", err)
+		logger.Error("remove: remove metadata to manifest")
+		return boson.ZeroAddress, err
+	}
+	var storeSizeFn []manifest.StoreSizeFunc
+	manifestReference, err := m.Store(ctx, storeSizeFn...)
+	if err != nil {
+		logger.Debugf("remove: store manifest: %v", err)
+		logger.Error("remove: store manifest")
+		return boson.ZeroAddress, fmt.Errorf("store manifest: %w", err)
+	}
+	bitLen := 0
+	fn = func(reference boson.Address) error {
+		bitLen++
+		return nil
+	}
+	err = m.IterateAddresses(ctx, fn)
+	err = s.chunkInfo.OnFileUpload(ctx, manifestReference, int64(bitLen))
+	if err = s.fileInfo.AddFileMirror(manifestReference, address, filestore.REMOVE); err != nil {
+		logger.Debugf("remove: adding file mirror, error : %v", err)
+		logger.Error("remove:  adding file mirror, error")
+		return boson.ZeroAddress, err
+	}
+	return manifestReference, nil
+}
+
+func (s *server) fileAdd(ctx context.Context, rootCid, source boson.Address, path string, r *http.Request) (boson.Address, error) {
+	logger := tracing.NewLoggerWithTraceID(ctx, s.logger)
+	ls := loadsave.NewReadonly(s.storer, storage.ModeGetRequest)
+	m, err := manifest.NewDefaultManifestReference(source, ls)
+	if err != nil {
+		logger.Debugf("add: not manifest %s: %v", source, err)
+		logger.Errorf("add: not manifest %s", source)
+		return boson.ZeroAddress, err
+	}
+	var fcid boson.Address
+	var mtdt map[string]string
+	var p []byte
+	fn := func(nodeType int, path, prefix, hash []byte, metadata map[string]string) error {
+		if nodeType == 0 {
+			if strings.Contains(string(prefix), "._") {
+				return nil
+			}
+			fcid = boson.NewAddress(hash)
+			mtdt = metadata
+			p = prefix
+			bitLen, err := s.fileInfo.GetFileSize(fcid)
+			if err != nil {
+				return err
+			}
+			if bitLen > 1 {
+				bitLen++
+			}
+			err = s.chunkInfo.OnFileUpload(ctx, fcid, bitLen)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+
+	err = m.IterateDirectories(ctx, []byte(""), 0, fn)
+	if err != nil {
+		return boson.ZeroAddress, err
+	}
+	b := strings.Builder{}
+	b.WriteString(path)
+	b.Write(p)
+	path = b.String()
+	factory := requestPipelineFactory(ctx, s.storer, r)
+	ls = loadsave.New(s.storer, factory)
+	m, err = manifest.NewDefaultManifestReference(rootCid, ls)
+	if err != nil {
+		logger.Debugf("add: not manifest %s: %v", source, err)
+		logger.Errorf("add: not manifest %s", source)
+		return boson.ZeroAddress, err
+	}
+	fnAddress := func(reference boson.Address) error {
+		return nil
+	}
+	err = m.IterateAddresses(ctx, fnAddress)
+	if err != nil {
+		return boson.ZeroAddress, err
+	}
+	err = m.Add(ctx, path, manifest.NewEntry(fcid, mtdt, 0))
+	if err != nil {
+		logger.Debugf("add: adding metadata to manifest, : %v", err)
+		logger.Errorf("add: adding metadata to manifest")
+		return boson.ZeroAddress, err
+	}
+	var storeSizeFn []manifest.StoreSizeFunc
+	manifestReference, err := m.Store(ctx, storeSizeFn...)
+	if err != nil {
+		logger.Debugf("add: store manifest: %v", err)
+		logger.Error("add: store manifest")
+		return boson.ZeroAddress, fmt.Errorf("store manifest: %w", err)
+	}
+	bitLen := 0
+	fnAddress = func(reference boson.Address) error {
+		bitLen++
+		return nil
+	}
+	err = m.IterateAddresses(ctx, fnAddress)
+	if err != nil {
+		return boson.ZeroAddress, err
+	}
+	err = s.chunkInfo.OnFileUpload(ctx, manifestReference, int64(bitLen))
+	if err = s.fileInfo.AddFileMirror(manifestReference, rootCid, filestore.ADD); err != nil {
+		logger.Debugf("add: adding file mirror, error : %v", err)
+		logger.Error("add:  adding file mirror, error")
+		return boson.ZeroAddress, err
+	}
+	return manifestReference, nil
 }

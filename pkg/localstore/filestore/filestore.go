@@ -9,9 +9,13 @@ import (
 type Interface interface {
 	Init() error
 	Get(reference boson.Address) (FileView, bool)
+	GetMirror(reference boson.Address) (*FileMirror, error)
 	GetList(page Page, filter []Filter, sort Sort) ([]FileView, int)
+	GetMirrors(reference boson.Address) (fms []*FileMirror, err error)
 	Put(file FileView) error
+	PutMirror(pre, next boson.Address, ope Operation, file FileView) error
 	Delete(reference boson.Address) error
+	DeleteMirror(reference boson.Address) error
 	Has(reference boson.Address) bool
 	Update(file FileView) error
 }
@@ -52,6 +56,7 @@ type Sort struct {
 }
 
 var keyPrefix = "file"
+var mirrorPrefix = "mirror"
 
 func New(storer storage.StateStorer) Interface {
 	return &fileStore{
@@ -91,6 +96,14 @@ func (fs *fileStore) GetList(page Page, filter []Filter, sort Sort) ([]FileView,
 	return pf, total
 }
 
+func (fs *fileStore) GetMirror(reference boson.Address) (*FileMirror, error) {
+	return fs.getMirror(reference)
+}
+
+func (fs *fileStore) GetMirrors(reference boson.Address) (fms []*FileMirror, err error) {
+	return fs.getMirrors(reference)
+}
+
 func (fs *fileStore) Update(file FileView) error {
 	fs.files[file.RootCid.String()] = file
 	if err := fs.stateStore.Put(keyPrefix+"-"+file.RootCid.String(), file); err != nil {
@@ -105,6 +118,10 @@ func (fs *fileStore) Put(file FileView) error {
 		return err
 	}
 	return nil
+}
+
+func (fs *fileStore) PutMirror(pre, next boson.Address, ope Operation, file FileView) error {
+	return fs.putMirror(pre, next, ope, file)
 }
 
 func (fs *fileStore) put(file FileView) {
@@ -126,7 +143,9 @@ func (fs *fileStore) Delete(reference boson.Address) error {
 	}
 	return nil
 }
-
+func (fs *fileStore) DeleteMirror(reference boson.Address) error {
+	return fs.delMirror(reference)
+}
 func (fs *fileStore) Has(reference boson.Address) bool {
 	_, ok := fs.files[reference.String()]
 	return ok
