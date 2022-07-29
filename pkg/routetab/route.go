@@ -26,7 +26,7 @@ import (
 
 const (
 	ProtocolName           = "router"
-	ProtocolVersion        = "3.0.0"
+	ProtocolVersion        = "4.0.0"
 	StreamOnRelay          = "relay"
 	StreamOnRelayConnChain = "relayConnChain"
 	streamOnRouteReq       = "onRouteReq"
@@ -432,10 +432,7 @@ func (s *Service) getNeighbor(target boson.Address, alpha int32, skip ...boson.A
 			return false, false, nil
 		})
 	}
-	forward = s.kad.GetPeersWithLatencyEWMA(now)
-	if len(forward) > int(alpha) {
-		return forward[:int(alpha)]
-	}
+	forward, _ = s.kad.RandomSubset(now, int(alpha))
 	return
 }
 
@@ -736,221 +733,69 @@ func (s *Service) getNextHopEffective(target boson.Address, skips ...boson.Addre
 }
 
 func (s *Service) onRelay(ctx context.Context, p p2p.Peer, stream p2p.Stream) (err error) {
-	var (
-		target        boson.Address
-		next          boson.Address
-		forwardStream p2p.Stream
-		forwardWriter protobuf.Writer
-		forwardReader protobuf.Reader
-		forwardNext   bool
-		quit          bool
-	)
-
-	errChan := make(chan error, 1)
-	forwardChan := make(chan *pb.RouteRelayReq, 1)
-	readRespChan := make(chan *pb.RouteRelayResp, 1)
-
 	defer func() {
-		if forwardStream != nil {
-			quit = true
-			_ = forwardStream.Reset()
+		if err != nil {
+			s.logger.Tracef("onRelay from %s err %s", p.Address, err)
+			_ = stream.Reset()
+		} else {
+			_ = stream.Close()
+			s.logger.Tracef("onRelay from %s stream close", p.Address)
 		}
 	}()
 
-	req, w, r, forwardNext, err := s.p2ps.CallHandler(ctx, p, stream)
-
-	if forwardNext {
-		forwardChan <- req
-	} else {
+	req, _, _, forward, err := s.p2ps.CallHandler(ctx, p, stream)
+	if !forward {
 		return err
 	}
-
-	// read forward response
-	readResp := func(ch chan *pb.RouteRelayResp) {
-		for {
-			resp := &pb.RouteRelayResp{}
-			e := forwardReader.ReadMsg(resp)
-			if quit {
-				return
-			}
-			switch e {
-			case context.Canceled, io.EOF:
-				// when next node FullClose
-				errChan <- nil
-				return
-			case nil:
-				ch <- resp
-				s.logger.Tracef("route: onRelay target %s receive: from %s", target, next)
-			default:
-				content := fmt.Sprintf("route: onRelay read resp from next: %s", e.Error())
-				s.logger.Debug(content)
-				errChan <- fmt.Errorf(content)
-				return
-			}
-		}
-	}
-
-	for {
-		select {
-		case err = <-r.Err:
-			switch err {
-			case context.Canceled, io.EOF:
-				return nil
-			default:
-				return err
-			}
-		case req := <-forwardChan:
-			req.Paths = append(req.Paths, s.self.Bytes())
-			target = boson.NewAddress(req.Dest)
-			// jump next
-			if forwardStream == nil {
-				if s.IsNeighbor(target) {
-					next = target
-					s.logger.Tracef("route: onRelay the path has %d jump", len(req.Paths))
-				} else {
-					_, skips := generatePathItems(req.Paths)
-					next, err = s.GetNextHopRandomOrFind(ctx, target, skips...)
-					if err != nil {
-						s.logger.Debugf("route: onRelay target %s nextHop not found", target)
-						errChan <- err
-						break
-					}
-				}
-				forwardStream, err = s.stream.NewStream(ctx, next, stream.Headers(), ProtocolName, ProtocolVersion, StreamOnRelay)
-				if err != nil {
-					errChan <- err
-					break
-				}
-				forwardWriter, forwardReader = protobuf.NewWriterAndReader(forwardStream)
-				go readResp(readRespChan)
-				s.logger.Tracef("route: relay stream created, target %s next %s", target, next)
-			}
-			if err = forwardWriter.WriteMsg(req); err != nil {
-				content := fmt.Sprintf("route: onRelay forward msg: %s", err.Error())
-				s.logger.Errorf(content)
-				errChan <- fmt.Errorf(content)
-				break
-			}
-			s.logger.Tracef("route: onRelay target %s forward req to %s", target, next)
-		case resp := <-readRespChan:
-			w.W <- resp.Data
-			err = <-w.Err
-			if err != nil {
-				content := fmt.Sprintf("route: onRelay target %s send resp to %s: %s", target, p.Address, err.Error())
-				s.logger.Errorf(content)
-				errChan <- fmt.Errorf(content)
-				break
-			}
-			s.logger.Tracef("route: onRelay target %s send resp to %s", target, p.Address)
-		case err = <-errChan:
+	target := boson.NewAddress(req.Dest)
+	// forward
+	var (
+		next       boson.Address
+		remoteConn p2p.Stream
+	)
+	if s.IsNeighbor(target) {
+		next = target
+		s.logger.Tracef("route: onRelay the path has %d jump", len(req.Paths))
+	} else {
+		_, skips := generatePathItems(req.Paths)
+		next, err = s.GetNextHopRandomOrFind(ctx, target, skips...)
+		if err != nil {
+			s.logger.Debugf("route: onRelay target %s nextHop not found", target)
 			return err
 		}
 	}
-}
+	remoteConn, err = s.stream.NewStream(ctx, next, stream.Headers(), ProtocolName, ProtocolVersion, StreamOnRelay)
+	if err != nil {
+		return err
+	}
+	defer remoteConn.Close()
 
-// PackRelayReq This packet mode is UDP mode and writing success does not mean that the final target has received a message
-func (s *Service) PackRelayReq(ctx context.Context, stream p2p.VirtualStream, req *pb.RouteRelayReq) {
+	w := protobuf.NewWriter(remoteConn)
+	err = w.WriteMsgWithContext(ctx, req)
+	if err != nil {
+		return fmt.Errorf("route: onRelay forward syn err %s", err)
+	}
+
+	// response
+	respErrCh := make(chan error, 1)
 	go func() {
-		var quit bool
-		w, r := protobuf.NewWriterAndReader(stream.RealStream())
-		var err error
-		defer func() {
-			stream.UpdateStatRealStreamClosed()
-			quit = true
-			if err != nil {
-				_ = stream.RealStream().Reset()
-			} else {
-				_ = stream.RealStream().FullClose()
-			}
-		}()
-		go func() {
-			defer stream.UpdateStatRealStreamClosed()
-			for {
-				resp := &pb.RouteRelayResp{}
-				err = r.ReadMsg(resp)
-				if err != nil {
-					if quit {
-						err = nil
-					}
-					stream.Reader().Err <- err
-					return
-				}
-				stream.Reader().R <- resp.Data
-			}
-		}()
-		for {
-			select {
-			case <-stream.Done():
-				return
-			case <-ctx.Done():
-				return
-			case p := <-stream.Writer().W:
-				req.Data = p
-				err = w.WriteMsg(req)
-				stream.Writer().Err <- err
-				if err != nil {
-					return
-				}
-			}
-		}
+		_, err = io.Copy(stream, remoteConn)
+		s.logger.Tracef("route: onRelay io.copy resp err %v", err)
+		respErrCh <- err
 	}()
-}
-
-// PackRelayResp This packet mode is UDP mode and writing success does not mean that the final target has received a message
-// This channel is closed by the initiator node
-func (s *Service) PackRelayResp(ctx context.Context, stream p2p.VirtualStream, reqCh chan *pb.RouteRelayReq) {
+	// request
+	reqErrCh := make(chan error, 1)
 	go func() {
-		var quit bool
-		w, r := protobuf.NewWriterAndReader(stream.RealStream())
-		var err error
-		defer func() {
-			stream.UpdateStatRealStreamClosed()
-			quit = true
-			if err != nil {
-				_ = stream.RealStream().Reset()
-			} else {
-				_ = stream.RealStream().FullClose()
-			}
-		}()
-
-		first := true
-
-		go func() {
-			defer stream.UpdateStatRealStreamClosed()
-			for {
-				req := &pb.RouteRelayReq{}
-				err = r.ReadMsg(req)
-				if first {
-					first = false
-					if err != nil {
-						reqCh <- nil
-					} else {
-						reqCh <- req
-					}
-				}
-				if err != nil {
-					if quit {
-						err = nil
-					}
-					stream.Reader().Err <- err
-					return
-				}
-				stream.Reader().R <- req.Data
-			}
-		}()
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case p := <-stream.Writer().W:
-				err = w.WriteMsg(&pb.RouteRelayResp{Data: p})
-				stream.Writer().Err <- err
-				if err != nil {
-					return
-				}
-			}
-		}
+		_, err = io.Copy(remoteConn, stream)
+		s.logger.Tracef("route: onRelay io.copy req err %v", err)
+		reqErrCh <- err
 	}()
+	select {
+	case err = <-respErrCh:
+		return err
+	case err = <-reqErrCh:
+		return err
+	}
 }
 
 func (s *Service) convUnderlayList(uType int32, target, last boson.Address, old []*pb.UnderlayResp) (out []*pb.UnderlayResp) {

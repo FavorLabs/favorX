@@ -116,7 +116,16 @@ func (s *Service) Close() error {
 	}
 }
 
-func (s *Service) onFindNode(ctx context.Context, peer p2p.Peer, stream p2p.Stream) error {
+func (s *Service) onFindNode(ctx context.Context, peer p2p.Peer, stream p2p.Stream) (err error) {
+	start := time.Now()
+	defer func() {
+		s.logger.Debugf("hive2: onFindNode time consuming %v", time.Since(start).Seconds())
+		if err != nil {
+			_ = stream.Reset()
+		} else {
+			go stream.FullClose()
+		}
+	}()
 	addr, err := s.addressBook.Get(peer.Address)
 	if err != nil && !errors.Is(err, addressbook.ErrNotFound) {
 		return err
@@ -125,18 +134,11 @@ func (s *Service) onFindNode(ctx context.Context, peer p2p.Peer, stream p2p.Stre
 
 	s.metrics.OnFindNode.Inc()
 	s.logger.Tracef("hive2: onFindNode start... peer=%s", peer.Address.String())
-	start := time.Now()
 	w, r := protobuf.NewWriterAndReader(stream)
 	var req pb.FindNodeReq
-	if err := r.ReadMsgWithContext(ctx, &req); err != nil {
-		_ = stream.Reset()
+	if err = r.ReadMsgWithContext(ctx, &req); err != nil {
 		return fmt.Errorf("hive2: onFindNode handler read message: %w", err)
 	}
-
-	defer func() {
-		s.logger.Debugf("hive2: onFindNode time consuming %v", time.Since(start).Seconds())
-		go stream.FullClose()
-	}()
 
 	if req.Limit > maxPeersLimit {
 		req.Limit = maxPeersLimit
@@ -192,7 +194,6 @@ func (s *Service) onFindNode(ctx context.Context, peer p2p.Peer, stream p2p.Stre
 
 	err = w.WriteMsgWithContext(ctx, resp)
 	if err != nil {
-		_ = stream.Reset()
 		return fmt.Errorf("hive2: onFindNode handler write message: %w", err)
 	}
 	return nil
@@ -206,6 +207,14 @@ func (s *Service) DoFindNode(ctx context.Context, target, peer boson.Address, po
 		return
 	}
 
+	defer func() {
+		if err != nil {
+			_ = stream.Reset()
+		} else {
+			go stream.FullClose()
+		}
+	}()
+
 	ctx1, cancel := context.WithTimeout(ctx, messageTimeout)
 	defer cancel()
 
@@ -216,14 +225,12 @@ func (s *Service) DoFindNode(ctx context.Context, target, peer boson.Address, po
 		Limit:  limit,
 	})
 	if err != nil {
-		_ = stream.Reset()
 		err = fmt.Errorf("hive2: DoFindNode write message: %w", err)
 		return
 	}
 
 	var result pb.Peers
 	if err = r.ReadMsgWithContext(ctx1, &result); err != nil {
-		_ = stream.Reset()
 		err = fmt.Errorf("hive2: DoFindNode read message: %w", err)
 		return
 	}

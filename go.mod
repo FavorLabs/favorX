@@ -20,7 +20,7 @@ require (
 	github.com/kardianos/service v1.2.1
 	github.com/kilic/bls12-381 v0.1.0
 	github.com/libp2p/go-eventbus v0.2.1
-	github.com/libp2p/go-libp2p v0.19.0
+	github.com/libp2p/go-libp2p v0.19.4
 	github.com/libp2p/go-libp2p-core v0.15.1
 	github.com/libp2p/go-libp2p-nat v0.1.0
 	github.com/libp2p/go-libp2p-peerstore v0.6.0
