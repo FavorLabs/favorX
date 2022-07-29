@@ -639,8 +639,8 @@ github.com/libp2p/go-eventbus v0.2.1/go.mod h1:jc2S4SoEVPP48H9Wpzm5aiGwUCBMfGhVh
 github.com/libp2p/go-flow-metrics v0.0.1/go.mod h1:Iv1GH0sG8DtYN3SVJ2eG221wMiNpZxBdp967ls1g+k8=
 github.com/libp2p/go-flow-metrics v0.0.3 h1:8tAs/hSdNvUiLgtlSy3mxwxWP4I9y/jlkPFT7epKdeM=
 github.com/libp2p/go-flow-metrics v0.0.3/go.mod h1:HeoSNUrOJVK1jEpDqVEiUOIXqhbnS27omG0uWU5slZs=
-github.com/libp2p/go-libp2p v0.19.0 h1:zosskMbaobL7UDCVLEe1m5CGs1TaFNFoN/M5XLiKg0U=
-github.com/libp2p/go-libp2p v0.19.0/go.mod h1:Ki9jJXLO2YqrTIFxofV7Twyd3INWPT97+r8hGt7XPjI=
+github.com/libp2p/go-libp2p v0.19.4 h1:50YL0YwPhWKDd+qbZQDEdnsmVAAkaCQrWUjpdHv4hNA=
+github.com/libp2p/go-libp2p v0.19.4/go.mod h1:MIt8y481VDhUe4ErWi1a4bvt/CjjFfOq6kZTothWIXY=
 github.com/libp2p/go-libp2p-asn-util v0.2.0 h1:rg3+Os8jbnO5DxkC7K/Utdi+DkY3q/d1/1q+8WeNAsw=
 github.com/libp2p/go-libp2p-asn-util v0.2.0/go.mod h1:WoaWxbHKBymSN41hWSq/lGKJEca7TNm58+gGJi2WsLI=
 github.com/libp2p/go-libp2p-blankhost v0.3.0 h1:kTnLArltMabZlzY63pgGDA4kkUcLkBFSM98zBssn/IY=

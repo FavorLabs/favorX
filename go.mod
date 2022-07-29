@@ -20,7 +20,7 @@ require (
 	github.com/kardianos/service v1.2.1
 	github.com/kilic/bls12-381 v0.1.0
 	github.com/libp2p/go-eventbus v0.2.1
-	github.com/libp2p/go-libp2p v0.19.0
+	github.com/libp2p/go-libp2p v0.19.4
 	github.com/libp2p/go-libp2p-core v0.15.1
 	github.com/libp2p/go-libp2p-nat v0.1.0
 	github.com/libp2p/go-libp2p-peerstore v0.6.0
@@ -44,6 +44,7 @@ require (
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 	golang.org/x/sys v0.0.0-20220610221304-9f5ed59c137d
 	golang.org/x/term v0.0.0-20220526004731-065cf7ba2467
+	golang.org/x/text v0.3.8-0.20211105212822-18b340fc7af2
 	gopkg.in/yaml.v2 v2.4.0
 	resenje.org/singleflight v0.2.0
 	resenje.org/web v0.4.3
@@ -173,7 +174,6 @@ require (
 	go.uber.org/zap v1.21.0 // indirect
 	golang.org/x/mod v0.6.0-dev.0.20220106191415-9b9b3d81d5e3 // indirect
 	golang.org/x/net v0.0.0-20220520000938-2e3eb7b945c2 // indirect
-	golang.org/x/text v0.3.8-0.20211105212822-18b340fc7af2 // indirect
 	golang.org/x/tools v0.1.10 // indirect
 	golang.org/x/xerrors v0.0.0-20220517211312-f3a8303e98df // indirect
 	google.golang.org/grpc v1.46.2 // indirect
