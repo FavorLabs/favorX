@@ -91,7 +91,7 @@ func (m *mantarayManifest) Move(ctx context.Context, path, newPath string) error
 
 func (m *mantarayManifest) Copy(ctx context.Context, path, newPath string) error {
 	p := []byte(path)
-	np := []byte(path)
+	np := []byte(newPath)
 	err := m.trie.Copy(ctx, p, np, m.ls)
 	if err != nil {
 		if errors.Is(err, mantaray.ErrNotFound) {

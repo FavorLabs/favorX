@@ -780,13 +780,11 @@ func (s *server) manifestOperationHandler(w http.ResponseWriter, r *http.Request
 	case filestore.MOVE:
 		address, err = s.fileMove(ctx, address, manifest.Target, manifest.Source, r)
 
-	case filestore.COPE:
+	case filestore.COPY:
 		address, err = s.fileCopy(ctx, address, manifest.Target, manifest.Source, r)
 
 	case filestore.REMOVE:
 		address, err = s.fileRemove(ctx, address, manifest.Target, r)
-	case filestore.MKDIR:
-		address, err = s.fileMkdir(ctx, address, manifest.Target, r)
 	}
 	if err != nil {
 		jsonhttp.BadRequest(w, err)
@@ -885,61 +883,9 @@ func (s *server) fileCopy(ctx context.Context, address boson.Address, target, so
 		return boson.ZeroAddress, err
 	}
 	err = s.chunkInfo.OnFileUpload(ctx, manifestReference, int64(bitLen))
-	if err = s.fileInfo.AddFileMirror(manifestReference, address, filestore.COPE); err != nil {
+	if err = s.fileInfo.AddFileMirror(manifestReference, address, filestore.COPY); err != nil {
 		logger.Debugf("copy file: adding file mirror, error : %v", err)
 		logger.Error("copy file:  adding file mirror, error")
-		return boson.ZeroAddress, err
-	}
-	return manifestReference, nil
-}
-
-func (s *server) fileMkdir(ctx context.Context, address boson.Address, target string, r *http.Request) (boson.Address, error) {
-	logger := tracing.NewLoggerWithTraceID(ctx, s.logger)
-	factory := requestPipelineFactory(ctx, s.storer, r)
-	ls := loadsave.New(s.storer, factory)
-	m, err := manifest.NewDefaultManifestReference(address, ls)
-	if err != nil {
-		logger.Debugf("mkdir: not manifest %s: %v", address, err)
-		logger.Errorf("mkdir: not manifest %s", address)
-		return boson.ZeroAddress, err
-	}
-	fn := func(reference boson.Address) error {
-		return nil
-	}
-	err = m.IterateAddresses(ctx, fn)
-	if err != nil {
-		return boson.ZeroAddress, err
-	}
-	mtdt := make(map[string]string)
-	err = m.Add(ctx, target, manifest.NewEntry(boson.ZeroAddress, mtdt, 0))
-	if err != nil {
-		logger.Debugf("mkdir: adding metadata to manifest, : %v", err)
-		logger.Errorf("mkdir: adding metadata to manifest")
-		return boson.ZeroAddress, err
-	}
-	var storeSizeFn []manifest.StoreSizeFunc
-	manifestReference, err := m.Store(ctx, storeSizeFn...)
-	if err != nil {
-		logger.Debugf("mkdir: store manifest: %v", err)
-		logger.Error("mkdir: store manifest")
-		return boson.ZeroAddress, fmt.Errorf("store manifest: %w", err)
-	}
-	bitLen := 0
-	fn = func(reference boson.Address) error {
-		bitLen++
-		return nil
-	}
-	err = m.IterateAddresses(ctx, fn)
-	if err != nil {
-		return boson.ZeroAddress, err
-	}
-	err = s.chunkInfo.OnFileUpload(ctx, manifestReference, int64(bitLen))
-	if err != nil {
-		return boson.ZeroAddress, err
-	}
-	if err = s.fileInfo.AddFileMirror(manifestReference, address, filestore.MKDIR); err != nil {
-		logger.Debugf("mkdir: adding file mirror, error : %v", err)
-		logger.Error("mkdir:  adding file mirror, error")
 		return boson.ZeroAddress, err
 	}
 	return manifestReference, nil

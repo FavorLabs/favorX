@@ -28,7 +28,7 @@ type Operation int
 const (
 	REMOVE Operation = iota
 	MOVE
-	COPE
+	COPY
 	MKDIR
 	ADD
 )
@@ -39,8 +39,8 @@ func (o Operation) String() string {
 		return "REMOVE"
 	case MOVE:
 		return "MOVE"
-	case COPE:
-		return "COPE"
+	case COPY:
+		return "COPY"
 	case MKDIR:
 		return "MKDIR"
 	case ADD:
