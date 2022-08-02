@@ -1,4 +1,4 @@
-package libp2p
+package p2p
 
 import (
 	"bytes"
@@ -10,23 +10,31 @@ var _ p2p.Stream = (*virtualStream)(nil)
 
 type virtualStream struct {
 	p2p.Stream
-	read  *io.PipeReader
-	write *io.PipeWriter
+	ReadPipe  *io.PipeReader
+	WritePipe *io.PipeWriter
 }
 
-func newVirtualStream(s p2p.Stream) *virtualStream {
+func NewVirtualStream(s p2p.Stream) *virtualStream {
 	srv := &virtualStream{
 		Stream: s,
 	}
-	srv.read, srv.write = io.Pipe()
+	srv.ReadPipe, srv.WritePipe = io.Pipe()
 	return srv
 }
 
 func (s *virtualStream) Read(p []byte) (int, error) {
-	return s.read.Read(p)
+	return s.ReadPipe.Read(p)
 }
 
 func (s *virtualStream) Reset() error {
+	return nil
+}
+
+func (s *virtualStream) FullClose() error {
+	return nil
+}
+
+func (s *virtualStream) Close() error {
 	return nil
 }
 
