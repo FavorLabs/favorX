@@ -82,7 +82,7 @@ func (s *Service) copyStream(w http.ResponseWriter, r *http.Request, addr boson.
 			s.logger.Tracef("RelayHttpDoV2 to %s err %s", addr, err)
 			_ = st.Reset()
 		} else {
-			_ = st.Close()
+			_ = st.Close() // must use .Close instead of .FullClose, otherwise it will lead to goroutine leakage
 			s.logger.Tracef("RelayHttpDoV2 to %s stream close", addr)
 		}
 	}()

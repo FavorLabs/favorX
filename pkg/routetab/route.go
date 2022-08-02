@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/FavorLabs/favorX/pkg/addressbook"
+	fp2p "github.com/FavorLabs/favorX/pkg/p2p"
 	"github.com/FavorLabs/favorX/pkg/storage"
 	"github.com/FavorLabs/favorX/pkg/topology/kademlia"
 	"github.com/gauss-project/aurorafs/pkg/aurora"
@@ -735,19 +736,83 @@ func (s *Service) getNextHopEffective(target boson.Address, skips ...boson.Addre
 func (s *Service) onRelay(ctx context.Context, p p2p.Peer, stream p2p.Stream) (err error) {
 	defer func() {
 		if err != nil {
-			s.logger.Tracef("onRelay from %s err %s", p.Address, err)
+			s.logger.Tracef("route: onRelay from %s err %s", p.Address, err)
 			_ = stream.Reset()
 		} else {
-			_ = stream.Close()
-			s.logger.Tracef("onRelay from %s stream close", p.Address)
+			_ = stream.Close() // must use .Close instead of .FullClose, otherwise it will lead to goroutine leakage
+			s.logger.Tracef("route: onRelay from %s stream close", p.Address)
 		}
 	}()
 
-	req, _, _, forward, err := s.p2ps.CallHandler(ctx, p, stream)
-	if !forward {
-		return err
+	req := &pb.RouteRelayReq{}
+	r := protobuf.NewReader(stream)
+	err = r.ReadMsgWithContext(ctx, req)
+	if err != nil {
+		err = fmt.Errorf("read syn err %s", err)
+		return
+	}
+
+	buf := &fp2p.BuffMessage{}
+	if len(req.Data) == 0 {
+		err = r.ReadMsgWithContext(ctx, buf)
+		if err != nil {
+			err = fmt.Errorf("read first err %s", err)
+			return
+		}
+		req.Data = buf.Bytes()
+	} else {
+		_, err = buf.Write(req.Data)
+		if err != nil {
+			return
+		}
+	}
+
+	md, err := aurora.NewModelFromBytes(req.SrcMode)
+	if err != nil {
+		return
 	}
 	target := boson.NewAddress(req.Dest)
+	if !target.Equal(s.self) && !req.MidCall {
+		return
+	}
+	src := p2p.Peer{
+		Address: boson.NewAddress(req.Src),
+		Mode:    md,
+	}
+
+	kv := make(map[string]string)
+	kv["pName"] = string(req.ProtocolName)
+	kv["pVersion"] = string(req.ProtocolVersion)
+	kv["sName"] = string(req.StreamName)
+	ctxV := context.WithValue(ctx, "req_stream", kv)
+
+	vst := fp2p.NewVirtualStream(stream)
+	defer func() {
+		_ = vst.WritePipe.Close()
+		_ = vst.ReadPipe.Close()
+	}()
+
+	// request
+	reqErrCh := make(chan error, 1)
+	go func() {
+		_, err = io.Copy(vst.WritePipe, stream)
+		reqErrCh <- err
+	}()
+
+	_, _, res, _, err := s.p2ps.CallHandler(ctxV, src, vst)
+	if err != nil {
+		return err
+	}
+	_ = protobuf.NewWriter(vst.WritePipe).WriteMsg(buf)
+	select {
+	case e := <-res.Err:
+		if e == nil || target.Equal(s.self) {
+			return e
+		}
+	case err = <-reqErrCh:
+		return err
+	}
+
 	// forward
 	var (
 		next       boson.Address
@@ -768,27 +833,22 @@ func (s *Service) onRelay(ctx context.Context, p p2p.Peer, stream p2p.Stream) (e
 	if err != nil {
 		return err
 	}
-	defer remoteConn.Close()
+	defer remoteConn.Close() // must use .Close instead of .FullClose, otherwise it will lead to goroutine leakage
 
-	w := protobuf.NewWriter(remoteConn)
-	err = w.WriteMsgWithContext(ctx, req)
+	err = protobuf.NewWriter(remoteConn).WriteMsgWithContext(ctx, req)
 	if err != nil {
-		return fmt.Errorf("route: onRelay forward syn err %s", err)
+		return fmt.Errorf("forward syn err %s", err)
 	}
 
 	// response
 	respErrCh := make(chan error, 1)
 	go func() {
 		_, err = io.Copy(stream, remoteConn)
-		s.logger.Tracef("route: onRelay io.copy resp err %v", err)
 		respErrCh <- err
 	}()
-	// request
-	reqErrCh := make(chan error, 1)
+	// forward
 	go func() {
-		_, err = io.Copy(remoteConn, stream)
-		s.logger.Tracef("route: onRelay io.copy req err %v", err)
-		reqErrCh <- err
+		_, _ = io.Copy(remoteConn, vst.ReadPipe)
 	}()
 	select {
 	case err = <-respErrCh:
@@ -837,7 +897,7 @@ func (s *Service) onRelayConnChain(ctx context.Context, p p2p.Peer, stream p2p.S
 			s.logger.Tracef("onRelayConnChain from %s err %s", p.Address, err)
 			_ = stream.Reset()
 		} else {
-			_ = stream.Close()
+			_ = stream.Close() // must use .Close instead of .FullClose, otherwise it will lead to goroutine leakage
 			s.logger.Tracef("onRelayConnChain from %s stream close", p.Address)
 		}
 	}()
@@ -879,7 +939,7 @@ func (s *Service) onRelayConnChain(ctx context.Context, p p2p.Peer, stream p2p.S
 	if err != nil {
 		return fmt.Errorf("new forward stream to %s %s", next, err)
 	}
-	defer remoteConn.Close()
+	defer remoteConn.Close() // must use .Close instead of .FullClose, otherwise it will lead to goroutine leakage
 
 	w := protobuf.NewWriter(remoteConn)
 	err = w.WriteMsgWithContext(ctx, &req)
