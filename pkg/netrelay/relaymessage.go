@@ -62,7 +62,7 @@ func (s *Service) onRelayHttpReqV2(ctx context.Context, p p2p.Peer, stream p2p.S
 			s.logger.Tracef("onRelayHttpReqV2 from %s err %s", p.Address, err)
 			_ = stream.Reset()
 		} else {
-			_ = stream.Close()
+			_ = stream.Close() // must use .Close instead of .FullClose, otherwise it will lead to goroutine leakage
 			s.logger.Tracef("onRelayHttpReqV2 from %s stream close", p.Address)
 		}
 	}()
