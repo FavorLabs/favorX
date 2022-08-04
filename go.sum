@@ -73,6 +73,8 @@ github.com/FavorLabs/manifest v1.0.0 h1:1EMpD4oqxb5jxyYTtOxwGmrqeHqH/uaj3i9PXFah
 github.com/FavorLabs/manifest v1.0.0/go.mod h1:IMu6ZhKHuotakPu4gUW8zEfvqM1b63WMot9P70pie/Y=
 github.com/FavorLabs/manifest v1.1.0 h1:zOplKz4z+F5LSmVrMzrOmQ/zaflOqC2KYJ+JsEH+3Wg=
 github.com/FavorLabs/manifest v1.1.0/go.mod h1:IMu6ZhKHuotakPu4gUW8zEfvqM1b63WMot9P70pie/Y=
+github.com/FavorLabs/manifest v1.1.1 h1:wMtbzTclkTc6NHhPPVV2GZc3EUPwG2SEuNQCnTgQsTk=
+github.com/FavorLabs/manifest v1.1.1/go.mod h1:IMu6ZhKHuotakPu4gUW8zEfvqM1b63WMot9P70pie/Y=
 github.com/HdrHistogram/hdrhistogram-go v1.1.2 h1:5IcZpTvzydCQeHzK4Ef/D5rrSqwxob0t8PQPMybUNFM=
 github.com/Knetic/govaluate v3.0.1-0.20171022003610-9aa49832a739+incompatible h1:1G1pk05UrOh0NlF1oeaaix1x8XzrfjIDK47TY0Zehcw=
 github.com/Knetic/govaluate v3.0.1-0.20171022003610-9aa49832a739+incompatible/go.mod h1:r7JcOSlj0wfOMncg0iLm8Leh48TZaKVeNIfJntJ2wa0=

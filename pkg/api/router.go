@@ -140,8 +140,8 @@ func (s *server) setupRouting() {
 			http.Redirect(w, r, u.String(), http.StatusPermanentRedirect)
 		}),
 		"POST": web.ChainHandlers(
-			s.newTracingHandler("manifest-operation"),
-			web.FinalHandlerFunc(s.manifestOperationHandler),
+			s.newTracingHandler("manifest-interaction"),
+			web.FinalHandlerFunc(s.manifestInteractionHandler),
 		),
 	})
 

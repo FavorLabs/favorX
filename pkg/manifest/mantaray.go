@@ -76,29 +76,43 @@ func (m *mantarayManifest) Remove(ctx context.Context, path string) error {
 	return nil
 }
 
-func (m *mantarayManifest) Move(ctx context.Context, path, newPath string) error {
+func (m *mantarayManifest) Move(ctx context.Context, source boson.Address, path, newPath string) error {
 	p := []byte(path)
 	np := []byte(newPath)
-	err := m.trie.Move(ctx, p, np, m.ls)
+
+	root := m.trie
+	if !source.IsZero() {
+		root = mantaray.NewNodeRef(source.Bytes())
+	}
+
+	err := root.Move(ctx, m.trie, p, np, m.ls)
 	if err != nil {
 		if errors.Is(err, mantaray.ErrNotFound) {
 			return ErrNotFound
 		}
 		return err
 	}
+
 	return nil
 }
 
-func (m *mantarayManifest) Copy(ctx context.Context, path, newPath string) error {
+func (m *mantarayManifest) Copy(ctx context.Context, source boson.Address, path, newPath string) error {
 	p := []byte(path)
 	np := []byte(newPath)
-	err := m.trie.Copy(ctx, p, np, m.ls)
+
+	root := m.trie
+	if !source.IsZero() {
+		root = mantaray.NewNodeRef(source.Bytes())
+	}
+
+	err := root.Copy(ctx, m.trie, p, np, m.ls)
 	if err != nil {
 		if errors.Is(err, mantaray.ErrNotFound) {
 			return ErrNotFound
 		}
 		return err
 	}
+
 	return nil
 }
 
