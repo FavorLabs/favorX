@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"sync"
 
 	"github.com/FavorLabs/favorX/pkg/sctx"
 	"github.com/FavorLabs/favorX/pkg/storage"
@@ -58,6 +59,7 @@ func NewService(
 
 // Service is implementation of the pinning.Interface.
 type Service struct {
+	sync.RWMutex
 	pinStorage storage.Storer
 	rhStorage  storage.StateStorer
 	traverser  traversal.Traverser
@@ -65,6 +67,8 @@ type Service struct {
 
 // CreatePin implements Interface.CreatePin method.
 func (s *Service) CreatePin(ctx context.Context, ref boson.Address, traverse bool) error {
+	s.Lock()
+	defer s.Unlock()
 	// iterFn is a pinning iterator function over the leaves of the root.
 	ctx = sctx.SetRootHash(ctx, ref)
 	iterFn := func(leaf boson.Address) error {
@@ -95,6 +99,8 @@ func (s *Service) CreatePin(ctx context.Context, ref boson.Address, traverse boo
 
 // DeletePin implements Interface.DeletePin method.
 func (s *Service) DeletePin(ctx context.Context, ref boson.Address) error {
+	s.Lock()
+	defer s.Unlock()
 	var iterErr error
 	ctx = sctx.SetRootHash(ctx, ref)
 	// iterFn is a unpinning iterator function over the leaves of the root.
@@ -123,6 +129,8 @@ func (s *Service) DeletePin(ctx context.Context, ref boson.Address) error {
 
 // HasPin implements Interface.HasPin method.
 func (s *Service) HasPin(ref boson.Address) (bool, error) {
+	s.RLock()
+	defer s.RUnlock()
 	key, val := rootPinKey(ref), boson.NewAddress(nil)
 	switch err := s.rhStorage.Get(key, &val); {
 	case errors.Is(err, storage.ErrNotFound):
@@ -135,6 +143,8 @@ func (s *Service) HasPin(ref boson.Address) (bool, error) {
 
 // Pins implements Interface.Pins method.
 func (s *Service) Pins() ([]boson.Address, error) {
+	s.RLock()
+	defer s.RUnlock()
 	var refs []boson.Address
 	err := s.rhStorage.Iterate(storePrefix, func(key, val []byte) (stop bool, err error) {
 		var ref boson.Address

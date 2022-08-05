@@ -76,9 +76,9 @@ type Interface interface {
 	// Remove a manifest entry on the specified path.
 	Remove(context.Context, string) error
 	// Copy a manifest entry to the specified path.
-	Copy(context.Context, boson.Address, string, string) error
+	Copy(context.Context, boson.Address, string, string, bool) error
 	// Move a manifest entry to the specified path.
-	Move(context.Context, boson.Address, string, string) error
+	Move(context.Context, boson.Address, string, string, bool) error
 	// Lookup returns a manifest entry if one is found in the specified path.
 	Lookup(context.Context, string) (Entry, error)
 	// HasPrefix tests whether the specified prefix path exists.

@@ -674,10 +674,6 @@ func (s *Service) BlocklistedPeers() ([]p2p.BlockPeers, error) {
 }
 
 func (s *Service) Blocklist(overlay boson.Address, duration time.Duration, reason string) error {
-	if s.NetworkStatus() != p2p.NetworkStatusAvailable {
-		return errors.New("blocklisting peer when network not available")
-	}
-
 	s.logger.Tracef("libp2p blocklist: peer %s for %v reason: %s", overlay.String(), duration, reason)
 	if err := s.blocklist.Add(overlay, duration); err != nil {
 		s.metrics.BlocklistedPeerErrCount.Inc()

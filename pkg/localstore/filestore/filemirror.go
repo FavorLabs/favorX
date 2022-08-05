@@ -29,8 +29,6 @@ const (
 	REMOVE Operation = iota
 	MOVE
 	COPY
-	MKDIR
-	ADD
 )
 
 func (o Operation) String() string {
@@ -41,10 +39,6 @@ func (o Operation) String() string {
 		return "MOVE"
 	case COPY:
 		return "COPY"
-	case MKDIR:
-		return "MKDIR"
-	case ADD:
-		return "ADD"
 	default:
 		return "Unknown"
 	}
