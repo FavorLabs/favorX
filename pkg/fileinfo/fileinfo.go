@@ -37,6 +37,7 @@ type Interface interface {
 	GetChunkInfoServerOverlays(rootCid boson.Address) []aurora.ChunkInfoOverlay
 	GetChunkInfoSource(rootCid boson.Address) ChunkInfoSource
 	AddFileMirror(next, rootCid boson.Address, ope filestore.Operation) error
+	FileCounter(rootCid boson.Address) error
 }
 
 type FileInfo struct {
@@ -215,6 +216,10 @@ func (f *FileInfo) GetChunkInfoSource(rootCid boson.Address) ChunkInfoSource {
 	c, err := f.localStore.GetChunkByOverlay(chunkstore.SERVICE, rootCid, f.addr)
 	res.Len = c.Len
 	return res
+}
+
+func (f *FileInfo) FileCounter(rootCid boson.Address) error {
+	return f.localStore.ChunkCounter(rootCid)
 }
 
 func chunkLen(span int64) int64 {

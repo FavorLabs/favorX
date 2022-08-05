@@ -65,11 +65,11 @@ func (m *simpleManifest) Remove(_ context.Context, path string) error {
 	return nil
 }
 
-func (m *simpleManifest) Move(_ context.Context, _ boson.Address, _, _ string) error {
+func (m *simpleManifest) Move(_ context.Context, _ boson.Address, _, _ string, _ bool) error {
 	return nil
 }
 
-func (m *simpleManifest) Copy(_ context.Context, _ boson.Address, _, _ string) error {
+func (m *simpleManifest) Copy(_ context.Context, _ boson.Address, _, _ string, _ bool) error {
 	return nil
 }
 

@@ -659,3 +659,26 @@ func (db *DB) DeleteMirror(reference boson.Address) error {
 	defer db.fileMu.Unlock()
 	return db.filestore.DeleteMirror(reference)
 }
+
+func (db *DB) ChunkCounter(reference boson.Address) error {
+	db.fileMu.Lock()
+	defer db.fileMu.Unlock()
+	chunks, err := db.getAllChunks(reference)
+	if err != nil {
+		return err
+	}
+	batch := db.shed.NewBatch()
+	binIDs := make(map[uint8]uint64)
+	db.batchMu.Lock()
+	for _, c := range chunks {
+		item := addressToItem(c)
+		item.Type = 1
+		_, _, err = db.putUpload(batch, binIDs, item)
+		if err != nil {
+			return err
+		}
+	}
+	err = batch.Commit()
+	db.batchMu.Unlock()
+	return err
+}

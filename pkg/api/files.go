@@ -738,6 +738,7 @@ type ManifestAction struct {
 	Target    string              `json:"target"`
 	Source    string              `json:"source"`
 	Reference string              `json:"ref"`
+	Created   bool                `json:"created"`
 	Operation filestore.Operation `json:"op"`
 }
 
@@ -780,6 +781,13 @@ func (s *server) manifestInteractionHandler(w http.ResponseWriter, r *http.Reque
 		}
 	}
 
+	if action.Created {
+		if len(strings.Split(action.Target, "/")) > 256 {
+			jsonhttp.BadRequest(w, "file directories too long")
+			return
+		}
+	}
+
 	factory := requestPipelineFactory(ctx, s.storer, r)
 	ls := loadsave.New(s.storer, factory)
 	m, err := manifest.NewDefaultManifestReference(target, ls)
@@ -792,7 +800,7 @@ func (s *server) manifestInteractionHandler(w http.ResponseWriter, r *http.Reque
 
 	switch action.Operation {
 	case filestore.MOVE:
-		err = m.Move(r.Context(), source, action.Source, action.Target)
+		err = m.Move(r.Context(), source, action.Source, action.Target, action.Created)
 		if err != nil {
 			logger.Debugf("manifest interaction: moving manifest error: %v", err)
 			logger.Error("manifest interaction: moving manifest error")
@@ -801,7 +809,7 @@ func (s *server) manifestInteractionHandler(w http.ResponseWriter, r *http.Reque
 		}
 
 	case filestore.COPY:
-		err = m.Copy(r.Context(), source, action.Source, action.Target)
+		err = m.Copy(r.Context(), source, action.Source, action.Target, action.Created)
 		if err != nil {
 			logger.Debugf("manifest interaction: copying manifest error: %v", err)
 			logger.Error("manifest interaction: copying manifest error")
@@ -834,9 +842,49 @@ func (s *server) manifestInteractionHandler(w http.ResponseWriter, r *http.Reque
 		return nil
 	}); err != nil {
 		logger.Debugf("manifest interaction: iterate address error: %v", err)
-		logger.Debugf("manifest interaction: iterate address error")
+		logger.Error("manifest interaction: iterate address error")
 		jsonhttp.InternalServerError(w, err)
 		return
+	}
+
+	if !source.IsZero() && !source.Equal(target) {
+		ls = loadsave.NewReadonly(s.storer, storage.ModeGetRequest)
+		m, err = manifest.NewDefaultManifestReference(source, ls)
+		entries := make([]manifest.Entry, 0)
+		err = m.IterateDirectories(ctx, []byte(""), 0,
+			func(nodeType int, path, prefix, hash []byte, metadata map[string]string) error {
+				p := make([]byte, len(path)+len(prefix))
+				copy(p, path)
+				p = append(p, prefix...)
+				fullPath := string(p)
+				if nodeType == 0 && strings.Contains(fullPath, action.Source) {
+					entry := manifest.NewEntry(boson.NewAddress(hash), metadata, 0)
+					entries = append(entries, entry)
+				}
+				return nil
+			})
+
+		for _, entry := range entries {
+			err = s.fileInfo.FileCounter(entry.Reference())
+			if err != nil {
+				logger.Debugf("manifest interaction: file counter error: %v", err)
+				logger.Error("manifest interaction: file counter error")
+				jsonhttp.InternalServerError(w, err)
+				return
+			}
+			bitLen, err := s.fileInfo.GetFileSize(entry.Reference())
+			if err != nil {
+				return
+			}
+			if bitLen > 1 {
+				bitLen++
+			}
+			err = s.chunkInfo.OnFileUpload(ctx, entry.Reference(), bitLen)
+			if err != nil {
+				return
+			}
+		}
+
 	}
 
 	err = s.chunkInfo.OnFileUpload(ctx, manifestReference, int64(bitLen))
