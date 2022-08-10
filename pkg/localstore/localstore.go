@@ -521,15 +521,15 @@ func (db *DB) DeleteFile(reference boson.Address) error {
 	db.fileMu.Lock()
 	defer db.fileMu.Unlock()
 	db.chunkstore.CancelFinder(reference)
-	return db.setRemoveAll(reference)
-}
-
-func (db *DB) deleteFile(reference boson.Address) error {
 	err := db.filestore.Delete(reference)
 	if err != nil {
 		return err
 	}
-	err = db.chunkstore.RemoveAll(chunkstore.DISCOVER, reference)
+	return db.setRemoveAll(reference)
+}
+
+func (db *DB) deleteFile(reference boson.Address) error {
+	err := db.chunkstore.RemoveAll(chunkstore.DISCOVER, reference)
 	if err != nil {
 		return err
 	}
@@ -663,7 +663,7 @@ func (db *DB) DeleteMirror(reference boson.Address) error {
 func (db *DB) ChunkCounter(reference boson.Address) error {
 	db.fileMu.Lock()
 	defer db.fileMu.Unlock()
-	chunks, err := db.getAllChunks(reference)
+	chunks, err := db.getChunk(reference, 1)
 	if err != nil {
 		return err
 	}
