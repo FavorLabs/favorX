@@ -9,9 +9,9 @@ import (
 	"path/filepath"
 	"time"
 
+	fv "github.com/FavorLabs/favorX"
 	"github.com/FavorLabs/favorX/pkg/keystore/p2pkey"
 	"github.com/FavorLabs/favorX/pkg/node"
-	aufs "github.com/gauss-project/aurorafs"
 	"github.com/gauss-project/aurorafs/pkg/aurora"
 	"github.com/gauss-project/aurorafs/pkg/boson"
 	"github.com/gauss-project/aurorafs/pkg/crypto"
@@ -35,7 +35,7 @@ type signerConfig struct {
 }
 
 func Version() string {
-	return aufs.Version
+	return fv.Version
 }
 
 func NewNode(o *Options) (*Node, error) {
