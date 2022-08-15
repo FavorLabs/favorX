@@ -13,8 +13,8 @@ import (
 	"github.com/gauss-project/aurorafs/pkg/p2p"
 	libp2pm "github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p-core/host"
-	swarmt "github.com/libp2p/go-libp2p-swarm/testing"
 	bhost "github.com/libp2p/go-libp2p/p2p/host/basic"
+	swarmt "github.com/libp2p/go-libp2p/p2p/net/swarm/testing"
 	"github.com/multiformats/go-multistream"
 )
 
