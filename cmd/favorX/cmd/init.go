@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/gauss-project/aurorafs/pkg/node"
+	"github.com/FavorLabs/favorX/pkg/node"
 	"github.com/spf13/cobra"
 )
 
