@@ -3,6 +3,7 @@ package chunkinfo
 import (
 	"github.com/FavorLabs/favorX/pkg/bitvector"
 	"github.com/FavorLabs/favorX/pkg/localstore/chunkstore"
+	"github.com/FavorLabs/favorX/pkg/storage"
 	"github.com/gauss-project/aurorafs/pkg/boson"
 )
 
@@ -18,23 +19,20 @@ const (
 	RootCid_ADD
 )
 
-func (ci *ChunkInfo) isDownload(rootCid, overlay boson.Address) bool {
-	consumerList, err := ci.chunkStore.GetChunk(chunkstore.SERVICE, rootCid)
+func (ci *ChunkInfo) isDownload(rootCid boson.Address) bool {
+	c, err := ci.chunkStore.GetChunkByOverlay(chunkstore.SERVICE, rootCid, ci.addr)
 	if err != nil {
-		ci.logger.Errorf("chunkInfo isDownload:%w", err)
+		if err != storage.ErrNotFound {
+			ci.logger.Errorf("chunkInfo isDownload:%w", err)
+		}
 		return false
 	}
-	for _, c := range consumerList {
-		if c.Overlay.Equal(overlay) {
-			bv, err := bitvector.NewFromBytes(c.B, c.Len)
-			if err != nil {
-				ci.logger.Errorf("chunkInfo isDownload construct bitVector:%w", err)
-				return false
-			}
-			return bv.Equals()
-		}
+	bv, err := bitvector.NewFromBytes(c.B, c.Len)
+	if err != nil {
+		ci.logger.Errorf("chunkInfo isDownload construct bitVector:%w", err)
+		return false
 	}
-	return false
+	return bv.Equals()
 }
 
 func (ci *ChunkInfo) updateService(rootCid boson.Address, index, len int64, overlay boson.Address) error {

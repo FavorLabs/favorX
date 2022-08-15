@@ -90,8 +90,7 @@ func (ci *ChunkInfo) Discover(ctx context.Context, authInfo []byte, rootCid boso
 		if ci.isDiscover(rootCid) {
 			return true, nil
 		}
-
-		if ci.isDownload(rootCid, ci.addr) {
+		if ci.isDownload(rootCid) {
 			return true, nil
 		}
 		overlays, _ := sctx.GetTargets(topCtx)

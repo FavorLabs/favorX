@@ -1,6 +1,7 @@
 package manifest
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -81,7 +82,7 @@ func (m *mantarayManifest) Move(ctx context.Context, source boson.Address, path,
 	np := []byte(newPath)
 
 	root := m.trie
-	if !source.IsZero() {
+	if !source.IsZero() && !bytes.Equal(source.Bytes(), m.trie.Reference()) {
 		root = mantaray.NewNodeRef(source.Bytes())
 	}
 
@@ -101,7 +102,7 @@ func (m *mantarayManifest) Copy(ctx context.Context, source boson.Address, path,
 	np := []byte(newPath)
 
 	root := m.trie
-	if !source.IsZero() {
+	if !source.IsZero() && !bytes.Equal(source.Bytes(), m.trie.Reference()) {
 		root = mantaray.NewNodeRef(source.Bytes())
 	}
 

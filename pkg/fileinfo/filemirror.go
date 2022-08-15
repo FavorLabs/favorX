@@ -23,6 +23,7 @@ func (f *FileInfo) DeletedFileMirror(reference boson.Address) error {
 	}
 	for _, m := range mirrors {
 		_ = f.localStore.DeleteMirror(m.NextRootCid)
+		_ = f.localStore.DeleteFile(m.RootCid)
 	}
 	return nil
 }

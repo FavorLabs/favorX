@@ -135,7 +135,10 @@ func (f *FileInfo) AddFile(rootCid boson.Address) error {
 }
 
 func (f *FileInfo) DeleteFile(rootCid boson.Address) error {
-	return f.localStore.DeleteFile(rootCid)
+	if err := f.localStore.DeleteFile(rootCid); err != nil {
+		return err
+	}
+	return f.DeletedFileMirror(rootCid)
 }
 
 func (f *FileInfo) PinFile(rootCid boson.Address, pinned bool) error {

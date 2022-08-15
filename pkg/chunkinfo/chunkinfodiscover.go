@@ -7,6 +7,7 @@ import (
 	"github.com/FavorLabs/favorX/pkg/bitvector"
 	"github.com/FavorLabs/favorX/pkg/localstore/chunkstore"
 	"github.com/FavorLabs/favorX/pkg/retrieval/aco"
+	"github.com/FavorLabs/favorX/pkg/storage"
 	"github.com/gauss-project/aurorafs/pkg/boson"
 )
 
@@ -18,7 +19,9 @@ const (
 func (ci *ChunkInfo) isDiscover(rootCid boson.Address) bool {
 	consumerList, err := ci.chunkStore.GetChunk(chunkstore.DISCOVER, rootCid)
 	if err != nil {
-		ci.logger.Errorf("chunkInfo isDiscover:%w", err)
+		if err != storage.ErrNotFound {
+			ci.logger.Errorf("chunkInfo isDiscover:%w", err)
+		}
 		return false
 	}
 	if len(consumerList) <= 0 {
@@ -139,7 +142,7 @@ func (ci *ChunkInfo) cleanDiscoverTrigger() {
 			}
 			for rCid, providerList := range discover {
 				rootCid := boson.MustParseHexAddress(rCid)
-				if ci.isDownload(rootCid, ci.addr) {
+				if ci.isDownload(rootCid) {
 					ci.cancelPendingFinder(rootCid)
 					ci.queues.Delete(rootCid.String())
 					err = ci.chunkStore.DeleteAllChunk(chunkstore.DISCOVER, rootCid)

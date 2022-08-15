@@ -738,7 +738,6 @@ type ManifestAction struct {
 	Target    string              `json:"target"`
 	Source    string              `json:"source"`
 	Reference string              `json:"ref"`
-	Created   bool                `json:"created"`
 	Operation filestore.Operation `json:"op"`
 }
 
@@ -781,12 +780,13 @@ func (s *server) manifestInteractionHandler(w http.ResponseWriter, r *http.Reque
 		}
 	}
 
-	if action.Created {
-		if len(strings.Split(action.Target, "/")) > 256 {
-			jsonhttp.BadRequest(w, "file directories too long")
-			return
-		}
+	if len(strings.Split(action.Target, "/")) > 256 {
+		jsonhttp.BadRequest(w, "file directories too long")
+		return
 	}
+
+	action.Target = strings.TrimLeft(action.Target, "/")
+	action.Source = strings.TrimLeft(action.Source, "/")
 
 	factory := requestPipelineFactory(ctx, s.storer, r)
 	ls := loadsave.New(s.storer, factory)
@@ -800,7 +800,7 @@ func (s *server) manifestInteractionHandler(w http.ResponseWriter, r *http.Reque
 
 	switch action.Operation {
 	case filestore.MOVE:
-		err = m.Move(r.Context(), source, action.Source, action.Target, action.Created)
+		err = m.Move(r.Context(), source, action.Source, action.Target, true)
 		if err != nil {
 			logger.Debugf("manifest interaction: moving manifest error: %v", err)
 			logger.Error("manifest interaction: moving manifest error")
@@ -809,7 +809,7 @@ func (s *server) manifestInteractionHandler(w http.ResponseWriter, r *http.Reque
 		}
 
 	case filestore.COPY:
-		err = m.Copy(r.Context(), source, action.Source, action.Target, action.Created)
+		err = m.Copy(r.Context(), source, action.Source, action.Target, true)
 		if err != nil {
 			logger.Debugf("manifest interaction: copying manifest error: %v", err)
 			logger.Error("manifest interaction: copying manifest error")
@@ -825,6 +825,16 @@ func (s *server) manifestInteractionHandler(w http.ResponseWriter, r *http.Reque
 			jsonhttp.InternalServerError(w, err)
 			return
 		}
+	case filestore.MKDIR:
+		metadata := map[string]string{}
+		mkdirManifestEntry := manifest.NewEntry(boson.ZeroAddress, metadata, 0)
+		err = m.Add(ctx, action.Target, mkdirManifestEntry)
+		if err != nil {
+			logger.Debugf("manifest interaction: add to manifest: %v", err)
+			logger.Error("manifest interaction: add to manifest")
+			jsonhttp.InternalServerError(w, err)
+			return
+		}
 	}
 
 	var storeSizeFn []manifest.StoreSizeFunc
@@ -834,6 +844,28 @@ func (s *server) manifestInteractionHandler(w http.ResponseWriter, r *http.Reque
 		logger.Error("manifest interaction: store manifest error")
 		jsonhttp.InternalServerError(w, err)
 		return
+	}
+
+	if action.Operation == filestore.REMOVE {
+		var fileCount = 0
+		err = m.IterateDirectories(ctx, []byte(""), 0,
+			func(nodeType int, path, prefix, hash []byte, metadata map[string]string) error {
+				if nodeType == 0 {
+					fileCount++
+				}
+				return nil
+			})
+		if fileCount == 0 {
+			if err = s.fileInfo.DeleteFile(target); err != nil {
+				s.logger.Errorf("manifest interaction: remove file: %w", err)
+				jsonhttp.InternalServerError(w, "file deleting occur error")
+				return
+			}
+			jsonhttp.Created(w, UploadResponse{
+				Reference: boson.ZeroAddress,
+			})
+			return
+		}
 	}
 
 	bitLen := 0
@@ -847,7 +879,7 @@ func (s *server) manifestInteractionHandler(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	if !source.IsZero() && !source.Equal(target) {
+	if !source.IsZero() && !source.Equal(target) && action.Operation != filestore.REMOVE {
 		ls = loadsave.NewReadonly(s.storer, storage.ModeGetRequest)
 		m, err = manifest.NewDefaultManifestReference(source, ls)
 		entries := make([]manifest.Entry, 0)
