@@ -16,7 +16,7 @@ import (
 type Options struct {
 	// api setting
 	EnableTLS      bool
-	APIPort        int
+	ApiPort        int
 	DebugAPIPort   int
 	EnableDebugAPI bool
 
@@ -69,7 +69,7 @@ type Options struct {
 // or some fields are missing from the user's specified list.
 var defaultOptions = &Options{
 	EnableTLS:          true,
-	APIPort:            1633,
+	ApiPort:            1633,
 	DebugAPIPort:       1635,
 	WebsocketPort:      1637,
 	P2PPort:            1634,
@@ -90,7 +90,7 @@ func (o Options) DataDir(c *node.Options) {
 }
 
 func (o Options) APIAddr(c *node.Options) {
-	c.APIAddr = fmt.Sprintf("%s:%d", listenAddress, o.APIPort)
+	c.APIAddr = fmt.Sprintf("%s:%d", listenAddress, o.ApiPort)
 }
 
 func (o Options) EnableApiTLS(c *node.Options) {

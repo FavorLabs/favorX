@@ -37,7 +37,6 @@ import (
 	"github.com/gauss-project/aurorafs/pkg/aurora"
 	"github.com/gauss-project/aurorafs/pkg/boson"
 	"github.com/gauss-project/aurorafs/pkg/logging"
-	"github.com/gauss-project/aurorafs/pkg/node"
 	"github.com/gauss-project/aurorafs/pkg/pingpong"
 	"github.com/gauss-project/aurorafs/pkg/resolver/multiresolver"
 	"github.com/gauss-project/aurorafs/pkg/rpc"
@@ -481,7 +480,7 @@ func NewNode(nodeMode aurora.Model, addr string, bosonAddress boson.Address, pub
 		hiveObj.Start()
 	}
 
-	stack, err := node.NewRPC(logger, node.Config{
+	stack, err := NewRPC(logger, Config{
 		EnableApiTLS: o.EnableApiTLS,
 		TlsCrtFile:   o.TlsCrtFile,
 		TlsKeyFile:   o.TlsKeyFile,
