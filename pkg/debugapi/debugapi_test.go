@@ -12,6 +12,7 @@ import (
 	"github.com/gauss-project/aurorafs/pkg/aurora"
 
 	"github.com/FavorLabs/favorX/pkg/debugapi"
+	"github.com/FavorLabs/favorX/pkg/storage"
 	"github.com/gauss-project/aurorafs"
 	accountingmock "github.com/gauss-project/aurorafs/pkg/accounting/mock"
 	"github.com/gauss-project/aurorafs/pkg/boson"
@@ -22,7 +23,6 @@ import (
 	p2pmock "github.com/gauss-project/aurorafs/pkg/p2p/mock"
 	"github.com/gauss-project/aurorafs/pkg/pingpong"
 	"github.com/gauss-project/aurorafs/pkg/resolver"
-	"github.com/gauss-project/aurorafs/pkg/storage"
 	"github.com/gauss-project/aurorafs/pkg/topology/bootnode"
 	"github.com/gauss-project/aurorafs/pkg/topology/lightnode"
 	topologymock "github.com/gauss-project/aurorafs/pkg/topology/mock"
@@ -58,7 +58,7 @@ func newTestServer(t *testing.T, o testServerOptions) *testServer {
 	ln := lightnode.NewContainer(o.Overlay)
 	bn := bootnode.NewContainer(o.Overlay)
 	s := debugapi.New(o.Overlay, o.PublicKey, logging.New(io.Discard, 0), nil, o.CORSAllowedOrigins, false, nil, debugapi.Options{NodeMode: aurora.NewModel()})
-	s.Configure(o.P2P, o.Pingpong, nil, topologyDriver, ln, bn, o.Storer, nil, nil, nil, nil)
+	s.Configure(o.P2P, o.Pingpong, nil, topologyDriver, ln, bn, o.Storer, nil, nil, nil, nil, nil)
 	ts := httptest.NewServer(s)
 	t.Cleanup(ts.Close)
 
@@ -148,7 +148,7 @@ func TestServer_Configure(t *testing.T) {
 		}),
 	)
 
-	s.Configure(o.P2P, o.Pingpong, nil, topologyDriver, ln, bn, o.Storer, nil, nil, nil, nil)
+	s.Configure(o.P2P, o.Pingpong, nil, topologyDriver, ln, bn, o.Storer, nil, nil, nil, nil, nil)
 
 	testBasicRouter(t, client)
 	jsonhttptest.Request(t, client, http.MethodGet, "/readiness", http.StatusOK,

@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"sync"
 
+	"github.com/FavorLabs/favorX/pkg/addressbook"
 	"github.com/FavorLabs/favorX/pkg/chunkinfo"
 	"github.com/FavorLabs/favorX/pkg/fileinfo"
 	"github.com/FavorLabs/favorX/pkg/multicast"
@@ -60,6 +61,7 @@ type Service struct {
 	nodeOptions        Options
 	cache              *gcache.Cache
 	cacheCtx           context.Context
+	addressBook        addressbook.Interface
 }
 
 type Options struct {
@@ -99,7 +101,9 @@ func New(overlay boson.Address, publicKey ecdsa.PublicKey, logger logging.Logger
 // Configure injects required dependencies and configuration parameters and
 // constructs HTTP routes that depend on them. It is intended and safe to call
 // this method only once.
-func (s *Service) Configure(p2p p2p.DebugService, pingpong pingpong.Interface, group *multicast.Service, topologyDriver topology.Driver, lightNodes *lightnode.Container, bootNodes *bootnode.Container, storer storage.Storer, route routetab.RouteTab, chunkinfo chunkinfo.Interface, fileInfo fileinfo.Interface, retrieval retrieval.Interface) {
+func (s *Service) Configure(p2p p2p.DebugService, pingpong pingpong.Interface, group *multicast.Service, topologyDriver topology.Driver, lightNodes *lightnode.Container,
+	bootNodes *bootnode.Container, storer storage.Storer, route routetab.RouteTab, chunkinfo chunkinfo.Interface, fileInfo fileinfo.Interface, retrieval retrieval.Interface,
+	ab addressbook.Interface) {
 	s.p2p = p2p
 	s.pingpong = pingpong
 	s.topologyDriver = topologyDriver
@@ -111,6 +115,7 @@ func (s *Service) Configure(p2p p2p.DebugService, pingpong pingpong.Interface, g
 	s.chunkInfo = chunkinfo
 	s.fileInfo = fileInfo
 	s.retrieval = retrieval
+	s.addressBook = ab
 
 	s.setRouter(s.newRouter())
 }
