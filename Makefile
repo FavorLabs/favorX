@@ -110,7 +110,7 @@ ios: download-vendor
 ios:
 	[ -d "dist" ] || mkdir dist
 	$(GO) mod vendor && echo "create go dependency vendor"
-	[ -d "dist/favorX.xcframework" ] || (GO111MODULE=off $(GOMOBILE) bind -tags=leveldb -target=ios -o=favorX.xcframework -ldflags="$(LDFLAGS)" ./mobile && mv -n favorX.xcframework dist/) || (echo "build ios framework failed" && rm -rf vendor && exit 1)
+	[ -d "dist/favorX.xcframework" ] || (GO111MODULE=off $(GOMOBILE) bind -tags=leveldb,nowatchdog -target=ios -o=favorX.xcframework -ldflags="$(LDFLAGS)" ./mobile && mv -n favorX.xcframework dist/) || (echo "build ios framework failed" && rm -rf vendor && exit 1)
 	rm -rf vendor
 	echo "ios framework build finished."
 	echo "please import dist/favorX.xcframework to xcode!"
