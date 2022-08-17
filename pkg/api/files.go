@@ -194,6 +194,12 @@ func (s *server) fileUploadHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	err = s.fileInfo.AddFile(manifestReference)
+	if err != nil {
+		jsonhttp.NotFound(w, "add file error")
+		return
+	}
+
 	if strings.ToLower(r.Header.Get(PinHeader)) == StringTrue {
 		if err := s.pinning.CreatePin(ctx, manifestReference, false); err != nil {
 			logger.Debugf("upload file: creation of pin for %q failed: %v", manifestReference, err)
@@ -206,11 +212,7 @@ func (s *server) fileUploadHandler(w http.ResponseWriter, r *http.Request) {
 			s.logger.Errorf("upload file:update fileinfo pin failed:%v", err)
 		}
 	}
-	err = s.fileInfo.AddFile(manifestReference)
-	if err != nil {
-		jsonhttp.NotFound(w, "add file error")
-		return
-	}
+
 	w.Header().Set("ETag", fmt.Sprintf("%q", manifestReference.String()))
 	jsonhttp.Created(w, UploadResponse{
 		Reference: manifestReference,
