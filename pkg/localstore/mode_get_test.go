@@ -328,15 +328,15 @@ func TestChainChunks(t *testing.T) {
 		t.Error("ch is not nil")
 	}
 
-	ch, err = db.Get(context.Background(), storage.ModeGetChain, ch.Address(), 0)
+	_, err = db.Get(context.Background(), storage.ModeGetChain, ch.Address(), 0)
 	if err != nil {
 		t.Fatal(err)
 	}
-	ch, err = db.Get(context.Background(), storage.ModeGetRequest, ch1.Address(), 0)
+	_, err = db.Get(context.Background(), storage.ModeGetRequest, ch1.Address(), 0)
 	if err != nil {
 		t.Fatal(err)
 	}
-	ch, err = db.Get(context.Background(), storage.ModeGetChain, ch1.Address(), 0)
+	_, err = db.Get(context.Background(), storage.ModeGetChain, ch1.Address(), 0)
 	if err != nil {
 		t.Fatal(err)
 	}

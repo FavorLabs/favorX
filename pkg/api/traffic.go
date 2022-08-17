@@ -32,8 +32,8 @@ type trafficCheque struct {
 func (s *server) trafficInfo(w http.ResponseWriter, r *http.Request) {
 	tra, err := s.traffic.TrafficInfo()
 	if err != nil {
-		s.logger.Error("Api-trafficInfo Failed to get traffic information: %v", err)
-		jsonhttp.InternalServerError(w, nil)
+		s.logger.Errorf("Api-trafficInfo Failed to get traffic information: %v", err)
+		jsonhttp.InternalServerError(w, err)
 		return
 	}
 

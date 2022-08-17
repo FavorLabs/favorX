@@ -217,6 +217,10 @@ func (f *FileInfo) GetChunkInfoSource(rootCid boson.Address) ChunkInfoSource {
 		res.ChunkSource = append(res.ChunkSource, source)
 	}
 	c, err := f.localStore.GetChunkByOverlay(chunkstore.SERVICE, rootCid, f.addr)
+	if err != nil {
+		f.logger.Errorf("fileInfo GetChunkInfoSource:%w", err)
+		return res
+	}
 	res.Len = c.Len
 	return res
 }

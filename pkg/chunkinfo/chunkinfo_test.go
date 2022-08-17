@@ -49,7 +49,7 @@ func TestInit(t *testing.T) {
 
 	server := mockChunkInfo(s, recorder, serverAddress)
 
-	if server.Init(context.Background(), nil, rootCid) {
+	if server.Discover(context.Background(), nil, rootCid) {
 		t.Fatalf(" want false")
 	}
 }
@@ -78,7 +78,7 @@ func TestHandlerChunkInfoReq(t *testing.T) {
 	a := mockChunkInfo(s, recorder, clientAddress)
 	a.newQueue(rootCid.String())
 	a.getQueue(rootCid.String()).push(UnPull, serverAddress.Bytes())
-	a.cpd.updatePendingFinder(rootCid)
+	a.updatePendingFinder(rootCid)
 	ctx := context.Background()
 	a.doFindChunkInfo(ctx, nil, rootCid)
 	time.Sleep(5 * time.Second)

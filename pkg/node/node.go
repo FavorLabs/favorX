@@ -493,18 +493,18 @@ func NewNode(nodeMode aurora.Model, addr string, bosonAddress boson.Address, pub
 		// HTTPModules: []string{"debug", "api"},
 		WSAddr:    o.WSAddr,
 		WSOrigins: o.CORSAllowedOrigins,
-		WSModules: []string{"group", "p2p", "chunkInfo", "retrieval", "oracle"},
+		WSModules: []string{"group", "p2p", "chunkInfo", "traffic", "retrieval", "oracle"},
 	})
 	if err != nil {
 		return nil, err
 	}
 	stack.RegisterAPIs([]rpc.API{
-		group.API(),     // group
-		kad.API(),       // p2p
-		chunkInfo.API(), // chunkInfo
-		// apiInterface.API(), // traffic
-		retrieve.API(),    // retrieval
-		oracleChain.API(), // oracle
+		group.API(),        // group
+		kad.API(),          // p2p
+		chunkInfo.API(),    // chunkInfo
+		apiInterface.API(), // traffic
+		retrieve.API(),     // retrieval
+		oracleChain.API(),  // oracle
 	})
 	if err = stack.Start(); err != nil {
 		return nil, err

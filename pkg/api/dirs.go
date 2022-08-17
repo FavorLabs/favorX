@@ -368,8 +368,6 @@ func (s *server) fileDeleteHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	r = r.WithContext(sctx.SetRootHash(r.Context(), hash))
-
 	err = s.fileInfo.DeleteFile(hash)
 	s.chunkInfo.CancelFindChunkInfo(hash)
 	if err != nil {
