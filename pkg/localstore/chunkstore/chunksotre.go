@@ -110,7 +110,7 @@ func (cs *chunkStore) Put(chunkType ChunkType, reference boson.Address, provider
 	default:
 		return TypeError
 	}
-	return nil
+	return err
 }
 func (cs *chunkStore) Get(chunkType ChunkType, reference boson.Address) ([]Consumer, error) {
 	switch chunkType {

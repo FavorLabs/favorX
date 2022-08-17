@@ -7,9 +7,9 @@ import (
 
 	"github.com/FavorLabs/favorX/pkg/chunkinfo"
 	"github.com/FavorLabs/favorX/pkg/retrieval/aco"
+	"github.com/FavorLabs/favorX/pkg/routetab/mock"
 	"github.com/gauss-project/aurorafs/pkg/aurora"
 	"github.com/gauss-project/aurorafs/pkg/boson"
-	"github.com/gauss-project/aurorafs/pkg/routetab/mock"
 )
 
 var (
@@ -44,16 +44,6 @@ type ChunkInfo struct {
 	cpd   *pendingFinderInfo
 	route mock.MockRouteTable
 	queue map[string]chunkinfo.Pull
-}
-
-func (ci *ChunkInfo) ManifestView(ctx context.Context, nameOrHex, pathVar string, depth int) (*chunkinfo.ManifestNode, error) {
-	// TODO implement me
-	panic("implement me")
-}
-
-func (ci *ChunkInfo) GetManifest(rootCid, pathVar string, depth int) (maniFest *chunkinfo.ManifestNode) {
-	// TODO implement me
-	panic("implement me")
 }
 
 func New(route mock.MockRouteTable) *ChunkInfo {

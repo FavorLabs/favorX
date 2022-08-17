@@ -38,9 +38,9 @@ func (cs *chunkStore) putDiscover(rootCid, overlay boson.Address, b []byte, len 
 	if !ok {
 		v = make(map[string]*discoverBitVector)
 	}
-	var data = &discoverBitVector{}
 
-	if data, ok = cs.discover[r][o]; ok {
+	data, ok := cs.discover[r][o]
+	if ok {
 		if data.bit.Len() < len {
 			bv, err := bitvector.NewFromBytes(b, len)
 			if err != nil {

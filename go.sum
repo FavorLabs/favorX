@@ -70,6 +70,8 @@ github.com/BurntSushi/xgb v0.0.0-20160522181843-27f122750802/go.mod h1:IVnqGOEym
 github.com/DATA-DOG/go-sqlmock v1.3.3/go.mod h1:f/Ixk793poVmq4qj/V1dPUg2JEAKC73Q5eFN3EC/SaM=
 github.com/FavorLabs/manifest v1.1.2 h1:PGYu94mIon3SfVvULKSXq1DQHql6TFD4dZoGkTu+PRA=
 github.com/FavorLabs/manifest v1.1.2/go.mod h1:IMu6ZhKHuotakPu4gUW8zEfvqM1b63WMot9P70pie/Y=
+github.com/FavorLabs/manifest v1.2.0 h1:tT6CLEcljx+ebuN99JudRslTqdwdQWq1cFt/z6nbrkQ=
+github.com/FavorLabs/manifest v1.2.0/go.mod h1:IMu6ZhKHuotakPu4gUW8zEfvqM1b63WMot9P70pie/Y=
 github.com/HdrHistogram/hdrhistogram-go v1.1.2 h1:5IcZpTvzydCQeHzK4Ef/D5rrSqwxob0t8PQPMybUNFM=
 github.com/Knetic/govaluate v3.0.1-0.20171022003610-9aa49832a739+incompatible h1:1G1pk05UrOh0NlF1oeaaix1x8XzrfjIDK47TY0Zehcw=
 github.com/Knetic/govaluate v3.0.1-0.20171022003610-9aa49832a739+incompatible/go.mod h1:r7JcOSlj0wfOMncg0iLm8Leh48TZaKVeNIfJntJ2wa0=

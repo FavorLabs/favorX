@@ -19,6 +19,7 @@ import (
 	"github.com/FavorLabs/favorX/pkg/fileinfo"
 	"github.com/FavorLabs/favorX/pkg/multicast"
 	"github.com/FavorLabs/favorX/pkg/routetab"
+	"github.com/FavorLabs/favorX/pkg/settlement/traffic"
 	"github.com/FavorLabs/favorX/pkg/storage"
 	"github.com/FavorLabs/favorX/pkg/traversal"
 	"github.com/ethereum/go-ethereum/common"
@@ -31,7 +32,6 @@ import (
 	"github.com/gauss-project/aurorafs/pkg/pinning"
 	"github.com/gauss-project/aurorafs/pkg/resolver"
 	"github.com/gauss-project/aurorafs/pkg/settlement/chain"
-	"github.com/gauss-project/aurorafs/pkg/settlement/traffic"
 	"github.com/gauss-project/aurorafs/pkg/topology"
 	"github.com/gauss-project/aurorafs/pkg/tracing"
 )

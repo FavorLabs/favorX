@@ -4,14 +4,15 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"github.com/gauss-project/aurorafs/pkg/boson"
-	"github.com/gauss-project/aurorafs/pkg/logging"
-	traMock "github.com/gauss-project/aurorafs/pkg/settlement/traffic/mock"
-	"github.com/gauss-project/aurorafs/pkg/statestore/mock"
 	"io/ioutil"
 	"math/big"
 	"testing"
 	"time"
+
+	traMock "github.com/FavorLabs/favorX/pkg/settlement/traffic/mock"
+	"github.com/FavorLabs/favorX/pkg/statestore/mock"
+	"github.com/gauss-project/aurorafs/pkg/boson"
+	"github.com/gauss-project/aurorafs/pkg/logging"
 )
 
 var (

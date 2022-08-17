@@ -167,14 +167,20 @@ func (s *server) fileUploadHandler(w http.ResponseWriter, r *http.Request) {
 	var storeSizeFn []manifest.StoreSizeFunc
 
 	manifestReference, err := m.Store(ctx, storeSizeFn...)
+	if err != nil {
+		logger.Debugf("upload file: manifest store, file %q: %v", fileName, err)
+		logger.Errorf("upload file: manifest store, file %q", fileName)
+		jsonhttp.InternalServerError(w, nil)
+		return
+	}
 	fn := func(reference boson.Address) error {
 		bitLen++
 		return nil
 	}
 	err = m.IterateAddresses(ctx, fn)
 	if err != nil {
-		logger.Debugf("upload file: manifest store, file %q: %v", fileName, err)
-		logger.Errorf("upload file: manifest store, file %q", fileName)
+		logger.Debugf("upload file: manifest iterate, file %q: %v", fileName, err)
+		logger.Errorf("upload file: manifest iterate, file %q", fileName)
 		jsonhttp.InternalServerError(w, nil)
 		return
 	}
@@ -848,7 +854,7 @@ func (s *server) manifestInteractionHandler(w http.ResponseWriter, r *http.Reque
 
 	if action.Operation == filestore.REMOVE {
 		var fileCount = 0
-		err = m.IterateDirectories(ctx, []byte(""), 0,
+		_ = m.IterateDirectories(ctx, []byte(""), 0,
 			func(nodeType int, path, prefix, hash []byte, metadata map[string]string) error {
 				if nodeType == 0 {
 					fileCount++
@@ -882,8 +888,14 @@ func (s *server) manifestInteractionHandler(w http.ResponseWriter, r *http.Reque
 	if !source.IsZero() && !source.Equal(target) && action.Operation != filestore.REMOVE {
 		ls = loadsave.NewReadonly(s.storer, storage.ModeGetRequest)
 		m, err = manifest.NewDefaultManifestReference(source, ls)
+		if err != nil {
+			logger.Debugf("download: not manifest %s: %v", source, err)
+			logger.Errorf("download: not manifest %s", source)
+			jsonhttp.NotFound(w, err)
+			return
+		}
 		entries := make([]manifest.Entry, 0)
-		err = m.IterateDirectories(ctx, []byte(""), 0,
+		_ = m.IterateDirectories(ctx, []byte(""), 0,
 			func(nodeType int, path, prefix, hash []byte, metadata map[string]string) error {
 				p := make([]byte, len(path)+len(prefix))
 				copy(p, path)
@@ -920,9 +932,16 @@ func (s *server) manifestInteractionHandler(w http.ResponseWriter, r *http.Reque
 	}
 
 	err = s.chunkInfo.OnFileUpload(ctx, manifestReference, int64(bitLen))
+	if err != nil {
+		logger.Debugf("upload file: chunk transfer data err: %v", err)
+		logger.Errorf("upload file: chunk transfer data err")
+		jsonhttp.InternalServerError(w, "chunk transfer data error")
+		return
+	}
 	if err = s.fileInfo.AddFileMirror(manifestReference, target, action.Operation); err != nil {
 		logger.Debugf("manifest interaction: adding file mirror error : %v", err)
 		logger.Error("manifest interaction:  adding file mirror error")
+		jsonhttp.InternalServerError(w, "file mirror storage error")
 		return
 	}
 
