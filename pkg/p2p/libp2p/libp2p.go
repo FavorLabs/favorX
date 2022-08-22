@@ -223,18 +223,16 @@ func New(ctx context.Context, signer beecrypto.Signer, networkID uint64, overlay
 
 	var advertisableAddresser handshake.AdvertisableAddressResolver
 	var natAddrResolver *staticAddressResolver
-	if enableNAT {
-		if o.NATAddr == "" {
-			advertisableAddresser = &UpnpAddressResolver{
-				host: h,
-			}
-		} else {
-			natAddrResolver, err = newStaticAddressResolver(o.NATAddr, net.LookupIP)
-			if err != nil {
-				return nil, fmt.Errorf("static nat: %w", err)
-			}
-			advertisableAddresser = natAddrResolver
+	if o.NATAddr == "" {
+		advertisableAddresser = &UpnpAddressResolver{
+			host: h,
 		}
+	} else {
+		natAddrResolver, err = newStaticAddressResolver(o.NATAddr, net.LookupIP)
+		if err != nil {
+			return nil, fmt.Errorf("static nat: %w", err)
+		}
+		advertisableAddresser = natAddrResolver
 	}
 
 	if o.LightNodeLimit <= 0 {
