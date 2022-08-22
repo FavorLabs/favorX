@@ -150,7 +150,9 @@ func NewNode(nodeMode aurora.Model, addr string, bosonAddress boson.Address, pub
 
 	if o.EnableApiTLS && o.TlsKeyFile == "" && o.TlsCrtFile == "" {
 		// auto create
-		o.TlsCrtFile, o.TlsKeyFile = cert.GenerateCert(o.DataDir)
+		crt := cert.New(o.DataDir).LoadCA().MakeCert()
+		o.TlsKeyFile = crt.KeyFile
+		o.TlsCrtFile = crt.CertFile
 	}
 
 	if o.DebugAPIAddr != "" {
