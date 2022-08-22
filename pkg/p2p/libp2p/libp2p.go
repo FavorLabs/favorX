@@ -163,7 +163,9 @@ func New(ctx context.Context, signer beecrypto.Signer, networkID uint64, overlay
 		libp2p.UserAgent(userAgent()),
 	}
 
-	if o.NATAddr == "" {
+	enableNAT := o.NodeMode.IsFull()
+
+	if enableNAT && o.NATAddr == "" {
 		opts = append(opts,
 			libp2p.NATManager(func(n network.Network) basichost.NATManager {
 				natManager = basichost.NewNATManager(n)
@@ -221,16 +223,18 @@ func New(ctx context.Context, signer beecrypto.Signer, networkID uint64, overlay
 
 	var advertisableAddresser handshake.AdvertisableAddressResolver
 	var natAddrResolver *staticAddressResolver
-	if o.NATAddr == "" {
-		advertisableAddresser = &UpnpAddressResolver{
-			host: h,
+	if enableNAT {
+		if o.NATAddr == "" {
+			advertisableAddresser = &UpnpAddressResolver{
+				host: h,
+			}
+		} else {
+			natAddrResolver, err = newStaticAddressResolver(o.NATAddr, net.LookupIP)
+			if err != nil {
+				return nil, fmt.Errorf("static nat: %w", err)
+			}
+			advertisableAddresser = natAddrResolver
 		}
-	} else {
-		natAddrResolver, err = newStaticAddressResolver(o.NATAddr, net.LookupIP)
-		if err != nil {
-			return nil, fmt.Errorf("static nat: %w", err)
-		}
-		advertisableAddresser = natAddrResolver
 	}
 
 	if o.LightNodeLimit <= 0 {
@@ -653,7 +657,7 @@ func (s *Service) NATAddresses() (addresses []net.Addr, err error) {
 		if err := natIterFn(s.natManager.NAT(), 0); err != nil {
 			return nil, err
 		}
-	} else {
+	} else if s.natAddrResolver != nil {
 		proto := strings.Split(s.natAddrResolver.multiProto, "/")
 		addr, err := net.ResolveTCPAddr("tcp", proto[len(proto)-1]+":"+s.natAddrResolver.port)
 		if err != nil {
