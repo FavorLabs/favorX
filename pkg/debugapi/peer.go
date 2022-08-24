@@ -194,21 +194,23 @@ func (s *Service) peerRemoveBlockingHandler(w http.ResponseWriter, r *http.Reque
 
 func (s *Service) peersAllHandler(w http.ResponseWriter, r *http.Request) {
 	type Out struct {
-		Overlay string `json:"overlay"`
-		IPV4    string `json:"ipv4"`
-		IPV6    string `json:"ipv6"`
+		Overlay   string `json:"overlay"`
+		IPV4      string `json:"ipv4"`
+		IPV6      string `json:"ipv6"`
+		Connected bool   `json:"connected"`
 	}
 	list := []Out{}
+	conn := make(map[string]struct{})
 
-	err := s.addressBook.IterateOverlays(func(v boson.Address) (bool, error) {
+	fn := func(v boson.Address, connected bool) {
 		addr, err := s.addressBook.Get(v)
 		if err != nil {
-			return false, err
+			return
 		}
 		if manet.IsPrivateAddr(addr.Underlay) {
-			return false, err
+			return
 		}
-		lo := Out{Overlay: addr.Overlay.String()}
+		lo := Out{Overlay: addr.Overlay.String(), Connected: connected}
 		multiaddr.ForEach(addr.Underlay, func(c multiaddr.Component) bool {
 			switch c.Protocol().Code {
 			case multiaddr.P_IP6ZONE:
@@ -222,7 +224,20 @@ func (s *Service) peersAllHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			return false
 		})
+		if connected {
+			conn[addr.String()] = struct{}{}
+		}
 		list = append(list, lo)
+	}
+
+	connected := s.p2p.Peers()
+	for _, v := range connected {
+		fn(v.Address, true)
+	}
+	err := s.addressBook.IterateOverlays(func(v boson.Address) (bool, error) {
+		if _, ok := conn[v.String()]; !ok {
+			fn(v, false)
+		}
 		return false, nil
 	})
 	if err != nil {
