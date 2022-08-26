@@ -652,7 +652,7 @@ func (s *server) fileRegister(w http.ResponseWriter, r *http.Request) {
 	defer s.tranProcess.Delete(apiName + address.String())
 	var gasPrice, minGasPrice *big.Int
 	price := r.URL.Query().Get("gasPrice")
-	if price != "" {
+	if price == "" {
 		gasPrice = big.NewInt(0)
 	} else {
 		gas, err := strconv.ParseInt(price, 10, 64)
@@ -665,7 +665,7 @@ func (s *server) fileRegister(w http.ResponseWriter, r *http.Request) {
 	}
 
 	minPrice := r.URL.Query().Get("minGasPrice")
-	if minPrice != "" {
+	if minPrice == "" {
 		minGasPrice = big.NewInt(0)
 	} else {
 		gas, err := strconv.ParseInt(minPrice, 10, 64)
@@ -727,7 +727,7 @@ func (s *server) fileRegisterRemove(w http.ResponseWriter, r *http.Request) {
 	defer s.tranProcess.Delete(apiName + address.String())
 	var gasPrice, minGasPrice *big.Int
 	price := r.URL.Query().Get("gasPrice")
-	if price != "" {
+	if price == "" {
 		gasPrice = big.NewInt(0)
 	} else {
 		gas, err := strconv.ParseInt(price, 10, 64)
@@ -740,7 +740,7 @@ func (s *server) fileRegisterRemove(w http.ResponseWriter, r *http.Request) {
 	}
 
 	minPrice := r.URL.Query().Get("minGasPrice")
-	if minPrice != "" {
+	if minPrice == "" {
 		minGasPrice = big.NewInt(0)
 	} else {
 		gas, err := strconv.ParseInt(minPrice, 10, 64)
