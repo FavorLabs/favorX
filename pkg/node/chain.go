@@ -3,8 +3,13 @@ package node
 import (
 	"context"
 	"fmt"
+
 	"github.com/FavorLabs/favorX/pkg/crypto"
 	"github.com/FavorLabs/favorX/pkg/p2p/libp2p"
+	"github.com/FavorLabs/favorX/pkg/settlement/chain"
+	chainCommon "github.com/FavorLabs/favorX/pkg/settlement/chain/common"
+	"github.com/FavorLabs/favorX/pkg/settlement/chain/oracle"
+	chainTraffic "github.com/FavorLabs/favorX/pkg/settlement/chain/traffic"
 	"github.com/FavorLabs/favorX/pkg/settlement/chain/transaction"
 	"github.com/FavorLabs/favorX/pkg/settlement/pseudosettle"
 	"github.com/FavorLabs/favorX/pkg/settlement/traffic"
@@ -15,10 +20,6 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/gauss-project/aurorafs/pkg/logging"
 	"github.com/gauss-project/aurorafs/pkg/settlement"
-	"github.com/gauss-project/aurorafs/pkg/settlement/chain"
-	chainCommon "github.com/gauss-project/aurorafs/pkg/settlement/chain/common"
-	"github.com/gauss-project/aurorafs/pkg/settlement/chain/oracle"
-	chainTraffic "github.com/gauss-project/aurorafs/pkg/settlement/chain/traffic"
 	"github.com/gauss-project/aurorafs/pkg/subscribe"
 )
 

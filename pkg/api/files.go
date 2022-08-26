@@ -7,11 +7,13 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"math/big"
 	"mime"
 	"net/http"
 	"path"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -648,7 +650,32 @@ func (s *server) fileRegister(w http.ResponseWriter, r *http.Request) {
 	nameOrHex := mux.Vars(r)["address"]
 	address, err := s.resolveNameOrAddress(nameOrHex)
 	defer s.tranProcess.Delete(apiName + address.String())
+	var gasPrice, minGasPrice *big.Int
+	price := r.URL.Query().Get("gasPrice")
+	if price != "" {
+		gasPrice = big.NewInt(0)
+	} else {
+		gas, err := strconv.ParseInt(price, 10, 64)
+		if err != nil {
+			logger.Errorf("gasPrice:%v to int64 error", price)
+			jsonhttp.InternalServerError(w, fmt.Sprintf("incoming parameters gasPrice error"))
+			return
+		}
+		gasPrice = big.NewInt(gas)
+	}
 
+	minPrice := r.URL.Query().Get("minGasPrice")
+	if minPrice != "" {
+		minGasPrice = big.NewInt(0)
+	} else {
+		gas, err := strconv.ParseInt(minPrice, 10, 64)
+		if err != nil {
+			logger.Errorf("minGasPrice:%v to int64 error", price)
+			jsonhttp.InternalServerError(w, fmt.Sprintf("incoming parameters minGasPrice error"))
+			return
+		}
+		minGasPrice = big.NewInt(gas)
+	}
 	if err != nil {
 		logger.Debugf("file fileRegister: parse address %s: %v", nameOrHex, err)
 		logger.Errorf("file fileRegister: parse address")
@@ -669,7 +696,7 @@ func (s *server) fileRegister(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	hash, err := s.oracleChain.RegisterCidAndNode(r.Context(), address, s.overlay)
+	hash, err := s.oracleChain.RegisterCidAndNode(r.Context(), address, s.overlay, gasPrice, minGasPrice)
 	if err != nil {
 		logger.Errorf("fileRegister failed: %v ", err)
 		jsonhttp.InternalServerError(w, fmt.Sprintf("fileRegister failed: %v ", err))
@@ -698,6 +725,32 @@ func (s *server) fileRegisterRemove(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer s.tranProcess.Delete(apiName + address.String())
+	var gasPrice, minGasPrice *big.Int
+	price := r.URL.Query().Get("gasPrice")
+	if price != "" {
+		gasPrice = big.NewInt(0)
+	} else {
+		gas, err := strconv.ParseInt(price, 10, 64)
+		if err != nil {
+			logger.Errorf("gasPrice:%v to int64 error", price)
+			jsonhttp.InternalServerError(w, fmt.Sprintf("incoming parameters gasPrice error"))
+			return
+		}
+		gasPrice = big.NewInt(gas)
+	}
+
+	minPrice := r.URL.Query().Get("minGasPrice")
+	if minPrice != "" {
+		minGasPrice = big.NewInt(0)
+	} else {
+		gas, err := strconv.ParseInt(minPrice, 10, 64)
+		if err != nil {
+			logger.Errorf("minGasPrice:%v to int64 error", price)
+			jsonhttp.InternalServerError(w, fmt.Sprintf("incoming parameters minGasPrice error"))
+			return
+		}
+		minGasPrice = big.NewInt(gas)
+	}
 	if _, ok := s.tranProcess.Load(apiName + address.String()); ok {
 		logger.Errorf("parse address %s under processing", nameOrHex)
 		jsonhttp.InternalServerError(w, fmt.Sprintf("parse address %s under processing", nameOrHex))
@@ -717,7 +770,7 @@ func (s *server) fileRegisterRemove(w http.ResponseWriter, r *http.Request) {
 		jsonhttp.Forbidden(w, fmt.Sprintf("address:%v Already Remove", address.String()))
 	}
 
-	hash, err := s.oracleChain.RemoveCidAndNode(r.Context(), address, s.overlay)
+	hash, err := s.oracleChain.RemoveCidAndNode(r.Context(), address, s.overlay, gasPrice, minGasPrice)
 	if err != nil {
 		s.logger.Error("fileRegisterRemove failed: %v ", err)
 		jsonhttp.InternalServerError(w, fmt.Sprintf("fileRegisterRemove failed: %v ", err))

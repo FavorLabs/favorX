@@ -10,11 +10,11 @@ import (
 	"github.com/FavorLabs/favorX/pkg/retrieval/aco"
 	"github.com/FavorLabs/favorX/pkg/routetab"
 	"github.com/FavorLabs/favorX/pkg/sctx"
+	"github.com/FavorLabs/favorX/pkg/settlement/chain"
 	"github.com/gauss-project/aurorafs/pkg/boson"
 	"github.com/gauss-project/aurorafs/pkg/logging"
 	"github.com/gauss-project/aurorafs/pkg/p2p"
 	"github.com/gauss-project/aurorafs/pkg/rpc"
-	"github.com/gauss-project/aurorafs/pkg/settlement/chain"
 	"github.com/gauss-project/aurorafs/pkg/subscribe"
 	"resenje.org/singleflight"
 )
