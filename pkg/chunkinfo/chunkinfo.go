@@ -94,18 +94,22 @@ func (ci *ChunkInfo) Discover(ctx context.Context, authInfo []byte, rootCid boso
 			return true, nil
 		}
 		overlays, _ := sctx.GetTargets(topCtx)
-		if overlays == nil {
-			rootCid := sctx.GetRootHash(topCtx)
-			value, ok := ci.discover.Load(rootCid.String())
-			if !ok {
-				overlays = ci.oracleChain.GetNodesFromCid(rootCid.Bytes())
-				ci.discover.Store(rootCid.String(), overlays)
+		rootCid := sctx.GetRootHash(topCtx)
+		value, ok := ci.discover.Load(rootCid.String())
+		if !ok {
+			oracleOverlays := ci.oracleChain.GetNodesFromCid(rootCid.Bytes())
+			if overlays != nil {
+				overlays = removeRepeatElement(oracleOverlays, overlays...)
 			} else {
-				overlays = value.([]boson.Address)
+				overlays = oracleOverlays
 			}
-			if len(overlays) <= 0 {
-				return false, nil
-			}
+			ci.discover.Store(rootCid.String(), overlays)
+		} else {
+			targets := value.([]boson.Address)
+			overlays = removeRepeatElement(targets, overlays...)
+		}
+		if len(overlays) <= 0 {
+			return false, nil
 		}
 		ci.CancelFindChunkInfo(rootCid)
 		return ci.FindChunkInfo(context.Background(), authInfo, rootCid, overlays), nil
@@ -114,6 +118,20 @@ func (ci *ChunkInfo) Discover(ctx context.Context, authInfo []byte, rootCid boso
 		return false
 	}
 	return v.(bool)
+}
+
+func removeRepeatElement(list []boson.Address, address ...boson.Address) []boson.Address {
+	addresses := make(map[string]struct{}, len(list)+len(address))
+	for _, over := range list {
+		addresses[over.String()] = struct{}{}
+	}
+	for _, over := range address {
+		_, ok := addresses[over.String()]
+		if !ok {
+			list = append(list, over)
+		}
+	}
+	return list
 }
 
 func (ci *ChunkInfo) FindRoutes(_ context.Context, rootCid boson.Address, index int64) []aco.Route {
