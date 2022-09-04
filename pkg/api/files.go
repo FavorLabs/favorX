@@ -230,6 +230,11 @@ func (s *server) fileDownloadHandler(w http.ResponseWriter, r *http.Request) {
 		r = r.WithContext(sctx.SetTargets(r.Context(), targets))
 	}
 
+	oracle := r.URL.Query().Get("oracle")
+	if oracle == "" {
+		oracle = "false"
+	}
+	isOracle, _ := strconv.ParseBool(oracle)
 	nameOrHex := mux.Vars(r)["address"]
 	pathVar := mux.Vars(r)["path"]
 	if strings.HasSuffix(pathVar, "/") {
@@ -247,7 +252,7 @@ func (s *server) fileDownloadHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	r = r.WithContext(sctx.SetRootHash(r.Context(), address))
-	if !s.chunkInfo.Discover(r.Context(), nil, address) {
+	if !s.chunkInfo.Discover(r.Context(), nil, address, isOracle) {
 		logger.Debugf("download: chunkInfo init %s: false", nameOrHex)
 		jsonhttp.NotFound(w, "chunkInfo init false")
 		return
@@ -359,7 +364,7 @@ func (s *server) fileDownloadHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	me = manifest.NewEntry(me.Reference(), me.Metadata(), 0)
 
-	if !s.chunkInfo.Discover(r.Context(), nil, me.Reference()) {
+	if !s.chunkInfo.Discover(r.Context(), nil, me.Reference(), isOracle) {
 		logger.Debugf("download: chunkInfo init %s->%s: false", nameOrHex, me.Reference())
 		jsonhttp.NotFound(w, fmt.Errorf("chunkInfo init %s false", me.Reference()))
 		return
@@ -398,7 +403,19 @@ func (s *server) downloadHandler(w http.ResponseWriter, r *http.Request, rootCid
 	if targets != "" {
 		r = r.WithContext(sctx.SetTargets(r.Context(), targets))
 	}
-	_, _ = s.storer.Get(r.Context(), storage.ModeGetRequest, reference, index)
+	reader, l, err := joiner.New(r.Context(), s.storer, storage.ModeGetRequest, reference, index)
+	if err != nil {
+		if errors.Is(err, storage.ErrNotFound) {
+			logger.Debugf("api download: not found %s: %v", reference, err)
+			logger.Error("api download: not found")
+			jsonhttp.NotFound(w, err)
+			return
+		}
+		logger.Debugf("api download: unexpected error %s: %v", reference, err)
+		logger.Error("api download: unexpected error")
+		jsonhttp.InternalServerError(w, err)
+		return
+	}
 	length, err := s.fileInfo.GetFileSize(reference)
 	if err != nil {
 		s.logger.Debugf("file %s index:%d get size %s", reference, index, err)
@@ -414,7 +431,7 @@ func (s *server) downloadHandler(w http.ResponseWriter, r *http.Request, rootCid
 	}
 
 	r = r.WithContext(sctx.SetRootLen(r.Context(), length))
-	reader, l, err := joiner.New(r.Context(), s.storer, storage.ModeGetRequest, reference, index)
+	reader, l, err = joiner.New(r.Context(), s.storer, storage.ModeGetRequest, reference, index)
 	if err != nil {
 		if errors.Is(err, storage.ErrNotFound) {
 			logger.Debugf("api download: not found %s: %v", reference, err)
