@@ -38,7 +38,7 @@ func (s *Service) chunkInfoInitHandler(w http.ResponseWriter, r *http.Request) {
 		jsonhttp.BadRequest(w, "bad rootCid")
 		return
 	}
-	v := s.chunkInfo.Discover(r.Context(), nil, rootCid)
+	v := s.chunkInfo.Discover(r.Context(), nil, rootCid, true)
 	jsonhttp.OK(w, chunkInfoIntoResp{
 		Msg: v,
 	})

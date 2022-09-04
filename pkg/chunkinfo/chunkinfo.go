@@ -20,7 +20,7 @@ import (
 )
 
 type Interface interface {
-	Discover(ctx context.Context, auth []byte, rootCid boson.Address) bool
+	Discover(ctx context.Context, auth []byte, rootCid boson.Address, isOracle bool) bool
 
 	FindRoutes(ctx context.Context, rootCid boson.Address, bit int64) []aco.Route
 
@@ -67,7 +67,7 @@ func New(addr boson.Address, streamer p2p.Streamer, logger logging.Logger,
 		chunkStore:     chunkStore,
 	}
 	chunkInfo.triggerTimeOut()
-	chunkInfo.cleanDiscoverTrigger()
+	//chunkInfo.cleanDiscoverTrigger()
 	return chunkInfo
 }
 
@@ -82,7 +82,7 @@ type BitVectorInfo struct {
 	Bitvector BitVector
 }
 
-func (ci *ChunkInfo) Discover(ctx context.Context, authInfo []byte, rootCid boson.Address) bool {
+func (ci *ChunkInfo) Discover(ctx context.Context, authInfo []byte, rootCid boson.Address, isOracle bool) bool {
 	key := fmt.Sprintf("%s%s", rootCid, "chunkinfo")
 	topCtx := ctx
 	v, _, _ := ci.singleflight.Do(ctx, key, func(ctx context.Context) (interface{}, error) {
@@ -96,15 +96,18 @@ func (ci *ChunkInfo) Discover(ctx context.Context, authInfo []byte, rootCid boso
 		overlays, _ := sctx.GetTargets(topCtx)
 		rootCid := sctx.GetRootHash(topCtx)
 		value, ok := ci.discover.Load(rootCid.String())
-		if !ok {
+		if !ok && isOracle {
 			oracleOverlays := ci.oracleChain.GetNodesFromCid(rootCid.Bytes())
 			if overlays != nil {
 				overlays = removeRepeatElement(oracleOverlays, overlays...)
 			} else {
 				overlays = oracleOverlays
 			}
-			ci.discover.Store(rootCid.String(), overlays)
-		} else {
+			if len(overlays) > 0 {
+				ci.discover.Store(rootCid.String(), overlays)
+			}
+		}
+		if ok {
 			targets := value.([]boson.Address)
 			overlays = removeRepeatElement(targets, overlays...)
 		}
