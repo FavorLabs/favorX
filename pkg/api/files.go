@@ -226,8 +226,14 @@ func (s *server) fileDownloadHandler(w http.ResponseWriter, r *http.Request) {
 	ls := loadsave.NewReadonly(s.storer, storage.ModeGetRequest)
 
 	targets := r.URL.Query().Get("targets")
+	var isOracle = true
 	if targets != "" {
 		r = r.WithContext(sctx.SetTargets(r.Context(), targets))
+		oracle := r.URL.Query().Get("oracle")
+		if oracle == "" {
+			oracle = "false"
+		}
+		isOracle, _ = strconv.ParseBool(oracle)
 	}
 
 	nameOrHex := mux.Vars(r)["address"]
@@ -247,7 +253,7 @@ func (s *server) fileDownloadHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	r = r.WithContext(sctx.SetRootHash(r.Context(), address))
-	if !s.chunkInfo.Discover(r.Context(), nil, address) {
+	if !s.chunkInfo.Discover(r.Context(), nil, address, isOracle) {
 		logger.Debugf("download: chunkInfo init %s: false", nameOrHex)
 		jsonhttp.NotFound(w, "chunkInfo init false")
 		return
@@ -359,7 +365,7 @@ func (s *server) fileDownloadHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	me = manifest.NewEntry(me.Reference(), me.Metadata(), 0)
 
-	if !s.chunkInfo.Discover(r.Context(), nil, me.Reference()) {
+	if !s.chunkInfo.Discover(r.Context(), nil, me.Reference(), isOracle) {
 		logger.Debugf("download: chunkInfo init %s->%s: false", nameOrHex, me.Reference())
 		jsonhttp.NotFound(w, fmt.Errorf("chunkInfo init %s false", me.Reference()))
 		return

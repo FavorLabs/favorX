@@ -20,7 +20,7 @@ import (
 )
 
 type Interface interface {
-	Discover(ctx context.Context, auth []byte, rootCid boson.Address) bool
+	Discover(ctx context.Context, auth []byte, rootCid boson.Address, isOracle bool) bool
 
 	FindRoutes(ctx context.Context, rootCid boson.Address, bit int64) []aco.Route
 
@@ -67,7 +67,7 @@ func New(addr boson.Address, streamer p2p.Streamer, logger logging.Logger,
 		chunkStore:     chunkStore,
 	}
 	chunkInfo.triggerTimeOut()
-	chunkInfo.cleanDiscoverTrigger()
+	//chunkInfo.cleanDiscoverTrigger()
 	return chunkInfo
 }
 
@@ -82,7 +82,7 @@ type BitVectorInfo struct {
 	Bitvector BitVector
 }
 
-func (ci *ChunkInfo) Discover(ctx context.Context, authInfo []byte, rootCid boson.Address) bool {
+func (ci *ChunkInfo) Discover(ctx context.Context, authInfo []byte, rootCid boson.Address, isOracle bool) bool {
 	key := fmt.Sprintf("%s%s", rootCid, "chunkinfo")
 	topCtx := ctx
 	v, _, _ := ci.singleflight.Do(ctx, key, func(ctx context.Context) (interface{}, error) {
@@ -94,18 +94,25 @@ func (ci *ChunkInfo) Discover(ctx context.Context, authInfo []byte, rootCid boso
 			return true, nil
 		}
 		overlays, _ := sctx.GetTargets(topCtx)
-		if overlays == nil {
-			rootCid := sctx.GetRootHash(topCtx)
-			value, ok := ci.discover.Load(rootCid.String())
-			if !ok {
-				overlays = ci.oracleChain.GetNodesFromCid(rootCid.Bytes())
-				ci.discover.Store(rootCid.String(), overlays)
+		rootCid := sctx.GetRootHash(topCtx)
+		value, ok := ci.discover.Load(rootCid.String())
+		if !ok && isOracle {
+			oracleOverlays := ci.oracleChain.GetNodesFromCid(rootCid.Bytes())
+			if overlays != nil {
+				overlays = removeRepeatElement(oracleOverlays, overlays...)
 			} else {
-				overlays = value.([]boson.Address)
+				overlays = oracleOverlays
 			}
-			if len(overlays) <= 0 {
-				return false, nil
+			if len(overlays) > 0 {
+				ci.discover.Store(rootCid.String(), overlays)
 			}
+		}
+		if ok {
+			targets := value.([]boson.Address)
+			overlays = removeRepeatElement(targets, overlays...)
+		}
+		if len(overlays) <= 0 {
+			return false, nil
 		}
 		ci.CancelFindChunkInfo(rootCid)
 		return ci.FindChunkInfo(context.Background(), authInfo, rootCid, overlays), nil
@@ -114,6 +121,20 @@ func (ci *ChunkInfo) Discover(ctx context.Context, authInfo []byte, rootCid boso
 		return false
 	}
 	return v.(bool)
+}
+
+func removeRepeatElement(list []boson.Address, address ...boson.Address) []boson.Address {
+	addresses := make(map[string]struct{}, len(list)+len(address))
+	for _, over := range list {
+		addresses[over.String()] = struct{}{}
+	}
+	for _, over := range address {
+		_, ok := addresses[over.String()]
+		if !ok {
+			list = append(list, over)
+		}
+	}
+	return list
 }
 
 func (ci *ChunkInfo) FindRoutes(_ context.Context, rootCid boson.Address, index int64) []aco.Route {
