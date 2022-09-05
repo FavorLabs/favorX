@@ -82,7 +82,7 @@ type BitVectorInfo struct {
 	Bitvector BitVector
 }
 
-func (ci *ChunkInfo) Discover(ctx context.Context, authInfo []byte, rootCid boson.Address, isOracle bool) bool {
+func (ci *ChunkInfo) Discover(ctx context.Context, authInfo []byte, rootCid boson.Address, chain bool) bool {
 	key := fmt.Sprintf("%s%s", rootCid, "chunkinfo")
 	topCtx := ctx
 	v, _, _ := ci.singleflight.Do(ctx, key, func(ctx context.Context) (interface{}, error) {
@@ -95,27 +95,22 @@ func (ci *ChunkInfo) Discover(ctx context.Context, authInfo []byte, rootCid boso
 		}
 		overlays, _ := sctx.GetTargets(topCtx)
 		if overlays == nil {
-			overlays, _ = sctx.GetOracle(topCtx)
-		}
-		rootCid := sctx.GetRootHash(topCtx)
-		value, ok := ci.discover.Load(rootCid.String())
-		if !ok && isOracle {
-			oracleOverlays := ci.oracleChain.GetNodesFromCid(rootCid.Bytes())
-			if overlays != nil {
-				overlays = removeRepeatElement(oracleOverlays, overlays...)
-			} else {
-				overlays = oracleOverlays
-			}
-			if len(overlays) > 0 {
+			rootCid := sctx.GetRootHash(topCtx)
+			value, ok := ci.discover.Load(rootCid.String())
+			if !ok && chain {
+				overlays = ci.oracleChain.GetNodesFromCid(rootCid.Bytes())
 				ci.discover.Store(rootCid.String(), overlays)
 			}
-		}
-		if ok {
-			targets := value.([]boson.Address)
-			overlays = removeRepeatElement(targets, overlays...)
-		}
-		if overlays == nil || len(overlays) <= 0 {
-			return false, nil
+			if ok {
+				overlays = value.([]boson.Address)
+			}
+			oracles, _ := sctx.GetOracle(topCtx)
+			if oracles != nil {
+				overlays = removeRepeatElement(overlays, oracles...)
+			}
+			if len(overlays) <= 0 {
+				return false, nil
+			}
 		}
 		ci.CancelFindChunkInfo(rootCid)
 		return ci.FindChunkInfo(context.Background(), authInfo, rootCid, overlays), nil

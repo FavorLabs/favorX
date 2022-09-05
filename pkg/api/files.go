@@ -226,18 +226,20 @@ func (s *server) fileDownloadHandler(w http.ResponseWriter, r *http.Request) {
 	ls := loadsave.NewReadonly(s.storer, storage.ModeGetRequest)
 
 	targets := r.URL.Query().Get("targets")
-	var isOracle = true
-	if targets != "" {
-		oracle := r.URL.Query().Get("oracle")
-		if oracle == "" {
-			oracle = "false"
+	var isChain = true
+	if targets == "" {
+		chain := r.URL.Query().Get("chain")
+		if chain == "" {
+			chain = "false"
 		}
-		isOracle, _ = strconv.ParseBool(oracle)
-		if !isOracle {
-			r = r.WithContext(sctx.SetTargets(r.Context(), targets))
-		} else {
-			r = r.WithContext(sctx.SetOracle(r.Context(), targets))
+		oracles := r.URL.Query().Get("oracles")
+		if oracles != "" {
+			isChain, _ = strconv.ParseBool(chain)
+			r = r.WithContext(sctx.SetOracle(r.Context(), oracles))
 		}
+	} else {
+		isChain = false
+		r = r.WithContext(sctx.SetTargets(r.Context(), targets))
 	}
 
 	nameOrHex := mux.Vars(r)["address"]
@@ -257,7 +259,7 @@ func (s *server) fileDownloadHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	r = r.WithContext(sctx.SetRootHash(r.Context(), address))
-	if !s.chunkInfo.Discover(r.Context(), nil, address, isOracle) {
+	if !s.chunkInfo.Discover(r.Context(), nil, address, isChain) {
 		logger.Debugf("download: chunkInfo init %s: false", nameOrHex)
 		jsonhttp.NotFound(w, "chunkInfo init false")
 		return
@@ -369,7 +371,7 @@ func (s *server) fileDownloadHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	me = manifest.NewEntry(me.Reference(), me.Metadata(), 0)
 
-	if !s.chunkInfo.Discover(r.Context(), nil, me.Reference(), isOracle) {
+	if !s.chunkInfo.Discover(r.Context(), nil, me.Reference(), isChain) {
 		logger.Debugf("download: chunkInfo init %s->%s: false", nameOrHex, me.Reference())
 		jsonhttp.NotFound(w, fmt.Errorf("chunkInfo init %s false", me.Reference()))
 		return
