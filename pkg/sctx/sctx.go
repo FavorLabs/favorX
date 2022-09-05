@@ -21,6 +21,7 @@ type (
 	requestHostKey   struct{}
 	// tagKey            struct{}
 	targetsContextKey struct{}
+	oracleContextKey  struct{}
 	gasPriceKey       struct{}
 	gasLimitKey       struct{}
 	rootHashKey       struct{}
@@ -50,6 +51,33 @@ func SetTargets(ctx context.Context, targets string) context.Context {
 // reading the prefix targets sent in the download API.
 func GetTargets(ctx context.Context) ([]boson.Address, error) {
 	targetString, ok := ctx.Value(targetsContextKey{}).(string)
+	if !ok {
+		return nil, ErrTargetPrefix
+	}
+
+	prefixes := strings.Split(targetString, ",")
+	var targets []boson.Address
+	for _, prefix := range prefixes {
+		target, err := boson.ParseHexAddress(prefix)
+		if err != nil {
+			continue
+		}
+		targets = append(targets, target)
+	}
+	if len(targets) <= 0 {
+		return nil, ErrTargetPrefix
+	}
+	return targets, nil
+}
+
+func SetOracle(ctx context.Context, targets string) context.Context {
+	return context.WithValue(ctx, oracleContextKey{}, targets)
+}
+
+// GetTargets returns the specific target pinners for a corresponding chunk by
+// reading the prefix targets sent in the download API.
+func GetOracle(ctx context.Context) ([]boson.Address, error) {
+	targetString, ok := ctx.Value(oracleContextKey{}).(string)
 	if !ok {
 		return nil, ErrTargetPrefix
 	}
