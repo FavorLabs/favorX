@@ -228,12 +228,16 @@ func (s *server) fileDownloadHandler(w http.ResponseWriter, r *http.Request) {
 	targets := r.URL.Query().Get("targets")
 	var isOracle = true
 	if targets != "" {
-		r = r.WithContext(sctx.SetTargets(r.Context(), targets))
 		oracle := r.URL.Query().Get("oracle")
 		if oracle == "" {
 			oracle = "false"
 		}
 		isOracle, _ = strconv.ParseBool(oracle)
+		if !isOracle {
+			r = r.WithContext(sctx.SetTargets(r.Context(), targets))
+		} else {
+			r = r.WithContext(sctx.SetOracle(r.Context(), targets))
+		}
 	}
 
 	nameOrHex := mux.Vars(r)["address"]

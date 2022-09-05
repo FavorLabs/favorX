@@ -94,6 +94,9 @@ func (ci *ChunkInfo) Discover(ctx context.Context, authInfo []byte, rootCid boso
 			return true, nil
 		}
 		overlays, _ := sctx.GetTargets(topCtx)
+		if overlays == nil {
+			overlays, _ = sctx.GetOracle(topCtx)
+		}
 		rootCid := sctx.GetRootHash(topCtx)
 		value, ok := ci.discover.Load(rootCid.String())
 		if !ok && isOracle {
@@ -111,7 +114,7 @@ func (ci *ChunkInfo) Discover(ctx context.Context, authInfo []byte, rootCid boso
 			targets := value.([]boson.Address)
 			overlays = removeRepeatElement(targets, overlays...)
 		}
-		if len(overlays) <= 0 {
+		if overlays == nil || len(overlays) <= 0 {
 			return false, nil
 		}
 		ci.CancelFindChunkInfo(rootCid)
