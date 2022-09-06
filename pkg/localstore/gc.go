@@ -296,10 +296,12 @@ func (db *DB) incGCSizeInBatch(batch driver.Batching, change int64) (err error) 
 	if newSize >= db.capacity {
 		db.triggerGarbageCollection()
 	}
-	//m := getMemory()
-	//if gcMemory > m {
-	//	db.triggerGarbageMemoryCollection()
-	//}
+	if db.fullNode {
+		m := getMemory()
+		if gcMemory > m {
+			db.triggerGarbageMemoryCollection()
+		}
+	}
 	return nil
 }
 
