@@ -41,7 +41,7 @@ var (
 	// transaction on garbage collection.
 	gcBatchSize uint64 = 10000
 
-	gcMemory uint64 = 100 * 1024 * 1024
+	gcMemory uint64 = 50 * 1024 * 1024
 )
 
 // collectGarbageWorker is a long running function that waits for
