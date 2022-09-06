@@ -344,6 +344,7 @@ func NewNode(nodeMode aurora.Model, addr string, bosonAddress boson.Address, pub
 	lo := &localstore.Options{
 		Capacity: o.CacheCapacity,
 		Driver:   o.DBDriver,
+		FullNode: nodeMode.IsFull(),
 	}
 	storer, err := localstore.New(path, bosonAddress.Bytes(), stateStore, lo, logger)
 	if err != nil {

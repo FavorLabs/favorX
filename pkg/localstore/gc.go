@@ -41,7 +41,7 @@ var (
 	// transaction on garbage collection.
 	gcBatchSize uint64 = 10000
 
-	gcMemory uint64 = 100 * 1024 * 1024
+	gcMemory uint64 = 50 * 1024 * 1024
 )
 
 // collectGarbageWorker is a long running function that waits for
@@ -296,9 +296,11 @@ func (db *DB) incGCSizeInBatch(batch driver.Batching, change int64) (err error) 
 	if newSize >= db.capacity {
 		db.triggerGarbageCollection()
 	}
-	m := getMemory()
-	if gcMemory > m {
-		db.triggerGarbageMemoryCollection()
+	if db.fullNode {
+		m := getMemory()
+		if gcMemory > m {
+			db.triggerGarbageMemoryCollection()
+		}
 	}
 	return nil
 }

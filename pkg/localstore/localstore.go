@@ -65,6 +65,8 @@ type DB struct {
 	// schema name of loaded data
 	schemaName shed.StringField
 
+	fullNode bool
+
 	// retrieval indexes
 	retrievalDataIndex   shed.Index
 	retrievalAccessIndex shed.Index
@@ -142,6 +144,8 @@ type Options struct {
 
 	// MetricsPrefix defines a prefix for metrics names.
 	MetricsPrefix string
+
+	FullNode bool
 }
 
 // New returns a new DB.  All fields and indexes are initialized
@@ -156,6 +160,7 @@ func New(path string, baseKey []byte, stateStore storage.StateStorer, o *Options
 	}
 
 	db = &DB{
+		fullNode:   o.FullNode,
 		capacity:   o.Capacity,
 		baseKey:    baseKey,
 		chunkstore: chunkstore.New(stateStore),
