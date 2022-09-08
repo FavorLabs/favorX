@@ -112,14 +112,17 @@ func (f *FileInfo) ManifestView(ctx context.Context, nameOrHex string, pathVar s
 				}
 
 				refChunk, err := f.localStore.Get(ctx, storage.ModeGetRequest, boson.NewAddress(hash), 0)
-				if err != nil {
+				if err != nil && !errors.Is(err, storage.ErrNotFound) {
 					return err
 				}
-
+				var size uint64 = 0
+				if refChunk != nil {
+					size = binary.LittleEndian.Uint64(refChunk.Data()[:boson.SpanSize])
+				}
 				node.Nodes[string(prefix)] = &ManifestNode{
 					Type:      manifest.File.String(),
 					Hash:      boson.NewAddress(hash).String(),
-					Size:      binary.LittleEndian.Uint64(refChunk.Data()[:boson.SpanSize]),
+					Size:      size,
 					Extension: extension,
 					MimeType:  metadata[manifest.EntryMetadataContentTypeKey],
 				}
