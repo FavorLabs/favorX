@@ -99,7 +99,6 @@ func (ci *ChunkInfo) Discover(ctx context.Context, authInfo []byte, rootCid boso
 			value, ok := ci.discover.Load(rootCid.String())
 			if !ok && chain {
 				overlays = ci.oracleChain.GetNodesFromCid(rootCid.Bytes())
-				ci.discover.Store(rootCid.String(), overlays)
 			}
 			if ok {
 				overlays = value.([]boson.Address)
@@ -111,6 +110,7 @@ func (ci *ChunkInfo) Discover(ctx context.Context, authInfo []byte, rootCid boso
 			if len(overlays) <= 0 {
 				return false, nil
 			}
+			ci.discover.Store(rootCid.String(), overlays)
 		}
 		ci.CancelFindChunkInfo(rootCid)
 		return ci.FindChunkInfo(context.Background(), authInfo, rootCid, overlays), nil
