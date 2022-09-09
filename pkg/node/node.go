@@ -363,9 +363,7 @@ func NewNode(nodeMode aurora.Model, addr string, bosonAddress boson.Address, pub
 
 	ns := netstore.New(storer, retrieve, logger, bosonAddress)
 
-	traversalService := traversal.New(ns)
-
-	pinningService := pinning.NewService(storer, stateStore, traversalService)
+	pinningService := pinning.NewService(storer, stateStore, traversal.New(storer))
 
 	multiResolver := multiresolver.NewMultiResolver(
 		multiresolver.WithDefaultEndpoint(o.ChainEndpoint),
@@ -412,7 +410,7 @@ func NewNode(nodeMode aurora.Model, addr string, bosonAddress boson.Address, pub
 	var apiService api.Service
 	if o.APIAddr != "" {
 		// API server
-		apiService = api.New(ns, multiResolver, bosonAddress, chunkInfo, fileInfo, traversalService, pinningService,
+		apiService = api.New(ns, multiResolver, bosonAddress, chunkInfo, fileInfo, traversal.New(ns), pinningService,
 			authenticator, logger, kad, tracer, apiInterface, commonChain, oracleChain, relay, group, route,
 			api.Options{
 				CORSAllowedOrigins: o.CORSAllowedOrigins,
