@@ -1,8 +1,8 @@
 package wiredtiger
 
 /*
-#cgo !windows CFLAGS: -I/usr/local/include
-#cgo !windows LDFLAGS: -L/usr/local/lib -lwiredtiger
+#cgo !windows CFLAGS: -I../../../thirdparty/include
+#cgo !windows LDFLAGS: -L../../../thirdparty/lib -Wl,-rpath,$ORIGIN/thirdparty/lib -lwiredtiger
 #cgo windows CFLAGS: -Ic:/wiredtiger/include
 #cgo windows LDFLAGS: -Lc:/wiredtiger/lib -lwiredtiger
 
