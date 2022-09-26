@@ -51,7 +51,11 @@ ifneq ($(GOOS), windows)
 	sh -c "./install-deps.sh $(LIB_INSTALL_DIR) $(IS_DOCKER)"
 endif
 	$(GO) env -w CGO_ENABLED=1
+ifeq ($(GOOS), linux)
+	LD_LIBRARY_PATH=$(LIB_INSTALL_DIR) $(GO) build -trimpath -ldflags "$(LDFLAGS)" -o dist/$(BINARY_NAME) ./cmd/favorX
+else
 	$(GO) build -trimpath -ldflags "$(LDFLAGS)" -o dist/$(BINARY_NAME) ./cmd/favorX
+endif
 	$(GO) env -w CGO_ENABLED=$(CGO_ENABLED)
 
 dist:

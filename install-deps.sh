@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 set -e
 
 SHELL_FOLDER="$(pwd)"
@@ -125,7 +125,7 @@ if $IS_DOCKER; then
 fi
 
 if command -v ldconfig > /dev/null; then
-  ldconfig "$INSTALL_DIR"/lib
+  sudo ldconfig "$INSTALL_DIR"/lib
 fi
 
-#rm -rf "$SHELL_FOLDER"/lib
+rm -rf "$SHELL_FOLDER"/lib
