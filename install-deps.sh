@@ -82,6 +82,7 @@ EOF
       patch -p1 < reenable_rtti.patch
       wget -O fix_inline.patch https://github.com/google/snappy/pull/128/commits/0c716d435abe65250100c2caea0e5126ac4e14bd.patch
       patch -p1 < fix_inline.patch
+      popd
     fi
 
     pushd snappy
@@ -111,7 +112,7 @@ else
   fi
 
   sh autogen.sh
-  ./configure --enable-snappy --enable-tcmalloc --disable-dependency-tracking --prefix="$INSTALL_DIR" CPPFLAGS="-I$INSTALL_DIR/include" CXXFLAGS="-I$INSTALL_DIR/include" LDFLAGS="-L$INSTALL_DIR/lib" LT_SYS_LIBRARY_PATH="$INSTALL_DIR"/lib
+  ./configure --enable-snappy --enable-tcmalloc --disable-dependency-tracking --disable-standalone-build --prefix="$INSTALL_DIR" CPPFLAGS="-I$INSTALL_DIR/include" CXXFLAGS="-I$INSTALL_DIR/include" LDFLAGS="-L$INSTALL_DIR/lib" LT_SYS_LIBRARY_PATH="$INSTALL_DIR"/lib
   make
   make install
   make clean
@@ -127,4 +128,4 @@ if command -v ldconfig > /dev/null; then
   ldconfig "$INSTALL_DIR"/lib
 fi
 
-rm -rf "$SHELL_FOLDER"/lib
+#rm -rf "$SHELL_FOLDER"/lib
