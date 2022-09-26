@@ -20,7 +20,7 @@ LDFLAGS ?= -s -w -X github.com/FavorLabs/favorX.commitHash="$(COMMIT_HASH)" -X g
 GOOS ?= $(shell go env GOOS)
 SHELL ?= bash
 IS_DOCKER ?= false
-LIB_INSTALL_DIR ?= /usr/local
+LIB_INSTALL_DIR ?= $(shell pwd)/thirdparty
 CGO_ENABLED ?= $(shell go env CGO_ENABLED)
 
 ifeq ($(GOOS), windows)
@@ -47,6 +47,7 @@ binary-ldb:
 binary: dist FORCE
 	$(GO) version
 ifneq ($(GOOS), windows)
+	[ -d $(LIB_INSTALL_DIR) ] || mkdir $(LIB_INSTALL_DIR)
 	sh -c "./install-deps.sh $(LIB_INSTALL_DIR) $(IS_DOCKER)"
 endif
 	$(GO) env -w CGO_ENABLED=1
