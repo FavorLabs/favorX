@@ -1,10 +1,7 @@
 package wiredtiger
 
 /*
-#cgo !windows CFLAGS: -I/usr/local/include
-#cgo !windows LDFLAGS: -L/usr/local/lib -lwiredtiger
-#cgo windows CFLAGS: -Ic:/wiredtiger/include
-#cgo windows LDFLAGS: -Lc:/wiredtiger/lib -lwiredtiger
+#cgo LDFLAGS: -lwiredtiger -ltcmalloc -lsnappy
 
 #include <stdlib.h>
 #include <wiredtiger.h>
