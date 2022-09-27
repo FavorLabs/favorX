@@ -27,10 +27,14 @@ ifeq ($(GOOS), windows)
 WORK_DIR := $(shell pwd | sed -E 's/^\/([a-zA-Z])\//\1\:\//' | sed -E 's/\//\\\\/g' | tr '[:upper:]' '[:lower:]')
 PATH_SEP := ;
 BINARY_NAME := favorX.exe
+CGO_CFLAGS ?= -Ic:/wiredtiger/include
+CGO_LDFLAGS ?= -Lc:/wiredtiger/lib
 else
 WORK_DIR := $(shell pwd | tr '[:upper:]' '[:lower:]')
 PATH_SEP := :
 BINARY_NAME := favorX
+CGO_CFLAGS ?= -I$(LIB_INSTALL_DIR)/include
+CGO_LDFLAGS ?= -L$(LIB_INSTALL_DIR)/lib
 endif
 
 .PHONY: all
@@ -51,12 +55,30 @@ ifneq ($(GOOS), windows)
 	sh -c "./install-deps.sh $(LIB_INSTALL_DIR) $(IS_DOCKER)"
 endif
 	$(GO) env -w CGO_ENABLED=1
-ifeq ($(GOOS), linux)
-	LD_LIBRARY_PATH=$(LIB_INSTALL_DIR) $(GO) build -trimpath -ldflags "$(LDFLAGS)" -o dist/$(BINARY_NAME) ./cmd/favorX
-else
-	$(GO) build -trimpath -ldflags "$(LDFLAGS)" -o dist/$(BINARY_NAME) ./cmd/favorX
-endif
+	LD_LIBRARY_PATH=$(LIB_INSTALL_DIR) CGO_CFLAGS=$(CGO_CFLAGS) CGO_LDFLAGS=$(CGO_LDFLAGS) $(GO) build -trimpath -ldflags "$(LDFLAGS)" -o dist/$(BINARY_NAME) ./cmd/favorX
 	$(GO) env -w CGO_ENABLED=$(CGO_ENABLED)
+ifeq ($(GOOS), darwin)
+	$(MAKE) check-xcode
+	for library in libwiredtiger libtcmalloc libsnappy; do \
+		match_library_path=`otool -L dist/$(BINARY_NAME) | grep $$library | grep -oE '[^\s].*dylib'` ; \
+		match_library=`echo $$match_library_path | grep -oE $$library'.*dylib'`; \
+		install_name_tool -change $$match_library_path "@rpath/"$$match_library dist/${BINARY_NAME} ; \
+	done
+	install_name_tool -add_rpath @loader_path dist/${BINARY_NAME}
+	install_name_tool -add_rpath @loader_path/../lib dist/${BINARY_NAME}
+	install_name_tool -add_rpath @loader_path/../thirdparty/lib dist/${BINARY_NAME}
+	wiredtiger_lib=`ls $(LIB_INSTALL_DIR)/lib/libwiredtiger-*.dylib | xargs realpath`; \
+	tcmalloc_lib_path=`otool -L $$wiredtiger_lib | grep -w libtcmalloc | grep -oE '^.*dylib'`; \
+	tcmalloc_lib=`echo $$tcmalloc_lib_path | grep -oE 'libtcmalloc[^/]*dylib'` ; \
+	install_name_tool -change $$tcmalloc_lib_path "@rpath/"$$tcmalloc_lib $$wiredtiger_lib
+else ifeq ($(GOOS), linux)
+	ifeq (, $(shell command -v patchelf 2>/dev/null))
+		echo "patchelf not installed" && exit
+	endif
+	patchelf --set-rpath '$$ORIGIN:$$ORIGIN/../lib:$$ORIGIN/../thirdparty/lib' dist/${BINARY_NAME}
+	wiredtiger_lib=`ls $(LIB_INSTALL_DIR)/lib/libwiredtiger-*.so | xargs realpath`; \
+	patchelf --set-rpath '$$ORIGIN' $$wiredtiger_lib
+endif
 
 dist:
 	mkdir $@
