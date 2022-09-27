@@ -72,9 +72,9 @@ ifeq ($(GOOS), darwin)
 	tcmalloc_lib=`echo $$tcmalloc_lib_path | grep -oE 'libtcmalloc[^/]*dylib'` ; \
 	install_name_tool -change $$tcmalloc_lib_path "@rpath/"$$tcmalloc_lib $$wiredtiger_lib
 else ifeq ($(GOOS), linux)
-	ifeq (, $(shell command -v patchelf 2>/dev/null))
-		echo "patchelf not installed" && exit
-	endif
+ifeq (, $(shell command -v patchelf 2>/dev/null))
+	echo "patchelf not installed" && exit
+endif
 	patchelf --set-rpath '$$ORIGIN:$$ORIGIN/../lib:$$ORIGIN/../thirdparty/lib' dist/${BINARY_NAME}
 	wiredtiger_lib=`ls $(LIB_INSTALL_DIR)/lib/libwiredtiger-*.so | xargs realpath`; \
 	patchelf --set-rpath '$$ORIGIN' $$wiredtiger_lib
