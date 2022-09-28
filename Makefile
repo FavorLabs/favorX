@@ -70,7 +70,8 @@ ifeq ($(GOOS), darwin)
 	wiredtiger_lib=`ls $(LIB_INSTALL_DIR)/lib/libwiredtiger-*.dylib | xargs realpath`; \
 	tcmalloc_lib_path=`otool -L $$wiredtiger_lib | grep -w libtcmalloc | grep -oE '^.*dylib'`; \
 	tcmalloc_lib=`echo $$tcmalloc_lib_path | grep -oE 'libtcmalloc[^/]*dylib'` ; \
-	install_name_tool -change $$tcmalloc_lib_path "@rpath/"$$tcmalloc_lib $$wiredtiger_lib
+	install_name_tool -change $$tcmalloc_lib_path "@rpath/"$$tcmalloc_lib $$wiredtiger_lib; \
+	install_name_tool -change $$tcmalloc_lib_path "@rpath/"$$tcmalloc_lib $(LIB_INSTALL_DIR)/lib/libwiredtiger_snappy.so
 else ifeq ($(GOOS), linux)
 ifeq (, $(shell command -v patchelf 2>/dev/null))
 	echo "patchelf not installed" && exit
@@ -78,6 +79,8 @@ endif
 	patchelf --set-rpath '$$ORIGIN:$$ORIGIN/../lib:$$ORIGIN/../thirdparty/lib' dist/${BINARY_NAME}
 	wiredtiger_lib=`ls $(LIB_INSTALL_DIR)/lib/libwiredtiger-*.so | xargs realpath`; \
 	patchelf --set-rpath '$$ORIGIN' $$wiredtiger_lib
+	wt_snappy_lib = `ls $(LIB_INSTALL_DIR)/lib/libwiredtiger_snappy.so | xargs realpath`; \
+	patchelf --set-rpath '$$ORIGIN' $$wt_snappy_lib
 endif
 
 dist:
