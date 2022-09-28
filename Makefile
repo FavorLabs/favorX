@@ -79,7 +79,7 @@ endif
 	patchelf --set-rpath '$$ORIGIN:$$ORIGIN/../lib:$$ORIGIN/../thirdparty/lib' dist/${BINARY_NAME}
 	wiredtiger_lib=`ls $(LIB_INSTALL_DIR)/lib/libwiredtiger-*.so | xargs realpath`; \
 	patchelf --set-rpath '$$ORIGIN' $$wiredtiger_lib
-	wt_snappy_lib = `ls $(LIB_INSTALL_DIR)/lib/libwiredtiger_snappy.so | xargs realpath`; \
+	wt_snappy_lib=`ls $(LIB_INSTALL_DIR)/lib/libwiredtiger_snappy.so | xargs realpath`; \
 	patchelf --set-rpath '$$ORIGIN' $$wt_snappy_lib
 endif
 
