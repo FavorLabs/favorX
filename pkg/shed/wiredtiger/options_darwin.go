@@ -13,6 +13,6 @@ var (
 	defaultSessionMax    = 20
 	defaultStatistics    = []StatisticsPolicy{StatisticsFast}
 	defaultStatisticsLog = StatisticsLog{Wait: 0}
-	defaultExtensions    = "[/usr/local/lib/libwiredtiger_snappy.so]"
+	defaultExtensions    = "[libwiredtiger_snappy.so]"
 	defaultVerbose       = "[]"
 )
