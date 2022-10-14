@@ -65,7 +65,7 @@ func (s *Service) newBasicRouter() *mux.Router {
 	return router
 }
 
-// newRouter construct the complete set of routes after all of the dependencies
+// newRouter construct the complete set of routes after all the dependencies
 // are injected and exposes /readiness endpoint to provide information that
 // Debug API is fully active.
 func (s *Service) newRouter() *mux.Router {

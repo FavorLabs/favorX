@@ -115,11 +115,10 @@ func (s *server) setupRouting() {
 	})
 
 	handle("/file/{address}", jsonhttp.MethodHandler{
-		"GET": http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			u := r.URL
-			u.Path += "/"
-			http.Redirect(w, r, u.String(), http.StatusPermanentRedirect)
-		}),
+		"GET": web.ChainHandlers(
+			s.newTracingHandler("file-download"),
+			web.FinalHandlerFunc(s.fileDownloadHandler),
+		),
 		"DELETE": web.ChainHandlers(
 			s.newTracingHandler("file-delete"),
 			web.FinalHandlerFunc(s.fileDeleteHandler),
@@ -250,6 +249,10 @@ func (s *server) setupRouting() {
 					w.Header().Set("Access-Control-Allow-Headers", "User-Agent, Origin, Accept, Authorization, Content-Type, X-Requested-With, Access-Control-Request-Headers, Access-Control-Request-Method, Tag, Pin, Encrypt, Index-Document, Error-Document, Collection, Collection-Name, Reference-Link")
 					w.Header().Set("Access-Control-Allow-Methods", "GET, HEAD, OPTIONS, POST, PUT, DELETE")
 					w.Header().Set("Access-Control-Max-Age", "3600")
+				}
+				if r.Method == "OPTIONS" {
+					w.WriteHeader(http.StatusOK)
+					return
 				}
 				h.ServeHTTP(w, r)
 			})
