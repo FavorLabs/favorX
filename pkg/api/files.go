@@ -244,11 +244,6 @@ func (s *server) fileDownloadHandler(w http.ResponseWriter, r *http.Request) {
 
 	nameOrHex := mux.Vars(r)["address"]
 	pathVar := mux.Vars(r)["path"]
-	if strings.HasSuffix(pathVar, "/") {
-		pathVar = strings.TrimRight(pathVar, "/")
-		// NOTE: leave one slash if there was some
-		pathVar += "/"
-	}
 
 	address, err := s.resolveNameOrAddress(nameOrHex)
 	if err != nil {
@@ -317,23 +312,6 @@ func (s *server) fileDownloadHandler(w http.ResponseWriter, r *http.Request) {
 		if !errors.Is(err, manifest.ErrNotFound) {
 			jsonhttp.NotFound(w, err)
 			return
-		}
-
-		if !strings.HasPrefix(pathVar, "/") {
-			// check for directory
-			dirPath := pathVar + "/"
-			exists, err := m.HasPrefix(r.Context(), dirPath)
-			if err == nil && exists {
-				// redirect to directory
-				u := r.URL
-				u.Path += "/"
-				redirectURL := u.String()
-
-				logger.Debugf("download: redirecting to %s: %v", redirectURL, err)
-
-				http.Redirect(w, r, redirectURL, http.StatusPermanentRedirect)
-				return
-			}
 		}
 
 		// check index suffix path

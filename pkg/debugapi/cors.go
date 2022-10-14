@@ -15,6 +15,10 @@ func (s *Service) corsHandler(h http.Handler) http.Handler {
 			w.Header().Set("Access-Control-Allow-Methods", "GET, HEAD, OPTIONS, POST, PUT, DELETE")
 			w.Header().Set("Access-Control-Max-Age", "3600")
 		}
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
 		h.ServeHTTP(w, r)
 	})
 }
