@@ -97,7 +97,7 @@ func (ci *ChunkInfo) sendData(ctx context.Context, address boson.Address, stream
 			return err
 		}
 	}
-	ci.logger.Tracef("got chunk info req")
+	ci.logger.Infof("got chunk info req:%s", address.String())
 	return nil
 }
 
@@ -182,6 +182,7 @@ func (ci *ChunkInfo) onFindChunkInfo(ctx context.Context, authInfo []byte, rootC
 
 	ov := overlay.String()
 	if chunkInfo[ov] != nil && ci.getPendingFinder(rootCid) {
+		ci.logger.Infof("found fCid:%s can go to %s to get", rootCid.String(), ov)
 		err := ci.updateDiscover(rootCid, overlay, chunkInfo[ov])
 		if err != nil {
 			ci.logger.Errorf("chunkInfo update:%w", err)

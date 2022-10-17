@@ -242,6 +242,7 @@ func (db *DB) setRemove(batch driver.Batching, addr, rootAddr boson.Address) (gc
 	}
 	err = db.deleteFile(addr)
 	if err != nil {
+		db.logger.Errorf("del file :%s error: %w", addr.String(), err)
 		return 0, err
 	}
 	// need to get access timestamp here as it is not
