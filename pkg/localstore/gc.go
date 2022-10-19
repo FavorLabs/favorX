@@ -169,7 +169,7 @@ func (db *DB) collectGarbage() (collectedCount uint64, done bool, err error) {
 		}
 	}
 
-	return collectedCount, done, nil
+	return collectedCount, done, err
 }
 
 func (db *DB) collectMemoryGarbage() (collectedCount uint64, done bool, err error) {
