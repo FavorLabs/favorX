@@ -238,14 +238,13 @@ func (db *DB) setRemove(batch driver.Batching, addr boson.Address, rootItem shed
 		return 0, err
 	}
 
-	err = db.retrievalAccessIndex.DeleteInBatch(batch, item)
-	if err != nil && !errors.Is(err, driver.ErrNotFound) {
-		return 0, err
-	}
-	err = db.deleteFile(addr)
-	if err != nil {
-		db.logger.Errorf("del file :%s error: %w", addr.String(), err)
-		return 0, err
+	if addr.Equal(boson.NewAddress(rootItem.Address)) {
+		rootItem = item
+	} else {
+		err = db.retrievalAccessIndex.DeleteInBatch(batch, item)
+		if err != nil && !errors.Is(err, driver.ErrNotFound) {
+			return 0, err
+		}
 	}
 	// need to get access timestamp here as it is not
 	// provided by the access function, and it is not
@@ -265,10 +264,11 @@ func (db *DB) setRemove(batch driver.Batching, addr boson.Address, rootItem shed
 }
 
 func (db *DB) gcRemove(batch driver.Batching, rootItem shed.Item) (gcSizeChange int64, err error) {
-	i, err := db.retrievalDataIndex.Get(rootItem)
-	if err == nil {
-		rootItem.StoreTimestamp = i.StoreTimestamp
-		rootItem.BinID = i.BinID
+	rootCid := boson.NewAddress(rootItem.Address)
+	err = db.deleteFile(rootCid)
+	if err != nil {
+		db.logger.Errorf("del file :%s error: %w", rootCid.String(), err)
+		return 0, err
 	}
 	// a check is needed for decrementing gcSize
 	// as delete is not reporting if the key/value pair
