@@ -245,12 +245,10 @@ func (db *DB) setGC(batch driver.Batching, item shed.Item) (gcSizeChange int64, 
 	item.AccessTimestamp = i.AccessTimestamp
 	if item.BinID == 0 {
 		i, err = db.retrievalDataIndex.Get(item)
-		if err != nil {
-			binIDs := make(map[uint8]uint64)
-			item.BinID, err = db.incBinID(binIDs, db.po(boson.NewAddress(item.Address)))
-		} else {
-			item.BinID = i.BinID
+		if err != nil && !errors.Is(err, driver.ErrNotFound) {
+			return 0, err
 		}
+		item.BinID = i.BinID
 	}
 	gcItem, err := db.gcIndex.Get(item)
 	if err != nil {

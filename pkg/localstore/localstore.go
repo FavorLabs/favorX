@@ -523,14 +523,24 @@ func (db *DB) PutFile(file filestore.FileView) error {
 	return db.filestore.Put(file)
 }
 func (db *DB) DeleteFile(reference boson.Address) error {
+	return db.commonDelete(addressToItem(reference))
+}
+
+func (db *DB) gcFile(item shed.Item) error {
+	err := db.commonDelete(item)
+	return err
+}
+
+func (db *DB) commonDelete(item shed.Item) error {
 	db.fileMu.Lock()
 	defer db.fileMu.Unlock()
+	reference := boson.NewAddress(item.Address)
 	db.chunkstore.CancelFinder(reference)
 	err := db.filestore.Delete(reference)
 	if err != nil {
 		return err
 	}
-	return db.setRemoveAll(reference)
+	return db.setRemoveAll(item)
 }
 
 func (db *DB) deleteFile(reference boson.Address) error {

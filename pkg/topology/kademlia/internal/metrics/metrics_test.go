@@ -4,10 +4,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/FavorLabs/favorX/pkg/shed"
+	"github.com/FavorLabs/favorX/pkg/topology/kademlia/internal/metrics"
 	"github.com/gauss-project/aurorafs/pkg/boson"
 	"github.com/gauss-project/aurorafs/pkg/p2p"
-	"github.com/gauss-project/aurorafs/pkg/shed"
-	"github.com/gauss-project/aurorafs/pkg/topology/kademlia/internal/metrics"
 	"github.com/gauss-project/aurorafs/pkg/topology/model"
 	"github.com/google/go-cmp/cmp"
 )
