@@ -91,7 +91,7 @@ type Options struct {
 	ReachabilityFunc peerFilterFunc
 }
 
-// Kad is the Aurora forwarding kademlia implementation.
+// Kad is the FavorX forwarding kademlia implementation.
 type Kad struct {
 	base              boson.Address         // this node's overlay address
 	discovery         discovery.Driver      // the discovery driver

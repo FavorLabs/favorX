@@ -197,7 +197,7 @@ func TestWithMultipartRequest(t *testing.T) {
 }
 
 func TestWithRequestHeader(t *testing.T) {
-	headerName := "Aurora-Header"
+	headerName := "Node-Header"
 	headerValue := "somevalue"
 	var gotValue string
 
@@ -319,7 +319,7 @@ func TestWithNoResponseBody(t *testing.T) {
 	})
 
 	assert(t, `got response body "not found", want none`, "", func(m *mock) {
-		jsonhttptest.Request(m, c, http.MethodGet, endpoint+"/aurora", http.StatusOK,
+		jsonhttptest.Request(m, c, http.MethodGet, endpoint+"/file", http.StatusOK,
 			jsonhttptest.WithNoResponseBody(),
 		)
 	})

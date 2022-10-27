@@ -24,7 +24,7 @@ import (
 	"github.com/FavorLabs/favorX/pkg/shed/driver"
 )
 
-// Item holds fields relevant to Aurora Chunk data and metadata.
+// Item holds fields relevant to FavorX Chunk data and metadata.
 // All information required for boson storage and operations
 // on that storage must be defined here.
 // This structure is logically connected to boson storage,

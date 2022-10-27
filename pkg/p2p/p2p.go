@@ -151,7 +151,7 @@ type StreamerDisconnecter interface {
 	Disconnecter
 }
 
-// Pinger interface is used to ping a underlay address which is not yet known to the aurora node.
+// Pinger interface is used to ping a underlay address which is not yet known to the node.
 // It uses libp2p's default ping protocol. This is different from the PingPong protocol as this
 // is meant to be used before we know a particular underlay and we can consider it useful
 type Pinger interface {

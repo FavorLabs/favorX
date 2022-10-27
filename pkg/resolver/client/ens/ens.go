@@ -20,7 +20,7 @@ const (
 	auroraContentHashPrefix   = "favor://"
 )
 
-// Address is the boson aurora address.
+// Address is the boson address.
 type Address = boson.Address
 
 // Make sure Client implements the resolver.Client interface.
@@ -117,12 +117,12 @@ func (c *Client) Resolve(name string) (Address, error) {
 	}
 
 	// Ensure that the content hash string is in a valid format, eg.
-	// "aurora://<address>".
+	// "favor://<address>".
 	if !strings.HasPrefix(hash, auroraContentHashPrefix) {
 		return boson.ZeroAddress, fmt.Errorf("contenthash %s: %w", hash, ErrInvalidContentHash)
 	}
 
-	// Trim the prefix and try to parse the result as a aurora address.
+	// Trim the prefix and try to parse the result as an address.
 	return boson.ParseHexAddress(strings.TrimPrefix(hash, auroraContentHashPrefix))
 }
 
@@ -189,15 +189,15 @@ func wrapResolve(registry *goens.Registry, addr common.Address, name string) (st
 		return "", err
 	}
 
-	auroraPrefix := []byte(auroraContentHashPrefix)
+	subPrefix := []byte(auroraContentHashPrefix)
 
-	prefixIndex := bytes.Index(decodedMHash.Digest, auroraPrefix)
+	prefixIndex := bytes.Index(decodedMHash.Digest, subPrefix)
 	if prefixIndex != 0 {
 		return "", fmt.Errorf("only support aurora-format contenthash")
 	}
 
-	contentHash := hex.EncodeToString(decodedMHash.Digest[len(auroraPrefix):])
-	prefix := string(decodedMHash.Digest[:len(auroraPrefix)])
+	contentHash := hex.EncodeToString(decodedMHash.Digest[len(subPrefix):])
+	prefix := string(decodedMHash.Digest[:len(subPrefix)])
 
 	return prefix + contentHash, nil
 }

@@ -13,7 +13,7 @@ import (
 const (
 	// ManifestSimpleContentType represents content type used for noting that
 	// specific file should be processed as 'simple' manifest
-	ManifestSimpleContentType = "application/aurora-manifest-simple+json"
+	ManifestSimpleContentType = "application/manifest-simple+json"
 )
 
 type simpleManifest struct {
