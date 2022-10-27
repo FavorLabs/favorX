@@ -3,7 +3,12 @@ package debugapi_test
 import (
 	"crypto/ecdsa"
 	"encoding/hex"
-	aufs "github.com/FavorLabs/favorX"
+	"io"
+	"net/http"
+	"net/http/httptest"
+	"net/url"
+	"testing"
+
 	favor "github.com/FavorLabs/favorX"
 	accountingmock "github.com/FavorLabs/favorX/pkg/accounting/mock"
 	"github.com/FavorLabs/favorX/pkg/address"
@@ -21,12 +26,7 @@ import (
 	"github.com/FavorLabs/favorX/pkg/topology/lightnode"
 	topologymock "github.com/FavorLabs/favorX/pkg/topology/mock"
 	"github.com/multiformats/go-multiaddr"
-	"io"
-	"net/http"
-	"net/http/httptest"
-	"net/url"
 	"resenje.org/web"
-	"testing"
 )
 
 type testServerOptions struct {
@@ -176,7 +176,7 @@ func testBasicRouter(t *testing.T, client *http.Client) {
 	jsonhttptest.Request(t, client, http.MethodGet, "/health", http.StatusOK,
 		jsonhttptest.WithExpectedJSONResponse(debugapi.StatusResponse{
 			Status:       "ok",
-			Version:      aufs.Version,
+			Version:      favor.Version,
 			FullNode:     false,
 			BootNodeMode: false,
 		}),

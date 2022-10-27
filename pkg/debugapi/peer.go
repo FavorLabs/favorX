@@ -25,7 +25,7 @@ func (s *Service) peerConnectHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		addr, e := boson.ParseHexAddress(dest)
 		if e != nil {
-			s.logger.Debugf("debug api: peer connect: parse multiaddress: %v", err)
+			s.logger.Debugf("debug api: peer connect: parse multi address: %v", err)
 			jsonhttp.BadRequest(w, err)
 			return
 		}

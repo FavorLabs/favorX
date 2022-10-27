@@ -60,7 +60,7 @@ func NewServer(logger logging.Logger, backend *ethclient.Client, address string,
 	}, nil
 }
 
-func (ora *ChainOracle) GetCid(aufsUri string) []byte {
+func (ora *ChainOracle) GetCid(_ string) []byte {
 	return nil
 }
 
@@ -80,7 +80,7 @@ func (ora *ChainOracle) GetNodesFromCid(cid []byte) []boson.Address {
 	return overs
 }
 
-func (ora *ChainOracle) GetSourceNodes(aufsUri string) []boson.Address {
+func (ora *ChainOracle) GetSourceNodes(_ string) []boson.Address {
 
 	return nil
 }

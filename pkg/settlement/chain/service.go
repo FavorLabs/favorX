@@ -2,17 +2,18 @@ package chain
 
 import (
 	"context"
+	"math/big"
+
 	"github.com/FavorLabs/favorX/pkg/boson"
 	"github.com/FavorLabs/favorX/pkg/rpc"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"math/big"
 )
 
 type ChainResult struct {
-	//success bool
+	// success bool
 	TxHash []byte
-	//reason  string
+	// reason  string
 }
 
 // TxRequest describes a request for a transaction that can be executed.
@@ -40,13 +41,13 @@ type TxInfo struct {
 }
 type Resolver interface {
 	// GetCid Resolve cid from  uri
-	GetCid(aufsUri string) []byte
+	GetCid(uri string) []byte
 
 	// GetNodesFromCid  Get source nodes of specified cid
 	GetNodesFromCid([]byte) []boson.Address
 
 	// GetSourceNodes  Short hand function, get storage nodes from uri
-	GetSourceNodes(aufsUri string) []boson.Address
+	GetSourceNodes(uri string) []boson.Address
 
 	// OnStoreMatched Notification when new data req matched
 	OnStoreMatched(cid boson.Address, dataLen uint64, salt uint64, address boson.Address)
