@@ -245,6 +245,12 @@ func (db *DB) setRemove(batch driver.Batching, addr boson.Address, rootItem shed
 		if err != nil && !errors.Is(err, driver.ErrNotFound) {
 			return 0, err
 		}
+		i, err = db.retrievalDataIndex.Get(rootItem)
+		if err != nil {
+			return 0, err
+		}
+		rootItem.StoreTimestamp = i.StoreTimestamp
+		rootItem.BinID = i.BinID
 	}
 	// need to get access timestamp here as it is not
 	// provided by the access function, and it is not
