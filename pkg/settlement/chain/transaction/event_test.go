@@ -6,13 +6,12 @@ package transaction_test
 
 import (
 	"errors"
-	transaction2 "github.com/gauss-project/aurorafs/pkg/settlement/chain/transaction"
-	"math/big"
-	"testing"
-
+	transaction2 "github.com/FavorLabs/favorX/pkg/settlement/chain/transaction"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethersphere/sw3-bindings/v3/simpleswapfactory"
+	"math/big"
+	"testing"
 )
 
 var (

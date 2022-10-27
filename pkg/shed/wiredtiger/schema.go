@@ -3,7 +3,7 @@ package wiredtiger
 import (
 	"fmt"
 
-	"github.com/gauss-project/aurorafs/pkg/shed/driver"
+	"github.com/FavorLabs/favorX/pkg/shed/driver"
 )
 
 const (

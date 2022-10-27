@@ -4,9 +4,9 @@ import (
 	"bytes"
 	"crypto/sha256"
 
+	"github.com/FavorLabs/favorX/pkg/boson"
+	"github.com/FavorLabs/favorX/pkg/routetab/pb"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/gauss-project/aurorafs/pkg/boson"
-	"github.com/gauss-project/aurorafs/pkg/routetab/pb"
 )
 
 func inPath(b []byte, path [][]byte) bool {

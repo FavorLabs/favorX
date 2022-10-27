@@ -3,7 +3,7 @@ package mock
 import (
 	"bytes"
 
-	"github.com/gauss-project/aurorafs/pkg/p2p"
+	"github.com/FavorLabs/favorX/pkg/p2p"
 )
 
 type Stream struct {

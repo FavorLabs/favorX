@@ -8,7 +8,7 @@ import (
 
 	"io"
 
-	"github.com/gauss-project/aurorafs/pkg/boson"
+	"github.com/FavorLabs/favorX/pkg/boson"
 )
 
 // simpleReadCloser wraps a byte slice in a io.ReadCloser implementation.

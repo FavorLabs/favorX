@@ -21,9 +21,9 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/FavorLabs/favorX/pkg/boson"
 	"github.com/FavorLabs/favorX/pkg/shed"
-	"github.com/gauss-project/aurorafs/pkg/boson"
-	"github.com/gauss-project/aurorafs/pkg/shed/driver"
+	"github.com/FavorLabs/favorX/pkg/shed/driver"
 	"github.com/pbnjay/memory"
 )
 
@@ -44,7 +44,7 @@ var (
 	gcMemory uint64 = 50 * 1024 * 1024
 )
 
-// collectGarbageWorker is a long running function that waits for
+// collectGarbageWorker is a long-running function that waits for
 // collectGarbageTrigger channel to signal a garbage collection
 // run. GC run iterates on gcIndex and removes older items
 // form retrieval and other indexes.

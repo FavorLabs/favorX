@@ -11,8 +11,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/FavorLabs/favorX/pkg/boson"
 	"github.com/FavorLabs/favorX/pkg/file"
-	"github.com/gauss-project/aurorafs/pkg/boson"
 )
 
 var (

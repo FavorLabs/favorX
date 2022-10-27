@@ -8,15 +8,15 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/FavorLabs/favorX/pkg/boson"
+	"github.com/FavorLabs/favorX/pkg/logging"
+	"github.com/FavorLabs/favorX/pkg/p2p"
+	"github.com/FavorLabs/favorX/pkg/rpc"
+	"github.com/FavorLabs/favorX/pkg/settlement"
 	"github.com/FavorLabs/favorX/pkg/settlement/traffic"
 	chequePkg "github.com/FavorLabs/favorX/pkg/settlement/traffic/cheque"
 	"github.com/FavorLabs/favorX/pkg/storage"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/gauss-project/aurorafs/pkg/boson"
-	"github.com/gauss-project/aurorafs/pkg/logging"
-	"github.com/gauss-project/aurorafs/pkg/p2p"
-	"github.com/gauss-project/aurorafs/pkg/rpc"
-	"github.com/gauss-project/aurorafs/pkg/settlement"
 )
 
 var (

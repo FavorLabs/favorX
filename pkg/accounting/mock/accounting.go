@@ -7,8 +7,8 @@ import (
 	"math/big"
 	"sync"
 
-	"github.com/gauss-project/aurorafs/pkg/accounting"
-	"github.com/gauss-project/aurorafs/pkg/boson"
+	"github.com/FavorLabs/favorX/pkg/accounting"
+	"github.com/FavorLabs/favorX/pkg/boson"
 )
 
 // Service is the mock Accounting service.

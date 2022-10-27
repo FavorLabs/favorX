@@ -4,12 +4,12 @@ import (
 	"context"
 	"math/big"
 
+	"github.com/FavorLabs/favorX/pkg/boson"
+	"github.com/FavorLabs/favorX/pkg/rpc"
+	"github.com/FavorLabs/favorX/pkg/settlement"
+	"github.com/FavorLabs/favorX/pkg/settlement/traffic"
+	chequePkg "github.com/FavorLabs/favorX/pkg/settlement/traffic/cheque"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/gauss-project/aurorafs/pkg/boson"
-	"github.com/gauss-project/aurorafs/pkg/rpc"
-	"github.com/gauss-project/aurorafs/pkg/settlement"
-	"github.com/gauss-project/aurorafs/pkg/settlement/traffic"
-	chequePkg "github.com/gauss-project/aurorafs/pkg/settlement/traffic/cheque"
 )
 
 type TraafficMock struct {

@@ -20,8 +20,8 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/gauss-project/aurorafs/pkg/boson"
-	"github.com/gauss-project/aurorafs/pkg/cac"
+	"github.com/FavorLabs/favorX/pkg/boson"
+	"github.com/FavorLabs/favorX/pkg/cac"
 )
 
 // fixtreuChunks are pregenerated content-addressed chunks necessary for explicit

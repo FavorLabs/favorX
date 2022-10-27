@@ -7,9 +7,9 @@ import (
 	"fmt"
 	"math"
 
+	"github.com/FavorLabs/favorX/pkg/boson"
 	"github.com/FavorLabs/favorX/pkg/file"
 	"github.com/FavorLabs/manifest/mantaray"
-	"github.com/gauss-project/aurorafs/pkg/boson"
 )
 
 const (

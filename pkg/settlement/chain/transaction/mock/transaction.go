@@ -9,12 +9,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/gauss-project/aurorafs/pkg/settlement/chain"
-	"math/big"
-
+	"github.com/FavorLabs/favorX/pkg/settlement/chain"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"math/big"
 )
 
 type transactionServiceMock struct {

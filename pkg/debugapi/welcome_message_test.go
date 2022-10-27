@@ -8,9 +8,9 @@ import (
 	"testing"
 
 	"github.com/FavorLabs/favorX/pkg/debugapi"
-	"github.com/gauss-project/aurorafs/pkg/jsonhttp"
-	"github.com/gauss-project/aurorafs/pkg/jsonhttp/jsonhttptest"
-	"github.com/gauss-project/aurorafs/pkg/p2p/mock"
+	"github.com/FavorLabs/favorX/pkg/jsonhttp"
+	"github.com/FavorLabs/favorX/pkg/jsonhttp/jsonhttptest"
+	"github.com/FavorLabs/favorX/pkg/p2p/mock"
 )
 
 func TestGetWelcomeMessage(t *testing.T) {

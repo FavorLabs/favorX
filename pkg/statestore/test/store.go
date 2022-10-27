@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gauss-project/aurorafs/pkg/storage"
+	"github.com/FavorLabs/favorX/pkg/storage"
 )
 
 const (

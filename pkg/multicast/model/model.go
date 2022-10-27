@@ -3,11 +3,11 @@ package model
 import (
 	"time"
 
-	"github.com/gauss-project/aurorafs/pkg/boson"
-	md "github.com/gauss-project/aurorafs/pkg/topology/model"
+	"github.com/FavorLabs/favorX/pkg/boson"
+	md "github.com/FavorLabs/favorX/pkg/topology/model"
 )
 
-// MetricSnapshotView represents snapshot of metrics counters in more human readable form.
+// MetricSnapshotView represents snapshot of metrics counters in more human-readable form.
 type MetricSnapshotView struct {
 	LastSeenTimestamp          int64   `json:"lastSeenTimestamp"`
 	SessionConnectionRetry     uint64  `json:"sessionConnectionRetry"`

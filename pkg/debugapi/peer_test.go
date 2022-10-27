@@ -6,14 +6,14 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/FavorLabs/favorX/pkg/address"
+	"github.com/FavorLabs/favorX/pkg/boson"
+	"github.com/FavorLabs/favorX/pkg/crypto"
 	"github.com/FavorLabs/favorX/pkg/debugapi"
-	"github.com/gauss-project/aurorafs/pkg/aurora"
-	"github.com/gauss-project/aurorafs/pkg/boson"
-	"github.com/gauss-project/aurorafs/pkg/crypto"
-	"github.com/gauss-project/aurorafs/pkg/jsonhttp"
-	"github.com/gauss-project/aurorafs/pkg/jsonhttp/jsonhttptest"
-	"github.com/gauss-project/aurorafs/pkg/p2p"
-	"github.com/gauss-project/aurorafs/pkg/p2p/mock"
+	"github.com/FavorLabs/favorX/pkg/jsonhttp"
+	"github.com/FavorLabs/favorX/pkg/jsonhttp/jsonhttptest"
+	"github.com/FavorLabs/favorX/pkg/p2p"
+	"github.com/FavorLabs/favorX/pkg/p2p/mock"
 	ma "github.com/multiformats/go-multiaddr"
 )
 
@@ -36,7 +36,7 @@ func TestConnect(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	bzzAddress, err := aurora.NewAddress(crypto.NewDefaultSigner(privateKey), underlama, overlay, 0)
+	bzzAddress, err := address.NewAddress(crypto.NewDefaultSigner(privateKey), underlama, overlay, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -48,7 +48,7 @@ func TestConnect(t *testing.T) {
 			}
 			return &p2p.Peer{
 				Address: bzzAddress.Overlay,
-				Mode:    aurora.NewModel().SetMode(aurora.FullNode),
+				Mode:    address.NewModel().SetMode(address.FullNode),
 			}, nil
 		})),
 	})
@@ -87,7 +87,7 @@ func TestConnect(t *testing.T) {
 				}
 				return &p2p.Peer{
 					Address: bzzAddress.Overlay,
-					Mode:    aurora.NewModel().SetMode(aurora.FullNode),
+					Mode:    address.NewModel().SetMode(address.FullNode),
 				}, nil
 			})),
 		})

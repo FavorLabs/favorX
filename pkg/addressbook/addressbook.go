@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/FavorLabs/favorX/pkg/address"
+	"github.com/FavorLabs/favorX/pkg/boson"
 	"github.com/FavorLabs/favorX/pkg/storage"
-	"github.com/gauss-project/aurorafs/pkg/aurora"
-	"github.com/gauss-project/aurorafs/pkg/boson"
 )
 
 const keyPrefix = "addressbook_entry_"
@@ -25,7 +25,7 @@ type Interface interface {
 	// IterateOverlays exposes overlays in a form of an iterator.
 	IterateOverlays(func(boson.Address) (bool, error)) error
 	// Addresses returns a list of all bzz.Address-es saved in addressbook.
-	Addresses() ([]aurora.Address, error)
+	Addresses() ([]address.Address, error)
 }
 
 type GetPutter interface {
@@ -35,12 +35,12 @@ type GetPutter interface {
 
 type Getter interface {
 	// Get returns pointer to saved bzz.Address for requested overlay address.
-	Get(overlay boson.Address) (addr *aurora.Address, err error)
+	Get(overlay boson.Address) (addr *address.Address, err error)
 }
 
 type Putter interface {
 	// Put saves relation between peer overlay address and bzz.Address address.
-	Put(overlay boson.Address, addr aurora.Address) (err error)
+	Put(overlay boson.Address, addr address.Address) (err error)
 }
 
 type Remover interface {
@@ -59,9 +59,9 @@ func New(storer storage.StateStorer) Interface {
 	}
 }
 
-func (s *store) Get(overlay boson.Address) (*aurora.Address, error) {
+func (s *store) Get(overlay boson.Address) (*address.Address, error) {
 	key := keyPrefix + overlay.String()
-	v := &aurora.Address{}
+	v := &address.Address{}
 	err := s.store.Get(key, &v)
 	if err != nil {
 		if err == storage.ErrNotFound {
@@ -73,7 +73,7 @@ func (s *store) Get(overlay boson.Address) (*aurora.Address, error) {
 	return v, nil
 }
 
-func (s *store) Put(overlay boson.Address, addr aurora.Address) (err error) {
+func (s *store) Put(overlay boson.Address, addr address.Address) (err error) {
 	key := keyPrefix + overlay.String()
 	return s.store.Put(key, &addr)
 }
@@ -119,9 +119,9 @@ func (s *store) Overlays() (overlays []boson.Address, err error) {
 	return overlays, nil
 }
 
-func (s *store) Addresses() (addresses []aurora.Address, err error) {
+func (s *store) Addresses() (addresses []address.Address, err error) {
 	err = s.store.Iterate(keyPrefix, func(_, value []byte) (stop bool, err error) {
-		entry := &aurora.Address{}
+		entry := &address.Address{}
 		err = entry.UnmarshalJSON(value)
 		if err != nil {
 			return true, err

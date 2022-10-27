@@ -32,13 +32,13 @@ type BitVector struct {
 
 // New creates a new bit vector with the given length
 func New(l int) (*BitVector, error) {
-	var len int
+	var length int
 	if l%8 == 0 && l != 0 {
-		len = l / 8
+		length = l / 8
 	} else {
-		len = l/8 + 1
+		length = l/8 + 1
 	}
-	return NewFromBytes(make([]byte, len), l)
+	return NewFromBytes(make([]byte, length), l)
 }
 
 // NewFromBytes creates a bit vector from the passed byte slice.
@@ -77,14 +77,14 @@ func (bv *BitVector) Set(i int) {
 	bv.set(i, true)
 }
 
-// Unset UNSETS the corresponding bit, counted from left to right
+// Unset the corresponding bit, counted from left to right
 func (bv *BitVector) Unset(i int) {
 	bv.set(i, false)
 }
 
 // SetBytes sets all bits in the bitvector that are set in the argument
 //
-// The argument must be the same as the bitvector length
+//	must be the same as the bitvector length
 func (bv *BitVector) SetBytes(bs []byte) error {
 	if len(bs) > len(bv.b) {
 		return errors.New("invalid length")
@@ -100,7 +100,7 @@ func (bv *BitVector) SetBytes(bs []byte) error {
 
 // UnsetBytes UNSETS all bits in the bitvector that are set in the argument
 //
-// The argument must be the same as the bitvector length
+//	must be the same as the bitvector length
 func (bv *BitVector) UnsetBytes(bs []byte) error {
 	if len(bs) > len(bv.b) {
 		return errors.New("invalid length")

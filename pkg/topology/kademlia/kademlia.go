@@ -5,33 +5,32 @@ import (
 	random "crypto/rand"
 	"encoding/json"
 	"errors"
+	"github.com/FavorLabs/favorX/pkg/address"
+	"github.com/FavorLabs/favorX/pkg/addressbook"
+	"github.com/FavorLabs/favorX/pkg/blocker"
+	"github.com/FavorLabs/favorX/pkg/boson"
+	"github.com/FavorLabs/favorX/pkg/discovery"
+	"github.com/FavorLabs/favorX/pkg/logging"
+	"github.com/FavorLabs/favorX/pkg/p2p"
+	"github.com/FavorLabs/favorX/pkg/pingpong"
+	"github.com/FavorLabs/favorX/pkg/shed"
+	"github.com/FavorLabs/favorX/pkg/subscribe"
+	"github.com/FavorLabs/favorX/pkg/topology"
+	"github.com/FavorLabs/favorX/pkg/topology/bootnode"
+	im "github.com/FavorLabs/favorX/pkg/topology/kademlia/internal/metrics"
+	"github.com/FavorLabs/favorX/pkg/topology/kademlia/internal/waitnext"
+	"github.com/FavorLabs/favorX/pkg/topology/lightnode"
+	"github.com/FavorLabs/favorX/pkg/topology/model"
+	"github.com/FavorLabs/favorX/pkg/topology/pslice"
+	"github.com/libp2p/go-libp2p-core/network"
+	ma "github.com/multiformats/go-multiaddr"
+	"golang.org/x/sync/errgroup"
 	"math/big"
 	"net"
 	"sort"
 	"sync"
 	"syscall"
 	"time"
-
-	"github.com/FavorLabs/favorX/pkg/addressbook"
-	"github.com/FavorLabs/favorX/pkg/shed"
-	im "github.com/FavorLabs/favorX/pkg/topology/kademlia/internal/metrics"
-	"github.com/FavorLabs/favorX/pkg/topology/kademlia/internal/waitnext"
-	"github.com/gauss-project/aurorafs/pkg/aurora"
-	"github.com/gauss-project/aurorafs/pkg/blocker"
-	"github.com/gauss-project/aurorafs/pkg/boson"
-	"github.com/gauss-project/aurorafs/pkg/discovery"
-	"github.com/gauss-project/aurorafs/pkg/logging"
-	"github.com/gauss-project/aurorafs/pkg/p2p"
-	"github.com/gauss-project/aurorafs/pkg/pingpong"
-	"github.com/gauss-project/aurorafs/pkg/subscribe"
-	"github.com/gauss-project/aurorafs/pkg/topology"
-	"github.com/gauss-project/aurorafs/pkg/topology/bootnode"
-	"github.com/gauss-project/aurorafs/pkg/topology/lightnode"
-	"github.com/gauss-project/aurorafs/pkg/topology/model"
-	"github.com/gauss-project/aurorafs/pkg/topology/pslice"
-	"github.com/libp2p/go-libp2p-core/network"
-	ma "github.com/multiformats/go-multiaddr"
-	"golang.org/x/sync/errgroup"
 )
 
 const (
@@ -47,8 +46,8 @@ const (
 	peerConnectionAttemptTimeout = 15 * time.Second // timeout for establishing a new connection with peer.
 
 	flagTimeout       = 5 * time.Minute  // how long before blocking a flagged peer
-	blockDuration     = time.Hour        // how long to blocklist an unresponsive peer for
-	blockWorkerWakeup = time.Second * 15 // wake up interval for the blocker worker
+	blockDuration     = time.Hour        // how long to blacklist an unresponsive peer for
+	blockWorkerWakeup = time.Second * 15 // wake-up interval for the blocker worker
 )
 
 var (
@@ -84,7 +83,7 @@ var noopSanctionedPeerFn = func(_ boson.Address) bool { return false }
 type Options struct {
 	SaturationFunc   binSaturationFunc
 	Bootnodes        []ma.Multiaddr
-	NodeMode         aurora.Model
+	NodeMode         address.Model
 	BitSuffixLength  int
 	PruneFunc        pruneFunc
 	StaticNodes      []boson.Address
@@ -111,7 +110,7 @@ type Kad struct {
 	depthMu           sync.RWMutex   // protect depth changes
 	manageC           chan struct{}  // trigger the manage forever loop to connect to new peers
 	logger            logging.Logger // logger
-	nodeMode          aurora.Model   // indicates whether the node working mode
+	nodeMode          address.Model  // indicates whether the node working mode
 	collector         *im.Collector
 	quit              chan struct{} // quit channel
 	halt              chan struct{} // halt channel
@@ -355,7 +354,7 @@ func (k *Kad) connectNeighbours(wg *sync.WaitGroup, peerConnChan chan<- *peerCon
 	})
 }
 
-func (k *Kad) GetAuroraAddress(overlay boson.Address) (addr *aurora.Address, err error) {
+func (k *Kad) GetAuroraAddress(overlay boson.Address) (addr *address.Address, err error) {
 	addr, err = k.addressBook.Get(overlay)
 	switch {
 	case errors.Is(err, addressbook.ErrNotFound):
@@ -369,7 +368,7 @@ func (k *Kad) GetAuroraAddress(overlay boson.Address) (addr *aurora.Address, err
 	return
 }
 
-func (k *Kad) Connection(ctx context.Context, addr *aurora.Address) error {
+func (k *Kad) Connection(ctx context.Context, addr *address.Address) error {
 	remove := func(peer boson.Address) {
 		k.waitNext.Remove(peer)
 		k.knownPeers.Remove(peer)

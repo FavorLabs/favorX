@@ -3,8 +3,8 @@ package testing
 import (
 	"testing"
 
-	"github.com/gauss-project/aurorafs/pkg/boson"
-	mockbytes "gitlab.com/nolash/go-mockbytes"
+	"github.com/FavorLabs/favorX/pkg/boson"
+	"gitlab.com/nolash/go-mockbytes"
 )
 
 var (

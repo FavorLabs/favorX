@@ -4,9 +4,9 @@ import (
 	"context"
 	"time"
 
-	"github.com/gauss-project/aurorafs/pkg/boson"
-	"github.com/gauss-project/aurorafs/pkg/boson/test"
-	"github.com/gauss-project/aurorafs/pkg/topology"
+	"github.com/FavorLabs/favorX/pkg/boson"
+	"github.com/FavorLabs/favorX/pkg/boson/test"
+	"github.com/FavorLabs/favorX/pkg/topology"
 )
 
 const (

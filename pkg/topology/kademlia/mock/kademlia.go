@@ -5,12 +5,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gauss-project/aurorafs/pkg/aurora"
-	"github.com/gauss-project/aurorafs/pkg/boson"
-	"github.com/gauss-project/aurorafs/pkg/p2p"
-	"github.com/gauss-project/aurorafs/pkg/subscribe"
-	"github.com/gauss-project/aurorafs/pkg/topology"
-	"github.com/gauss-project/aurorafs/pkg/topology/model"
+	"github.com/FavorLabs/favorX/pkg/address"
+	"github.com/FavorLabs/favorX/pkg/boson"
+	"github.com/FavorLabs/favorX/pkg/p2p"
+	"github.com/FavorLabs/favorX/pkg/subscribe"
+	"github.com/FavorLabs/favorX/pkg/topology"
+	"github.com/FavorLabs/favorX/pkg/topology/model"
 )
 
 type AddrTuple struct {
@@ -47,6 +47,11 @@ type Mock struct {
 	depthReplies []uint8
 	depthCalls   int
 	subPub       subscribe.SubPub
+}
+
+func (m *Mock) GetPeersWithLatencyEWMA(list []boson.Address) (now []boson.Address) {
+	//TODO implement me
+	panic("implement me")
 }
 
 func (m *Mock) RefreshProtectPeer(peer []boson.Address) {
@@ -92,7 +97,7 @@ func (m *Mock) ClosestPeers(addr boson.Address, limit int, _ topology.Filter, sk
 func (m *Mock) DisconnectForce(addr boson.Address, reason string) error {
 	m.Disconnected(p2p.Peer{
 		Address: addr,
-		Mode:    aurora.NewModel(),
+		Mode:    address.NewModel(),
 	}, reason)
 	return nil
 }

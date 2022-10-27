@@ -2,7 +2,7 @@ package chunkstore
 
 import (
 	"github.com/FavorLabs/favorX/pkg/bitvector"
-	"github.com/gauss-project/aurorafs/pkg/boson"
+	"github.com/FavorLabs/favorX/pkg/boson"
 	"strings"
 	"time"
 )

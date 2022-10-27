@@ -2,8 +2,8 @@ package oracle
 
 import (
 	"context"
-	"github.com/gauss-project/aurorafs/pkg/boson"
-	"github.com/gauss-project/aurorafs/pkg/rpc"
+	"github.com/FavorLabs/favorX/pkg/boson"
+	"github.com/FavorLabs/favorX/pkg/rpc"
 )
 
 func (ora *ChainOracle) API() rpc.API {

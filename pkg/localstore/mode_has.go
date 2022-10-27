@@ -21,7 +21,7 @@ import (
 	"github.com/FavorLabs/favorX/pkg/storage"
 	"time"
 
-	"github.com/gauss-project/aurorafs/pkg/boson"
+	"github.com/FavorLabs/favorX/pkg/boson"
 )
 
 // Has returns true if the chunk is stored in database.

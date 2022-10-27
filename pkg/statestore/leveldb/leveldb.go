@@ -6,10 +6,10 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/FavorLabs/favorX/pkg/logging"
+	"github.com/FavorLabs/favorX/pkg/shed/driver"
+	"github.com/FavorLabs/favorX/pkg/shed/leveldb"
 	"github.com/FavorLabs/favorX/pkg/storage"
-	"github.com/gauss-project/aurorafs/pkg/logging"
-	"github.com/gauss-project/aurorafs/pkg/shed/driver"
-	"github.com/gauss-project/aurorafs/pkg/shed/leveldb"
 	ldberr "github.com/syndtr/goleveldb/leveldb/errors"
 )
 

@@ -15,7 +15,7 @@
 // along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
 // Package encryption exposes functionalities needed for
-// encryption and decryption operations in Aurora.
+// encryption and decryption operations
 package encryption
 
 import (

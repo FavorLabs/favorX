@@ -22,7 +22,7 @@ import (
 	"github.com/FavorLabs/favorX/pkg/storage"
 	"testing"
 
-	"github.com/gauss-project/aurorafs/pkg/boson"
+	"github.com/FavorLabs/favorX/pkg/boson"
 )
 
 // TestExportImport constructs two databases, one to put and export

@@ -1,8 +1,8 @@
 package routetab
 
 import (
+	"github.com/FavorLabs/favorX/pkg/p2p/streamtest"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/gauss-project/aurorafs/pkg/p2p/streamtest"
 	"sync"
 )
 

@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"net/http/pprof"
 
-	"github.com/gauss-project/aurorafs/pkg/auth"
-	"github.com/gauss-project/aurorafs/pkg/jsonhttp"
-	"github.com/gauss-project/aurorafs/pkg/logging/httpaccess"
+	"github.com/FavorLabs/favorX/pkg/auth"
+	"github.com/FavorLabs/favorX/pkg/jsonhttp"
+	"github.com/FavorLabs/favorX/pkg/logging/httpaccess"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/prometheus/client_golang/prometheus/promhttp"

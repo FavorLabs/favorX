@@ -12,17 +12,16 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/gauss-project/aurorafs/pkg/settlement/chain"
-	"github.com/gauss-project/aurorafs/pkg/settlement/chain/transaction"
-	"github.com/gauss-project/aurorafs/pkg/settlement/chain/transaction/backendmock"
-
+	"github.com/FavorLabs/favorX/pkg/crypto"
+	signermock "github.com/FavorLabs/favorX/pkg/crypto/mock"
+	"github.com/FavorLabs/favorX/pkg/logging"
+	"github.com/FavorLabs/favorX/pkg/settlement/chain"
+	"github.com/FavorLabs/favorX/pkg/settlement/chain/transaction"
+	"github.com/FavorLabs/favorX/pkg/settlement/chain/transaction/backendmock"
+	storemock "github.com/FavorLabs/favorX/pkg/statestore/mock"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/gauss-project/aurorafs/pkg/crypto"
-	signermock "github.com/gauss-project/aurorafs/pkg/crypto/mock"
-	"github.com/gauss-project/aurorafs/pkg/logging"
-	storemock "github.com/gauss-project/aurorafs/pkg/statestore/mock"
 )
 
 func nonceKey(sender common.Address) string {

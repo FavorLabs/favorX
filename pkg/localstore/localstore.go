@@ -24,13 +24,13 @@ import (
 	"sync"
 	"time"
 
+	"github.com/FavorLabs/favorX/pkg/boson"
 	"github.com/FavorLabs/favorX/pkg/localstore/chunkstore"
 	"github.com/FavorLabs/favorX/pkg/localstore/filestore"
+	"github.com/FavorLabs/favorX/pkg/logging"
 	"github.com/FavorLabs/favorX/pkg/shed"
+	"github.com/FavorLabs/favorX/pkg/shed/driver"
 	"github.com/FavorLabs/favorX/pkg/storage"
-	"github.com/gauss-project/aurorafs/pkg/boson"
-	"github.com/gauss-project/aurorafs/pkg/logging"
-	"github.com/gauss-project/aurorafs/pkg/shed/driver"
 	"github.com/prometheus/client_golang/prometheus"
 )
 

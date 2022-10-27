@@ -23,11 +23,11 @@ import (
 	"errors"
 	"time"
 
+	"github.com/FavorLabs/favorX/pkg/boson"
 	"github.com/FavorLabs/favorX/pkg/sctx"
 	"github.com/FavorLabs/favorX/pkg/shed"
+	"github.com/FavorLabs/favorX/pkg/shed/driver"
 	"github.com/FavorLabs/favorX/pkg/storage"
-	"github.com/gauss-project/aurorafs/pkg/boson"
-	"github.com/gauss-project/aurorafs/pkg/shed/driver"
 )
 
 // Put stores Chunks to database and depending
@@ -149,8 +149,9 @@ func (db *DB) put(mode storage.ModePut, rootAddr boson.Address, chs ...boson.Chu
 }
 
 // putRequest adds an Item to the batch by updating required indexes:
-//  - put to indexes: retrieve, gc
-//  - it does not enter the syncpool
+//   - put to indexes: retrieve, gc
+//   - it does not enter the syncpool
+//
 // The batch can be written to the database.
 // Provided batch and binID map are updated.
 func (db *DB) putRequest(batch driver.Batching, binIDs map[uint8]uint64, item, rootItem shed.Item, forcePin bool) (exists bool, gcSizeChange int64, err error) {
@@ -173,7 +174,8 @@ func (db *DB) putRequest(batch driver.Batching, binIDs map[uint8]uint64, item, r
 }
 
 // putUpload adds an Item to the batch by updating required indexes:
-//  - put to indexes: retrieve, push, pull
+//   - put to indexes: retrieve, push, pull
+//
 // The batch can be written to the database.
 // Provided batch and binID map are updated.
 func (db *DB) putUpload(batch driver.Batching, binIDs map[uint8]uint64, item shed.Item) (exists bool, i shed.Item, err error) {

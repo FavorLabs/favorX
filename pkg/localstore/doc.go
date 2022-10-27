@@ -15,7 +15,7 @@
 // along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
 /*
-Package localstore provides disk storage layer for Aurora Chunk persistence.
+Package localstore provides disk storage layer for file Chunk persistence.
 It uses boson/shed abstractions.
 
 The main type is DB which manages the storage by providing methods to
@@ -24,9 +24,9 @@ access and add Chunks and to manage their status.
 Modes are abstractions that do specific changes to Chunks. There are three
 mode types:
 
- - ModeGet, for Chunk access
- - ModePut, for adding Chunks to the database
- - ModeSet, for changing Chunk statuses
+  - ModeGet, for Chunk access
+  - ModePut, for adding Chunks to the database
+  - ModeSet, for changing Chunk statuses
 
 Every mode type has a corresponding type (Getter, Putter and Setter)
 that provides adequate method to perform the opperation and that type

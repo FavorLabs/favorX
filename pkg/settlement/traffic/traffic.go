@@ -8,17 +8,17 @@ import (
 	"sync"
 	"time"
 
+	"github.com/FavorLabs/favorX/pkg/boson"
+	"github.com/FavorLabs/favorX/pkg/logging"
+	"github.com/FavorLabs/favorX/pkg/p2p"
+	"github.com/FavorLabs/favorX/pkg/rpc"
+	"github.com/FavorLabs/favorX/pkg/settlement"
+	"github.com/FavorLabs/favorX/pkg/settlement/chain"
 	chequePkg "github.com/FavorLabs/favorX/pkg/settlement/traffic/cheque"
 	"github.com/FavorLabs/favorX/pkg/settlement/traffic/trafficprotocol"
 	"github.com/FavorLabs/favorX/pkg/storage"
+	"github.com/FavorLabs/favorX/pkg/subscribe"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/gauss-project/aurorafs/pkg/boson"
-	"github.com/gauss-project/aurorafs/pkg/logging"
-	"github.com/gauss-project/aurorafs/pkg/p2p"
-	"github.com/gauss-project/aurorafs/pkg/rpc"
-	"github.com/gauss-project/aurorafs/pkg/settlement"
-	"github.com/gauss-project/aurorafs/pkg/settlement/chain"
-	"github.com/gauss-project/aurorafs/pkg/subscribe"
 )
 
 var (
@@ -380,7 +380,7 @@ func (s *Service) trafficPeerChequeUpdate(peerAddress common.Address, lastCheque
 	return nil
 }
 
-//Returns the maximum value
+// Returns the maximum value
 func (s *Service) maxBigint(a *big.Int, b *big.Int) *big.Int {
 	if a.Cmp(b) < 0 {
 		return b

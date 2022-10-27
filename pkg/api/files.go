@@ -17,19 +17,19 @@ import (
 	"strings"
 	"time"
 
+	"github.com/FavorLabs/favorX/pkg/address"
+	"github.com/FavorLabs/favorX/pkg/boson"
 	"github.com/FavorLabs/favorX/pkg/file/joiner"
 	"github.com/FavorLabs/favorX/pkg/file/loadsave"
 	"github.com/FavorLabs/favorX/pkg/fileinfo"
+	"github.com/FavorLabs/favorX/pkg/jsonhttp"
 	"github.com/FavorLabs/favorX/pkg/localstore/filestore"
 	"github.com/FavorLabs/favorX/pkg/manifest"
 	"github.com/FavorLabs/favorX/pkg/sctx"
 	"github.com/FavorLabs/favorX/pkg/storage"
+	"github.com/FavorLabs/favorX/pkg/tracing"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethersphere/langos"
-	"github.com/gauss-project/aurorafs/pkg/aurora"
-	"github.com/gauss-project/aurorafs/pkg/boson"
-	"github.com/gauss-project/aurorafs/pkg/jsonhttp"
-	"github.com/gauss-project/aurorafs/pkg/tracing"
 	"github.com/gorilla/mux"
 )
 
@@ -447,7 +447,7 @@ func (s *server) downloadHandler(w http.ResponseWriter, r *http.Request, rootCid
 type ListResponse struct {
 	RootCid   boson.Address          `json:"rootCid"`
 	PinState  bool                   `json:"pinState"`
-	BitVector aurora.BitVectorApi    `json:"bitVector"`
+	BitVector address.BitVectorApi   `json:"bitVector"`
 	Register  bool                   `json:"register"`
 	Manifest  *fileinfo.ManifestNode `json:"manifest"`
 }
@@ -458,7 +458,7 @@ type PageResponse struct {
 }
 
 func (s *server) fileListHandler(w http.ResponseWriter, r *http.Request) {
-	var reqs aurora.ApiBody
+	var reqs address.ApiBody
 	isBody := true
 	isPage := false
 	pageTotal := 0
@@ -477,7 +477,7 @@ func (s *server) fileListHandler(w http.ResponseWriter, r *http.Request) {
 	page := r.URL.Query().Get("page")
 	if page != "" {
 		isPage = true
-		var apiPage aurora.ApiPage
+		var apiPage address.ApiPage
 		err := json.Unmarshal([]byte(page), &apiPage)
 		if err != nil {
 			s.logger.Error("file list: Request parameter conversion failed,%v", err.Error())
@@ -489,7 +489,7 @@ func (s *server) fileListHandler(w http.ResponseWriter, r *http.Request) {
 	filter := r.URL.Query().Get("filter")
 	if filter != "" {
 		isPage = true
-		apiFilters := make([]aurora.ApiFilter, 0, 7)
+		apiFilters := make([]address.ApiFilter, 0, 7)
 		err := json.Unmarshal([]byte(filter), &apiFilters)
 		if err != nil {
 			s.logger.Error("file list: Request parameter conversion failed,%v", err.Error())
@@ -501,7 +501,7 @@ func (s *server) fileListHandler(w http.ResponseWriter, r *http.Request) {
 	asort := r.URL.Query().Get("sort")
 	if asort != "" {
 		isPage = true
-		var apiSort aurora.ApiSort
+		var apiSort address.ApiSort
 		err := json.Unmarshal([]byte(asort), &apiSort)
 		if err != nil {
 			s.logger.Error("file list: Request parameter conversion failed,%v", err.Error())
@@ -556,7 +556,7 @@ func (s *server) fileListHandler(w http.ResponseWriter, r *http.Request) {
 		responseList = append(responseList, ListResponse{
 			RootCid:  fileListInfo[i].RootCid,
 			PinState: fileListInfo[i].Pinned,
-			BitVector: aurora.BitVectorApi{
+			BitVector: address.BitVectorApi{
 				Len: fileListInfo[i].BvLen,
 				B:   fileListInfo[i].Bv,
 			},

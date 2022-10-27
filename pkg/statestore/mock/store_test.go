@@ -3,9 +3,9 @@ package mock_test
 import (
 	"testing"
 
-	"github.com/gauss-project/aurorafs/pkg/statestore/mock"
-	"github.com/gauss-project/aurorafs/pkg/statestore/test"
-	"github.com/gauss-project/aurorafs/pkg/storage"
+	"github.com/FavorLabs/favorX/pkg/statestore/mock"
+	"github.com/FavorLabs/favorX/pkg/statestore/test"
+	"github.com/FavorLabs/favorX/pkg/storage"
 )
 
 func TestMockStateStore(t *testing.T) {

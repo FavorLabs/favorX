@@ -2,9 +2,9 @@ package chunkinfo
 
 import (
 	"github.com/FavorLabs/favorX/pkg/bitvector"
+	"github.com/FavorLabs/favorX/pkg/boson"
 	"github.com/FavorLabs/favorX/pkg/localstore/chunkstore"
 	"github.com/FavorLabs/favorX/pkg/storage"
-	"github.com/gauss-project/aurorafs/pkg/boson"
 )
 
 type RootCidStatusEven struct {

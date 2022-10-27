@@ -9,15 +9,15 @@ import (
 	"sync"
 	"time"
 
+	"github.com/FavorLabs/favorX/pkg/address"
 	"github.com/FavorLabs/favorX/pkg/addressbook"
+	"github.com/FavorLabs/favorX/pkg/boson"
 	"github.com/FavorLabs/favorX/pkg/hive2/pb"
+	"github.com/FavorLabs/favorX/pkg/logging"
+	"github.com/FavorLabs/favorX/pkg/p2p"
+	"github.com/FavorLabs/favorX/pkg/p2p/protobuf"
+	"github.com/FavorLabs/favorX/pkg/topology"
 	"github.com/FavorLabs/favorX/pkg/topology/kademlia"
-	"github.com/gauss-project/aurorafs/pkg/aurora"
-	"github.com/gauss-project/aurorafs/pkg/boson"
-	"github.com/gauss-project/aurorafs/pkg/logging"
-	"github.com/gauss-project/aurorafs/pkg/p2p"
-	"github.com/gauss-project/aurorafs/pkg/p2p/protobuf"
-	"github.com/gauss-project/aurorafs/pkg/topology"
 	ma "github.com/multiformats/go-multiaddr"
 	manet "github.com/multiformats/go-multiaddr/net"
 	"golang.org/x/sync/semaphore"
@@ -313,23 +313,23 @@ func (s *Service) checkAndAddPeers(ctx context.Context, result resultChan) {
 				return
 			}
 
-			auroraAddress := aurora.Address{
+			adr := address.Address{
 				Overlay:   boson.NewAddress(newPeer.Overlay),
 				Underlay:  multiUnderlay,
 				Signature: newPeer.Signature,
 			}
 
-			err = s.addressBook.Put(auroraAddress.Overlay, auroraAddress)
+			err = s.addressBook.Put(adr.Overlay, adr)
 			if err != nil {
 				s.logger.Warningf("hive2: skipping peer in response %s: %v", newPeer.String(), err)
 				return
 			}
 
 			if s.addPeersHandler != nil {
-				s.addPeersHandler(auroraAddress.Overlay)
+				s.addPeersHandler(adr.Overlay)
 			}
 			<-time.After(time.Millisecond * 500)
-			result.syncResult <- auroraAddress.Overlay
+			result.syncResult <- adr.Overlay
 
 		}(p)
 	}

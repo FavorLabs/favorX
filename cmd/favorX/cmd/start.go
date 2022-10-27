@@ -14,16 +14,16 @@ import (
 	"time"
 
 	favor "github.com/FavorLabs/favorX"
+	"github.com/FavorLabs/favorX/pkg/address"
+	"github.com/FavorLabs/favorX/pkg/boson"
+	"github.com/FavorLabs/favorX/pkg/crypto"
+	"github.com/FavorLabs/favorX/pkg/keystore"
+	filekeystore "github.com/FavorLabs/favorX/pkg/keystore/file"
+	memkeystore "github.com/FavorLabs/favorX/pkg/keystore/mem"
 	"github.com/FavorLabs/favorX/pkg/keystore/p2pkey"
+	"github.com/FavorLabs/favorX/pkg/logging"
 	"github.com/FavorLabs/favorX/pkg/node"
-	"github.com/gauss-project/aurorafs/pkg/aurora"
-	"github.com/gauss-project/aurorafs/pkg/boson"
-	"github.com/gauss-project/aurorafs/pkg/crypto"
-	"github.com/gauss-project/aurorafs/pkg/keystore"
-	filekeystore "github.com/gauss-project/aurorafs/pkg/keystore/file"
-	memkeystore "github.com/gauss-project/aurorafs/pkg/keystore/mem"
-	"github.com/gauss-project/aurorafs/pkg/logging"
-	"github.com/gauss-project/aurorafs/pkg/resolver/multiresolver"
+	"github.com/FavorLabs/favorX/pkg/resolver/multiresolver"
 	"github.com/kardianos/service"
 	crypto2 "github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/spf13/cobra"
@@ -94,13 +94,13 @@ func (c *command) initStartCmd() (err error) {
 
 			bootNode := c.config.GetBool(optionNameBootnodeMode)
 			fullNode := c.config.GetBool(optionNameFullNode)
-			mode := aurora.NewModel()
+			mode := address.NewModel()
 			if bootNode {
-				mode.SetMode(aurora.BootNode)
-				mode.SetMode(aurora.FullNode)
+				mode.SetMode(address.BootNode)
+				mode.SetMode(address.FullNode)
 				logger.Info("Start node mode boot.")
 			} else if fullNode {
-				mode.SetMode(aurora.FullNode)
+				mode.SetMode(address.FullNode)
 				logger.Info("Start node mode full.")
 			} else {
 				logger.Info("Start node mode light.")
@@ -253,7 +253,7 @@ func (c *command) configureSigner(cmd *cobra.Command, logger logging.Logger) (co
 	}
 
 	var signer crypto.Signer
-	var address boson.Address
+	var adr boson.Address
 	var password string
 	var publicKey *ecdsa.PublicKey
 	if p := c.config.GetString(optionNamePassword); p != "" {
@@ -292,15 +292,15 @@ func (c *command) configureSigner(cmd *cobra.Command, logger logging.Logger) (co
 	signer = crypto.NewDefaultSigner(PrivateKey)
 	publicKey = &PrivateKey.PublicKey
 
-	address, err = crypto.NewOverlayAddress(*publicKey, c.config.GetUint64(optionNameNetworkID))
+	adr, err = crypto.NewOverlayAddress(*publicKey, c.config.GetUint64(optionNameNetworkID))
 	if err != nil {
 		return nil, err
 	}
 
 	if created {
-		logger.Infof("new boson network address created: %s", address)
+		logger.Infof("new boson network address created: %s", adr)
 	} else {
-		logger.Infof("using existing boson network address: %s", address)
+		logger.Infof("using existing boson network address: %s", adr)
 	}
 	// }
 
@@ -318,7 +318,7 @@ func (c *command) configureSigner(cmd *cobra.Command, logger logging.Logger) (co
 
 	return &signerConfig{
 		signer:           signer,
-		address:          address,
+		address:          adr,
 		publicKey:        publicKey,
 		libp2pPrivateKey: libp2pPrivateKey,
 	}, nil

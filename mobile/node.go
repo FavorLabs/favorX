@@ -10,13 +10,13 @@ import (
 	"time"
 
 	fx "github.com/FavorLabs/favorX"
+	"github.com/FavorLabs/favorX/pkg/address"
+	"github.com/FavorLabs/favorX/pkg/boson"
+	"github.com/FavorLabs/favorX/pkg/crypto"
+	filekeystore "github.com/FavorLabs/favorX/pkg/keystore/file"
 	"github.com/FavorLabs/favorX/pkg/keystore/p2pkey"
+	"github.com/FavorLabs/favorX/pkg/logging"
 	"github.com/FavorLabs/favorX/pkg/node"
-	"github.com/gauss-project/aurorafs/pkg/aurora"
-	"github.com/gauss-project/aurorafs/pkg/boson"
-	"github.com/gauss-project/aurorafs/pkg/crypto"
-	filekeystore "github.com/gauss-project/aurorafs/pkg/keystore/file"
-	"github.com/gauss-project/aurorafs/pkg/logging"
 	crypto2 "github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/sirupsen/logrus"
 )
@@ -54,9 +54,9 @@ func NewNode(o *Options) (*Node, error) {
 
 	logger.Infof("version: %v", Version())
 
-	mode := aurora.NewModel()
+	mode := address.NewModel()
 	if o.EnableFullNode {
-		mode.SetMode(aurora.FullNode)
+		mode.SetMode(address.FullNode)
 		logger.Info("start node mode full.")
 	} else {
 		logger.Info("start node mode light.")
@@ -94,14 +94,14 @@ func configureSigner(path, password string, networkID uint64, logger logging.Log
 	signer := crypto.NewDefaultSigner(PrivateKey)
 	publicKey := &PrivateKey.PublicKey
 
-	address, err := crypto.NewOverlayAddress(*publicKey, networkID)
+	adr, err := crypto.NewOverlayAddress(*publicKey, networkID)
 	if err != nil {
 		return nil, err
 	}
 	if created {
-		logger.Infof("new boson network address created: %s", address)
+		logger.Infof("new boson network address created: %s", adr)
 	} else {
-		logger.Infof("using existing boson network address: %s", address)
+		logger.Infof("using existing boson network address: %s", adr)
 	}
 
 	logger.Infof("boson public key %x", crypto.EncodeSecp256k1PublicKey(publicKey))
@@ -118,7 +118,7 @@ func configureSigner(path, password string, networkID uint64, logger logging.Log
 
 	return &signerConfig{
 		signer:           signer,
-		address:          address,
+		address:          adr,
 		publicKey:        publicKey,
 		libp2pPrivateKey: libp2pPrivateKey,
 	}, nil

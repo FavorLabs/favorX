@@ -33,7 +33,7 @@ a bin size too short, which in turn means that connections should be established
 within this bin. Empty bins have special status in terms of depth calculation
 and as mentioned before they are prioritized over deeper, non empty bins and
 they constitute as the node's depth when the latter is recalculated.
-For the rationale behind this please refer to the appropriate chapters in the book of Aurora.
+For the rationale behind this please refer to the appropriate chapters in the book
 
 A special case of the `manage()` functionality is that when we iterate over
 peers and we come across a peer that has PO >= depth, we would always like
@@ -86,7 +86,6 @@ bin | nodes
 3			0
 4			0
 depth: 0
-
 
 2. less or equal to two peers (nnLowWatermark=2) (a)
 bin | nodes

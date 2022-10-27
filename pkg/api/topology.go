@@ -4,8 +4,8 @@ import (
 	"net"
 	"net/http"
 
-	"github.com/gauss-project/aurorafs/pkg/boson"
-	"github.com/gauss-project/aurorafs/pkg/jsonhttp"
+	"github.com/FavorLabs/favorX/pkg/boson"
+	"github.com/FavorLabs/favorX/pkg/jsonhttp"
 )
 
 func (s *server) apiPort(w http.ResponseWriter, r *http.Request) {

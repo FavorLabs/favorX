@@ -7,12 +7,11 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/FavorLabs/favorX/pkg/logging"
+	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/windows/svc"
 	"golang.org/x/sys/windows/svc/debug"
 	"golang.org/x/sys/windows/svc/eventlog"
-
-	"github.com/gauss-project/aurorafs/pkg/logging"
-	"github.com/sirupsen/logrus"
 )
 
 func isWindowsService() (bool, error) {

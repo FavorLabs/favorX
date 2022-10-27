@@ -8,18 +8,16 @@ import (
 	"io"
 	"testing"
 
-	"github.com/gauss-project/aurorafs/pkg/bitvector"
-	"github.com/gauss-project/aurorafs/pkg/p2p"
-	"github.com/gauss-project/aurorafs/pkg/topology/lightnode"
-
+	"github.com/FavorLabs/favorX/pkg/address"
+	"github.com/FavorLabs/favorX/pkg/bitvector"
 	"github.com/FavorLabs/favorX/pkg/crypto"
+	"github.com/FavorLabs/favorX/pkg/logging"
+	"github.com/FavorLabs/favorX/pkg/p2p"
 	"github.com/FavorLabs/favorX/pkg/p2p/libp2p/internal/handshake"
 	"github.com/FavorLabs/favorX/pkg/p2p/libp2p/internal/handshake/mock"
 	"github.com/FavorLabs/favorX/pkg/p2p/libp2p/internal/handshake/pb"
-	"github.com/gauss-project/aurorafs/pkg/aurora"
-	"github.com/gauss-project/aurorafs/pkg/logging"
-	"github.com/gauss-project/aurorafs/pkg/p2p/protobuf"
-
+	"github.com/FavorLabs/favorX/pkg/p2p/protobuf"
+	"github.com/FavorLabs/favorX/pkg/topology/lightnode"
 	libp2ppeer "github.com/libp2p/go-libp2p-core/peer"
 	ma "github.com/multiformats/go-multiaddr"
 )
@@ -72,7 +70,7 @@ func TestHandshake(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	node1BzzAddress, err := aurora.NewAddress(signer1, node1ma, addr, networkID)
+	node1BzzAddress, err := address.NewAddress(signer1, node1ma, addr, networkID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -80,24 +78,24 @@ func TestHandshake(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	node2BzzAddress, err := aurora.NewAddress(signer2, node2ma, addr2, networkID)
+	node2BzzAddress, err := address.NewAddress(signer2, node2ma, addr2, networkID)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	node1Info := aurora.AddressInfo{
+	node1Info := address.AddressInfo{
 		Address:  node1BzzAddress,
-		NodeMode: aurora.NewModel().SetMode(aurora.FullNode),
+		NodeMode: address.NewModel().SetMode(address.FullNode),
 	}
-	node2Info := aurora.AddressInfo{
+	node2Info := address.AddressInfo{
 		Address:  node2BzzAddress,
-		NodeMode: aurora.NewModel().SetMode(aurora.FullNode),
+		NodeMode: address.NewModel().SetMode(address.FullNode),
 	}
 
 	aaddresser := &AdvertisableAddresserMock{}
 
 	light := lightnode.NewContainer(node1Info.Address.Overlay)
-	handshakeService, err := handshake.New(signer1, aaddresser, node1Info.Address.Overlay, networkID, aurora.NewModel().SetMode(aurora.FullNode), testWelcomeMessage, node1AddrInfo.ID, logger, light, lightnode.DefaultLightNodeLimit)
+	handshakeService, err := handshake.New(signer1, aaddresser, node1Info.Address.Overlay, networkID, address.NewModel().SetMode(address.FullNode), testWelcomeMessage, node1AddrInfo.ID, logger, light, lightnode.DefaultLightNodeLimit)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -161,7 +159,7 @@ func TestHandshake(t *testing.T) {
 			t.Fatal("bad ack - networkID")
 		}
 		bv1, _ := bitvector.NewFromBytes(ack.NodeMode, 1)
-		nb := aurora.Model{Bv: bv1}
+		nb := address.Model{Bv: bv1}
 		if nb.IsFull() != true {
 			t.Fatal("bad ack - full node")
 		}
@@ -173,7 +171,7 @@ func TestHandshake(t *testing.T) {
 
 	t.Run("Handshake - picker error", func(t *testing.T) {
 
-		handshakeService, err = handshake.New(signer1, aaddresser, node1Info.Address.Overlay, networkID, aurora.NewModel().SetMode(aurora.FullNode), "", node1AddrInfo.ID, logger, light, lightnode.DefaultLightNodeLimit)
+		handshakeService, err = handshake.New(signer1, aaddresser, node1Info.Address.Overlay, networkID, address.NewModel().SetMode(address.FullNode), "", node1AddrInfo.ID, logger, light, lightnode.DefaultLightNodeLimit)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -199,7 +197,7 @@ func TestHandshake(t *testing.T) {
 				Signature: node2BzzAddress.Signature,
 			},
 			NetworkID: networkID,
-			NodeMode:  aurora.NewModel().SetMode(aurora.FullNode).Bv.Bytes(),
+			NodeMode:  address.NewModel().SetMode(address.FullNode).Bv.Bytes(),
 		}); err != nil {
 			t.Fatal(err)
 		}
@@ -213,7 +211,7 @@ func TestHandshake(t *testing.T) {
 
 	t.Run("Handshake - picker light error", func(t *testing.T) {
 
-		handshakeService, err = handshake.New(signer1, aaddresser, node1Info.Address.Overlay, networkID, aurora.NewModel().SetMode(aurora.FullNode), "", node1AddrInfo.ID, logger, light, 0)
+		handshakeService, err = handshake.New(signer1, aaddresser, node1Info.Address.Overlay, networkID, address.NewModel().SetMode(address.FullNode), "", node1AddrInfo.ID, logger, light, 0)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -239,7 +237,7 @@ func TestHandshake(t *testing.T) {
 				Signature: node2BzzAddress.Signature,
 			},
 			NetworkID: networkID,
-			NodeMode:  aurora.NewModel().Bv.Bytes(),
+			NodeMode:  address.NewModel().Bv.Bytes(),
 		}); err != nil {
 			t.Fatal(err)
 		}
@@ -255,7 +253,7 @@ func TestHandshake(t *testing.T) {
 		const LongMessage = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Morbi consectetur urna ut lorem sollicitudin posuere. Donec sagittis laoreet sapien."
 
 		expectedErr := handshake.ErrWelcomeMessageLength
-		_, err = handshake.New(signer1, aaddresser, node1Info.Address.Overlay, networkID, aurora.NewModel().SetMode(aurora.FullNode), LongMessage, node1AddrInfo.ID, logger, light, lightnode.DefaultLightNodeLimit)
+		_, err = handshake.New(signer1, aaddresser, node1Info.Address.Overlay, networkID, address.NewModel().SetMode(address.FullNode), LongMessage, node1AddrInfo.ID, logger, light, lightnode.DefaultLightNodeLimit)
 		if err == nil || err.Error() != expectedErr.Error() {
 			t.Fatal("expected:", expectedErr, "got:", err)
 		}
@@ -463,7 +461,7 @@ func TestHandshake(t *testing.T) {
 	})
 
 	t.Run("Handle - OK", func(t *testing.T) {
-		handshakeService, err = handshake.New(signer1, aaddresser, node1Info.Address.Overlay, networkID, aurora.NewModel().SetMode(aurora.FullNode), "", node1AddrInfo.ID, logger, light, lightnode.DefaultLightNodeLimit)
+		handshakeService, err = handshake.New(signer1, aaddresser, node1Info.Address.Overlay, networkID, address.NewModel().SetMode(address.FullNode), "", node1AddrInfo.ID, logger, light, lightnode.DefaultLightNodeLimit)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -508,23 +506,23 @@ func TestHandshake(t *testing.T) {
 			t.Fatalf("got bad syn")
 		}
 
-		bzzAddress, err := aurora.ParseAddress(got.Ack.Address.Underlay, got.Ack.Address.Overlay, got.Ack.Address.Signature, got.Ack.NetworkID)
+		bzzAddress, err := address.ParseAddress(got.Ack.Address.Underlay, got.Ack.Address.Overlay, got.Ack.Address.Signature, got.Ack.NetworkID)
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		nb2, err := aurora.NewModelFromBytes(got.Ack.NodeMode)
+		nb2, err := address.NewModelFromBytes(got.Ack.NodeMode)
 		if err != nil {
 			t.Fatal(err)
 		}
-		testInfo(t, node1Info, aurora.AddressInfo{
+		testInfo(t, node1Info, address.AddressInfo{
 			Address:  bzzAddress,
 			NodeMode: nb2,
 		})
 	})
 
 	t.Run("Handle - read error ", func(t *testing.T) {
-		handshakeService, err = handshake.New(signer1, aaddresser, node1Info.Address.Overlay, networkID, aurora.NewModel().SetMode(aurora.FullNode), "", node1AddrInfo.ID, logger, light, lightnode.DefaultLightNodeLimit)
+		handshakeService, err = handshake.New(signer1, aaddresser, node1Info.Address.Overlay, networkID, address.NewModel().SetMode(address.FullNode), "", node1AddrInfo.ID, logger, light, lightnode.DefaultLightNodeLimit)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -543,7 +541,7 @@ func TestHandshake(t *testing.T) {
 	})
 
 	t.Run("Handle - write error ", func(t *testing.T) {
-		handshakeService, err = handshake.New(signer1, aaddresser, node1Info.Address.Overlay, networkID, aurora.NewModel().SetMode(aurora.FullNode), "", node1AddrInfo.ID, logger, light, lightnode.DefaultLightNodeLimit)
+		handshakeService, err = handshake.New(signer1, aaddresser, node1Info.Address.Overlay, networkID, address.NewModel().SetMode(address.FullNode), "", node1AddrInfo.ID, logger, light, lightnode.DefaultLightNodeLimit)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -570,7 +568,7 @@ func TestHandshake(t *testing.T) {
 	})
 
 	t.Run("Handle - ack read error ", func(t *testing.T) {
-		handshakeService, err = handshake.New(signer1, aaddresser, node1Info.Address.Overlay, networkID, aurora.NewModel().SetMode(aurora.FullNode), "", node1AddrInfo.ID, logger, light, lightnode.DefaultLightNodeLimit)
+		handshakeService, err = handshake.New(signer1, aaddresser, node1Info.Address.Overlay, networkID, address.NewModel().SetMode(address.FullNode), "", node1AddrInfo.ID, logger, light, lightnode.DefaultLightNodeLimit)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -599,7 +597,7 @@ func TestHandshake(t *testing.T) {
 	})
 
 	t.Run("Handle - networkID mismatch ", func(t *testing.T) {
-		handshakeService, err = handshake.New(signer1, aaddresser, node1Info.Address.Overlay, networkID, aurora.NewModel().SetMode(aurora.FullNode), "", node1AddrInfo.ID, logger, light, lightnode.DefaultLightNodeLimit)
+		handshakeService, err = handshake.New(signer1, aaddresser, node1Info.Address.Overlay, networkID, address.NewModel().SetMode(address.FullNode), "", node1AddrInfo.ID, logger, light, lightnode.DefaultLightNodeLimit)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -638,7 +636,7 @@ func TestHandshake(t *testing.T) {
 	})
 
 	t.Run("Handle - invalid ack", func(t *testing.T) {
-		handshakeService, err = handshake.New(signer1, aaddresser, node1Info.Address.Overlay, networkID, aurora.NewModel().SetMode(aurora.FullNode), "", node1AddrInfo.ID, logger, light, lightnode.DefaultLightNodeLimit)
+		handshakeService, err = handshake.New(signer1, aaddresser, node1Info.Address.Overlay, networkID, address.NewModel().SetMode(address.FullNode), "", node1AddrInfo.ID, logger, light, lightnode.DefaultLightNodeLimit)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -674,7 +672,7 @@ func TestHandshake(t *testing.T) {
 
 	// t.Run("Handle - transaction is not on the blockchain", func(t *testing.T) {
 	//
-	//	handshakeService, err := handshake.New(signer1, aaddresser, node1Info.Address.Overlay, networkID, aurora.NewModel().SetMode(aurora.FullNode), "", logger)
+	//	handshakeService, err := handshake.New(signer1, aaddresser, node1Info.Address.Overlay, networkID, address.NewModel().SetMode(address.FullNode), "", logger)
 	//	if err != nil {
 	//		t.Fatal(err)
 	//	}
@@ -709,7 +707,7 @@ func TestHandshake(t *testing.T) {
 	// })
 
 	t.Run("Handle - advertisable error", func(t *testing.T) {
-		handshakeService, err = handshake.New(signer1, aaddresser, node1Info.Address.Overlay, networkID, aurora.NewModel().SetMode(aurora.FullNode), "", node1AddrInfo.ID, logger, light, lightnode.DefaultLightNodeLimit)
+		handshakeService, err = handshake.New(signer1, aaddresser, node1Info.Address.Overlay, networkID, address.NewModel().SetMode(address.FullNode), "", node1AddrInfo.ID, logger, light, lightnode.DefaultLightNodeLimit)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -755,7 +753,7 @@ func (p *picker) Pick(peer p2p.Peer) bool {
 }
 
 // testInfo validates if two Info instances are equal.
-func testInfo(t *testing.T, got, want aurora.AddressInfo) {
+func testInfo(t *testing.T, got, want address.AddressInfo) {
 	t.Helper()
 	if !got.Address.Equal(want.Address) || got.NodeMode.Bv.String() != want.NodeMode.Bv.String() {
 		t.Fatalf("got info %+v, want %+v", got.NodeMode.Bv.String(), want.NodeMode.Bv.String())

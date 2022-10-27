@@ -8,21 +8,21 @@ import (
 	"testing"
 	"time"
 
+	"github.com/FavorLabs/favorX/pkg/address"
 	"github.com/FavorLabs/favorX/pkg/addressbook"
+	"github.com/FavorLabs/favorX/pkg/boson"
+	"github.com/FavorLabs/favorX/pkg/boson/test"
 	"github.com/FavorLabs/favorX/pkg/crypto"
 	"github.com/FavorLabs/favorX/pkg/hive2"
+	"github.com/FavorLabs/favorX/pkg/logging"
+	"github.com/FavorLabs/favorX/pkg/p2p"
+	p2pmock "github.com/FavorLabs/favorX/pkg/p2p/mock"
+	"github.com/FavorLabs/favorX/pkg/p2p/streamtest"
+	pingpongmock "github.com/FavorLabs/favorX/pkg/pingpong/mock"
 	"github.com/FavorLabs/favorX/pkg/shed"
 	mockstate "github.com/FavorLabs/favorX/pkg/statestore/mock"
+	"github.com/FavorLabs/favorX/pkg/subscribe"
 	"github.com/FavorLabs/favorX/pkg/topology/kademlia"
-	"github.com/gauss-project/aurorafs/pkg/aurora"
-	"github.com/gauss-project/aurorafs/pkg/boson"
-	"github.com/gauss-project/aurorafs/pkg/boson/test"
-	"github.com/gauss-project/aurorafs/pkg/logging"
-	"github.com/gauss-project/aurorafs/pkg/p2p"
-	p2pmock "github.com/gauss-project/aurorafs/pkg/p2p/mock"
-	"github.com/gauss-project/aurorafs/pkg/p2p/streamtest"
-	pingpongmock "github.com/gauss-project/aurorafs/pkg/pingpong/mock"
-	"github.com/gauss-project/aurorafs/pkg/subscribe"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/sirupsen/logrus"
 )
@@ -42,7 +42,7 @@ func randomUnderlayPublic(port int) string {
 
 type Node struct {
 	overlay boson.Address
-	addr    *aurora.Address
+	addr    *address.Address
 	peer    p2p.Peer
 	signer  crypto.Signer
 	book    addressbook.Interface
@@ -64,12 +64,12 @@ func p2pMock(ab addressbook.Interface, overlay boson.Address, signer crypto.Sign
 				if a.Underlay.Equal(underlay) {
 					return &p2p.Peer{
 						Address: a.Overlay,
-						Mode:    aurora.NewModel().SetMode(aurora.FullNode),
+						Mode:    address.NewModel().SetMode(address.FullNode),
 					}, nil
 				}
 			}
 
-			bzzAddr, err := aurora.NewAddress(signer, underlay, overlay, networkId)
+			bzzAddr, err := address.NewAddress(signer, underlay, overlay, networkId)
 			if err != nil {
 				return nil, err
 			}
@@ -80,14 +80,14 @@ func p2pMock(ab addressbook.Interface, overlay boson.Address, signer crypto.Sign
 
 			return &p2p.Peer{
 				Address: bzzAddr.Overlay,
-				Mode:    aurora.NewModel().SetMode(aurora.FullNode),
+				Mode:    address.NewModel().SetMode(address.FullNode),
 			}, nil
 		}),
 		p2pmock.WithPeersFunc(func() (out []p2p.Peer) {
-			_ = ab.IterateOverlays(func(address boson.Address) (bool, error) {
+			_ = ab.IterateOverlays(func(adr boson.Address) (bool, error) {
 				out = append(out, p2p.Peer{
-					Address: address,
-					Mode:    aurora.NewModel().SetMode(aurora.FullNode),
+					Address: adr,
+					Mode:    address.NewModel().SetMode(address.FullNode),
 				})
 				return false, nil
 			})
@@ -121,7 +121,7 @@ func newTestNode(t *testing.T, peer boson.Address, po int, underlay string, allo
 		return 0, nil
 	})
 
-	kad, err := kademlia.New(base.Overlay, ab, Hive2, p2ps, ppm, nil, nil, metricsDB, noopLogger, subscribe.NewSubPub(), kademlia.Options{BinMaxPeers: 5, NodeMode: aurora.NewModel().SetMode(aurora.FullNode)}) // kademlia instance
+	kad, err := kademlia.New(base.Overlay, ab, Hive2, p2ps, ppm, nil, nil, metricsDB, noopLogger, subscribe.NewSubPub(), kademlia.Options{BinMaxPeers: 5, NodeMode: address.NewModel().SetMode(address.FullNode)}) // kademlia instance
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -147,7 +147,7 @@ func newTestNode(t *testing.T, peer boson.Address, po int, underlay string, allo
 	}
 }
 
-func randomAddress(t *testing.T, base boson.Address, po int, underlay string) (addr *aurora.Address, signer crypto.Signer) {
+func randomAddress(t *testing.T, base boson.Address, po int, underlay string) (addr *address.Address, signer crypto.Signer) {
 	pk, _ := crypto.GenerateSecp256k1Key()
 	signer = crypto.NewDefaultSigner(pk)
 
@@ -157,14 +157,14 @@ func randomAddress(t *testing.T, base boson.Address, po int, underlay string) (a
 	if err != nil {
 		t.Fatal(err)
 	}
-	auroraAddr, err := aurora.NewAddress(signer, mu, p, networkId)
+	adr, err := address.NewAddress(signer, mu, p, networkId)
 	if err != nil {
 		t.Fatal(err)
 	}
-	return auroraAddr, signer
+	return adr, signer
 }
 
-func (s *Node) addOne(t *testing.T, peer *aurora.Address, connect bool) {
+func (s *Node) addOne(t *testing.T, peer *address.Address, connect bool) {
 	t.Helper()
 
 	if err := s.book.Put(peer.Overlay, *peer); err != nil {
@@ -187,11 +187,11 @@ func (s *Node) connect(t *testing.T, peer boson.Address, underlay string) {
 	pk, _ := crypto.GenerateSecp256k1Key()
 	signer := crypto.NewDefaultSigner(pk)
 
-	auroraAddr, err := aurora.NewAddress(signer, multiaddr, peer, networkId)
+	adr, err := address.NewAddress(signer, multiaddr, peer, networkId)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err = s.book.Put(peer, *auroraAddr); err != nil {
+	if err = s.book.Put(peer, *adr); err != nil {
 		t.Fatal(err)
 	}
 	err = s.kad.Connected(context.TODO(), p2p.Peer{Address: peer}, true)

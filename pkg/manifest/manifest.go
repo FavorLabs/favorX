@@ -1,5 +1,5 @@
 // Package manifest contains the abstractions needed for
-// collection representation in Aurora. It uses implementations
+// collection representation, It uses implementations
 // in ethersphere/manifest repo under the hood.
 package manifest
 
@@ -7,8 +7,8 @@ import (
 	"context"
 	"errors"
 
+	"github.com/FavorLabs/favorX/pkg/boson"
 	"github.com/FavorLabs/favorX/pkg/file"
-	"github.com/gauss-project/aurorafs/pkg/boson"
 )
 
 const DefaultManifestType = ManifestMantarayContentType

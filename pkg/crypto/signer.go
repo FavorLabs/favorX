@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/FavorLabs/favorX/pkg/crypto/eip712"
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/gauss-project/aurorafs/pkg/crypto/eip712"
 )
 
 var (

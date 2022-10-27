@@ -8,14 +8,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gauss-project/aurorafs/pkg/topology"
-	"github.com/gauss-project/aurorafs/pkg/topology/pslice"
+	"github.com/FavorLabs/favorX/pkg/boson"
+	"github.com/FavorLabs/favorX/pkg/multicast/pb"
+	"github.com/FavorLabs/favorX/pkg/p2p"
+	"github.com/FavorLabs/favorX/pkg/p2p/protobuf"
+	"github.com/FavorLabs/favorX/pkg/topology"
+	"github.com/FavorLabs/favorX/pkg/topology/pslice"
 	"github.com/gogf/gf/v2/util/gconv"
-
-	"github.com/gauss-project/aurorafs/pkg/boson"
-	"github.com/gauss-project/aurorafs/pkg/multicast/pb"
-	"github.com/gauss-project/aurorafs/pkg/p2p"
-	"github.com/gauss-project/aurorafs/pkg/p2p/protobuf"
 )
 
 const (

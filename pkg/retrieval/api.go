@@ -4,9 +4,9 @@ import (
 	"context"
 	"time"
 
-	"github.com/gauss-project/aurorafs/pkg/logging"
-	"github.com/gauss-project/aurorafs/pkg/rpc"
-	"github.com/gauss-project/aurorafs/pkg/subscribe"
+	"github.com/FavorLabs/favorX/pkg/logging"
+	"github.com/FavorLabs/favorX/pkg/rpc"
+	"github.com/FavorLabs/favorX/pkg/subscribe"
 	"github.com/prometheus/client_golang/prometheus"
 )
 

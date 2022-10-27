@@ -6,12 +6,12 @@ import (
 	"strings"
 
 	"github.com/FavorLabs/favorX/pkg/node"
-	"github.com/gauss-project/aurorafs/pkg/resolver/multiresolver"
+	"github.com/FavorLabs/favorX/pkg/resolver/multiresolver"
 )
 
-// Options represents the collection of configuration values to fine tune the aurora
+// Options represents the collection of configuration values to fine tune the
 // node embedded into a mobile process. The available values are a subset of the
-// entire API provided by aurora to reduce the maintenance surface and dev
+// entire API provided by node to reduce the maintenance surface and dev
 // complexity.
 type Options struct {
 	// api setting

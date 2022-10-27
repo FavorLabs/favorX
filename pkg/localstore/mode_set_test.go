@@ -21,8 +21,8 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/FavorLabs/favorX/pkg/shed/driver"
 	"github.com/FavorLabs/favorX/pkg/storage"
-	"github.com/gauss-project/aurorafs/pkg/shed/driver"
 )
 
 // TestModeSetRemove validates ModeSetRemove index values on the provided DB.

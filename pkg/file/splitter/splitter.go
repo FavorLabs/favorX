@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/FavorLabs/favorX/pkg/boson"
 	"github.com/FavorLabs/favorX/pkg/file"
 	"github.com/FavorLabs/favorX/pkg/file/splitter/internal"
 	"github.com/FavorLabs/favorX/pkg/storage"
-	"github.com/gauss-project/aurorafs/pkg/boson"
 )
 
 type putWrapper struct {
@@ -41,7 +41,7 @@ func NewSimpleSplitter(storePutter storage.Putter, mode storage.ModePut) file.Sp
 // It uses a non-optimized internal component that blocks when performing
 // multiple levels of hashing when building the file hash tree.
 //
-// It returns the Aurorahash of the data.
+// It returns the file hash of the data.
 func (s *simpleSplitter) Split(ctx context.Context, r io.ReadCloser, dataLength int64, toEncrypt bool) (addr boson.Address, err error) {
 	j := internal.NewSimpleSplitterJob(ctx, s.putter, dataLength, toEncrypt)
 	var total int64

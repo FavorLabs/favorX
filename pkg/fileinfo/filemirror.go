@@ -1,8 +1,8 @@
 package fileinfo
 
 import (
+	"github.com/FavorLabs/favorX/pkg/boson"
 	"github.com/FavorLabs/favorX/pkg/localstore/filestore"
-	"github.com/gauss-project/aurorafs/pkg/boson"
 )
 
 func (f *FileInfo) AddFileMirror(next, rootCid boson.Address, ope filestore.Operation) error {

@@ -2,8 +2,8 @@ package chunkinfo
 
 import (
 	"github.com/FavorLabs/favorX/pkg/bitvector"
+	"github.com/FavorLabs/favorX/pkg/boson"
 	"github.com/FavorLabs/favorX/pkg/localstore/chunkstore"
-	"github.com/gauss-project/aurorafs/pkg/boson"
 )
 
 func (ci *ChunkInfo) updateSource(rootCid boson.Address, index, len int64, sourceOverlay boson.Address) error {

@@ -7,8 +7,8 @@ package mock
 import (
 	"context"
 
-	"github.com/gauss-project/aurorafs/pkg/boson"
-	"github.com/gauss-project/aurorafs/pkg/pinning"
+	"github.com/FavorLabs/favorX/pkg/boson"
+	"github.com/FavorLabs/favorX/pkg/pinning"
 )
 
 var _ pinning.Interface = (*ServiceMock)(nil)

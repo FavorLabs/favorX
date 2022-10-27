@@ -5,9 +5,9 @@ import (
 	"context"
 	"testing"
 
-	"github.com/gauss-project/aurorafs/pkg/boson"
-	"github.com/gauss-project/aurorafs/pkg/storage"
-	"github.com/gauss-project/aurorafs/pkg/storage/mock"
+	"github.com/FavorLabs/favorX/pkg/boson"
+	"github.com/FavorLabs/favorX/pkg/storage"
+	"github.com/FavorLabs/favorX/pkg/storage/mock"
 )
 
 func TestMockStorer(t *testing.T) {

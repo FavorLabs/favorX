@@ -8,8 +8,8 @@ import (
 
 	"golang.org/x/crypto/bcrypt"
 
-	"github.com/gauss-project/aurorafs/pkg/auth"
-	"github.com/gauss-project/aurorafs/pkg/logging"
+	"github.com/FavorLabs/favorX/pkg/auth"
+	"github.com/FavorLabs/favorX/pkg/logging"
 )
 
 const (

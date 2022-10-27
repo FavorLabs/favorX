@@ -3,8 +3,8 @@ package chunkstore
 import (
 	"fmt"
 	"github.com/FavorLabs/favorX/pkg/bitvector"
+	"github.com/FavorLabs/favorX/pkg/boson"
 	"github.com/FavorLabs/favorX/pkg/storage"
-	"github.com/gauss-project/aurorafs/pkg/boson"
 	"strings"
 )
 

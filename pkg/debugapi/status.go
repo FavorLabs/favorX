@@ -4,7 +4,7 @@ import (
 	"net/http"
 
 	favor "github.com/FavorLabs/favorX"
-	"github.com/gauss-project/aurorafs/pkg/jsonhttp"
+	"github.com/FavorLabs/favorX/pkg/jsonhttp"
 )
 
 type statusResponse struct {

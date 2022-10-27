@@ -5,10 +5,9 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/FavorLabs/favorX/pkg/boson"
 	"github.com/FavorLabs/favorX/pkg/file"
-
 	"github.com/FavorLabs/manifest/simple"
-	"github.com/gauss-project/aurorafs/pkg/boson"
 )
 
 const (

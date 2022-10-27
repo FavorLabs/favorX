@@ -2,8 +2,8 @@ package kademlia
 
 import (
 	"context"
-	"github.com/gauss-project/aurorafs/pkg/rpc"
-	"github.com/gauss-project/aurorafs/pkg/subscribe"
+	"github.com/FavorLabs/favorX/pkg/rpc"
+	"github.com/FavorLabs/favorX/pkg/subscribe"
 )
 
 func (k *Kad) API() rpc.API {

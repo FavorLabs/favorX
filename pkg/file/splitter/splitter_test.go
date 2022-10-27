@@ -8,12 +8,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gauss-project/aurorafs/pkg/boson"
-	"github.com/gauss-project/aurorafs/pkg/file"
-	"github.com/gauss-project/aurorafs/pkg/file/splitter"
-	"github.com/gauss-project/aurorafs/pkg/storage"
-	"github.com/gauss-project/aurorafs/pkg/storage/mock"
-	mockbytes "gitlab.com/nolash/go-mockbytes"
+	"github.com/FavorLabs/favorX/pkg/boson"
+	"github.com/FavorLabs/favorX/pkg/file"
+	"github.com/FavorLabs/favorX/pkg/file/splitter"
+	"github.com/FavorLabs/favorX/pkg/storage"
+	"github.com/FavorLabs/favorX/pkg/storage/mock"
+	"gitlab.com/nolash/go-mockbytes"
 )
 
 // TestSplitIncomplete tests that the Split method returns an error if
@@ -54,7 +54,7 @@ func TestSplitSingleChunk(t *testing.T) {
 		t.Fatalf("expected %v, got %v", testHashAddress, resultAddress)
 	}
 
-	_, err = store.Get(context.Background(), storage.ModeGetRequest, resultAddress)
+	_, err = store.Get(context.Background(), storage.ModeGetRequest, resultAddress, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -86,12 +86,12 @@ func TestSplitThreeLevels(t *testing.T) {
 		t.Fatalf("expected %v, got %v", testHashAddress, resultAddress)
 	}
 
-	_, err = store.Get(context.Background(), storage.ModeGetRequest, resultAddress)
+	_, err = store.Get(context.Background(), storage.ModeGetRequest, resultAddress, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	rootChunk, err := store.Get(context.Background(), storage.ModeGetRequest, resultAddress)
+	rootChunk, err := store.Get(context.Background(), storage.ModeGetRequest, resultAddress, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -100,7 +100,7 @@ func TestSplitThreeLevels(t *testing.T) {
 	for i := 0; i < boson.ChunkSize; i += boson.SectionSize {
 		dataAddressBytes := rootData[i : i+boson.SectionSize]
 		dataAddress := boson.NewAddress(dataAddressBytes)
-		_, err := store.Get(context.Background(), storage.ModeGetRequest, dataAddress)
+		_, err := store.Get(context.Background(), storage.ModeGetRequest, dataAddress, 0)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -184,7 +184,7 @@ func TestUnalignedSplit(t *testing.T) {
 go test -v -bench=. -run Bench -benchmem
 goos: linux
 goarch: amd64
-pkg: github.com/gauss-project/aurorafs/pkg/file/splitter
+pkg: github.com/FavorLabs/favorX/pkg/file/splitter
 BenchmarkSplitter
 BenchmarkSplitter/1000-bytes
 BenchmarkSplitter/1000-bytes-4         	   12667	     95965 ns/op	  154870 B/op	     367 allocs/op
@@ -199,7 +199,7 @@ BenchmarkSplitter/10000000-bytes-4     	       4	 295615658 ns/op	186417904 B/op
 BenchmarkSplitter/100000000-bytes
 BenchmarkSplitter/100000000-bytes-4    	       1	2972826021 ns/op	1861374352 B/op	11321235 allocs/op
 PASS
-ok  	github.com/gauss-project/aurorafs/pkg/file/splitter	22.476s
+ok  	github.com/FavorLabs/favorX/pkg/file/splitter	22.476s
 */
 
 func BenchmarkSplitter(b *testing.B) {

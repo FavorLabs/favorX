@@ -10,12 +10,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/FavorLabs/favorX/pkg/logging"
 	"github.com/FavorLabs/favorX/pkg/netstore"
-	"github.com/gauss-project/aurorafs/pkg/logging"
 
+	"github.com/FavorLabs/favorX/pkg/boson"
 	"github.com/FavorLabs/favorX/pkg/storage"
 	"github.com/FavorLabs/favorX/pkg/storage/mock"
-	"github.com/gauss-project/aurorafs/pkg/boson"
 )
 
 var chunkData = []byte("mockdata")

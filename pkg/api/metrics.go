@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"time"
 
-	m "github.com/gauss-project/aurorafs/pkg/metrics"
+	m "github.com/FavorLabs/favorX/pkg/metrics"
 	"github.com/prometheus/client_golang/prometheus"
 )
 

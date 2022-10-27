@@ -4,20 +4,21 @@ import (
 	"bytes"
 	"context"
 	"crypto/ecdsa"
+	"github.com/FavorLabs/favorX/pkg/address"
 	"io"
 	"sort"
 	"testing"
 	"time"
 
 	"github.com/FavorLabs/favorX/pkg/addressbook"
+	"github.com/FavorLabs/favorX/pkg/boson"
 	"github.com/FavorLabs/favorX/pkg/crypto"
+	"github.com/FavorLabs/favorX/pkg/logging"
+	"github.com/FavorLabs/favorX/pkg/p2p"
 	"github.com/FavorLabs/favorX/pkg/p2p/libp2p"
 	"github.com/FavorLabs/favorX/pkg/statestore/mock"
-	"github.com/gauss-project/aurorafs/pkg/boson"
-	"github.com/gauss-project/aurorafs/pkg/logging"
-	"github.com/gauss-project/aurorafs/pkg/p2p"
-	"github.com/gauss-project/aurorafs/pkg/topology/bootnode"
-	"github.com/gauss-project/aurorafs/pkg/topology/lightnode"
+	"github.com/FavorLabs/favorX/pkg/topology/bootnode"
+	"github.com/FavorLabs/favorX/pkg/topology/lightnode"
 	"github.com/multiformats/go-multiaddr"
 )
 
@@ -73,6 +74,9 @@ func newService(t *testing.T, networkID uint64, o libp2pServiceOpts) (s *libp2p.
 	}
 	if o.bootNodes == nil {
 		o.bootNodes = bootnode.NewContainer(overlay)
+	}
+	if o.libp2pOpts.NodeMode.Bv == nil {
+		o.libp2pOpts.NodeMode = address.NewModel()
 	}
 	opts := o.libp2pOpts
 

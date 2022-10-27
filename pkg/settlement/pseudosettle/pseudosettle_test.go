@@ -3,19 +3,18 @@ package pseudosettle_test
 import (
 	"bytes"
 	"context"
+	"github.com/FavorLabs/favorX/pkg/boson"
+	"github.com/FavorLabs/favorX/pkg/logging"
+	"github.com/FavorLabs/favorX/pkg/p2p/protobuf"
+	"github.com/FavorLabs/favorX/pkg/p2p/streamtest"
+	"github.com/FavorLabs/favorX/pkg/settlement/pseudosettle"
+	"github.com/FavorLabs/favorX/pkg/settlement/pseudosettle/pb"
+	"github.com/FavorLabs/favorX/pkg/statestore/mock"
 	"github.com/ethereum/go-ethereum/common"
 	"io"
 	"math/big"
 	"testing"
 	"time"
-
-	"github.com/gauss-project/aurorafs/pkg/boson"
-	"github.com/gauss-project/aurorafs/pkg/logging"
-	"github.com/gauss-project/aurorafs/pkg/p2p/protobuf"
-	"github.com/gauss-project/aurorafs/pkg/p2p/streamtest"
-	"github.com/gauss-project/aurorafs/pkg/settlement/pseudosettle"
-	"github.com/gauss-project/aurorafs/pkg/settlement/pseudosettle/pb"
-	"github.com/gauss-project/aurorafs/pkg/statestore/mock"
 )
 
 type testObserver struct {

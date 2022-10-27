@@ -21,7 +21,7 @@ import (
 	"io"
 	"testing"
 
-	"github.com/gauss-project/aurorafs/pkg/logging"
+	"github.com/FavorLabs/favorX/pkg/logging"
 )
 
 func TestOneMigration(t *testing.T) {

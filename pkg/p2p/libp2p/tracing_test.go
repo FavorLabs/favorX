@@ -6,16 +6,16 @@ import (
 	"testing"
 	"time"
 
+	"github.com/FavorLabs/favorX/pkg/address"
+	"github.com/FavorLabs/favorX/pkg/p2p"
 	"github.com/FavorLabs/favorX/pkg/p2p/libp2p"
-	"github.com/gauss-project/aurorafs/pkg/aurora"
-	"github.com/gauss-project/aurorafs/pkg/p2p"
-	"github.com/gauss-project/aurorafs/pkg/tracing"
+	"github.com/FavorLabs/favorX/pkg/tracing"
 )
 
 func TestTracing(t *testing.T) {
 	tracer1, closer1, err := tracing.NewTracer(&tracing.Options{
 		Enabled:     true,
-		ServiceName: "aurora-test",
+		ServiceName: "node-test",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -24,7 +24,7 @@ func TestTracing(t *testing.T) {
 
 	tracer2, closer2, err := tracing.NewTracer(&tracing.Options{
 		Enabled:     true,
-		ServiceName: "aurora-test",
+		ServiceName: "node-test",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -32,10 +32,10 @@ func TestTracing(t *testing.T) {
 	defer closer2.Close()
 
 	s1, overlay1 := newService(t, 1, libp2pServiceOpts{libp2pOpts: libp2p.Options{
-		NodeMode: aurora.NewModel().SetMode(aurora.FullNode),
+		NodeMode: address.NewModel().SetMode(address.FullNode),
 	}})
 
-	s2, _ := newService(t, 1, libp2pServiceOpts{libp2pOpts: libp2p.Options{NodeMode: aurora.NewModel()}})
+	s2, _ := newService(t, 1, libp2pServiceOpts{libp2pOpts: libp2p.Options{NodeMode: address.NewModel()}})
 
 	var handledTracingSpan string
 	handled := make(chan struct{})

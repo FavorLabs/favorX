@@ -1,7 +1,7 @@
 package debugapi
 
 import (
-	"github.com/gauss-project/aurorafs/pkg/jsonhttp"
+	"github.com/FavorLabs/favorX/pkg/jsonhttp"
 	"github.com/gorilla/mux"
 	"net/http"
 	"strconv"

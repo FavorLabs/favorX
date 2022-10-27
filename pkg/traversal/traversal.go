@@ -9,13 +9,13 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"github.com/FavorLabs/favorX/pkg/boson"
 	"github.com/FavorLabs/favorX/pkg/file/joiner"
 	"github.com/FavorLabs/favorX/pkg/file/loadsave"
 	"github.com/FavorLabs/favorX/pkg/file/pipeline"
 	"github.com/FavorLabs/favorX/pkg/manifest"
 	"github.com/FavorLabs/favorX/pkg/storage"
 	"github.com/FavorLabs/manifest/mantaray"
-	"github.com/gauss-project/aurorafs/pkg/boson"
 )
 
 // Traverser represents service which traverse through address dependent chunks.

@@ -3,8 +3,8 @@ package feeder
 import (
 	"encoding/binary"
 
+	"github.com/FavorLabs/favorX/pkg/boson"
 	"github.com/FavorLabs/favorX/pkg/file/pipeline"
-	"github.com/gauss-project/aurorafs/pkg/boson"
 )
 
 const span = boson.SpanSize

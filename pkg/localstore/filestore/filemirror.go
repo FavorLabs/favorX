@@ -1,8 +1,8 @@
 package filestore
 
 import (
+	"github.com/FavorLabs/favorX/pkg/boson"
 	"github.com/FavorLabs/favorX/pkg/storage"
-	"github.com/gauss-project/aurorafs/pkg/boson"
 )
 
 type FileMirror struct {

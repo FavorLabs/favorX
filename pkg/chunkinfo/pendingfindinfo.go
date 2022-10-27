@@ -1,7 +1,7 @@
 package chunkinfo
 
 import (
-	"github.com/gauss-project/aurorafs/pkg/boson"
+	"github.com/FavorLabs/favorX/pkg/boson"
 )
 
 // updatePendingFinder

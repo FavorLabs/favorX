@@ -9,8 +9,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/gauss-project/aurorafs/pkg/logging"
-	"github.com/gauss-project/aurorafs/pkg/rpc"
+	"github.com/FavorLabs/favorX/pkg/logging"
+	"github.com/FavorLabs/favorX/pkg/rpc"
 )
 
 // Node is a container on which services can be registered.

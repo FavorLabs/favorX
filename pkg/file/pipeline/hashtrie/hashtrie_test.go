@@ -6,13 +6,13 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/FavorLabs/favorX/pkg/boson"
 	"github.com/FavorLabs/favorX/pkg/file/pipeline"
 	"github.com/FavorLabs/favorX/pkg/file/pipeline/bmt"
 	"github.com/FavorLabs/favorX/pkg/file/pipeline/hashtrie"
 	"github.com/FavorLabs/favorX/pkg/file/pipeline/store"
 	"github.com/FavorLabs/favorX/pkg/storage"
 	"github.com/FavorLabs/favorX/pkg/storage/mock"
-	"github.com/gauss-project/aurorafs/pkg/boson"
 )
 
 var (
@@ -106,7 +106,7 @@ func TestLevels(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			rootch, err := s.Get(ctx, storage.ModeGetRequest, boson.NewAddress(ref))
+			rootch, err := s.Get(ctx, storage.ModeGetRequest, boson.NewAddress(ref), 0)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -160,7 +160,6 @@ func TestLevels_TrieFull(t *testing.T) {
 }
 
 // TestRegression is a regression test for the bug
-// described in https://github.com/gauss-project/aurorafs/issues/1175
 func TestRegression(t *testing.T) {
 	var (
 		branching = 128
@@ -190,7 +189,7 @@ func TestRegression(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	rootch, err := s.Get(ctx, storage.ModeGetRequest, boson.NewAddress(ref))
+	rootch, err := s.Get(ctx, storage.ModeGetRequest, boson.NewAddress(ref), 0)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -5,7 +5,7 @@ import (
 	"context"
 	"io"
 
-	"github.com/gauss-project/aurorafs/pkg/boson"
+	"github.com/FavorLabs/favorX/pkg/boson"
 )
 
 type Reader interface {
