@@ -6,7 +6,7 @@ import (
 	goens "github.com/wealdtech/go-ens/v3"
 )
 
-const AuroraContentHashPrefix = auroraContentHashPrefix
+const ContentHashPrefix = contentHashPrefix
 
 var ErrNotImplemented = errNotImplemented
 

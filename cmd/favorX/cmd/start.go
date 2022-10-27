@@ -253,7 +253,6 @@ func (c *command) configureSigner(cmd *cobra.Command, logger logging.Logger) (co
 	}
 
 	var signer crypto.Signer
-	var adr boson.Address
 	var password string
 	var publicKey *ecdsa.PublicKey
 	if p := c.config.GetString(optionNamePassword); p != "" {
@@ -292,15 +291,16 @@ func (c *command) configureSigner(cmd *cobra.Command, logger logging.Logger) (co
 	signer = crypto.NewDefaultSigner(PrivateKey)
 	publicKey = &PrivateKey.PublicKey
 
-	adr, err = crypto.NewOverlayAddress(*publicKey, c.config.GetUint64(optionNameNetworkID))
+	var addr boson.Address
+	addr, err = crypto.NewOverlayAddress(*publicKey, c.config.GetUint64(optionNameNetworkID))
 	if err != nil {
 		return nil, err
 	}
 
 	if created {
-		logger.Infof("new boson network address created: %s", adr)
+		logger.Infof("new boson network address created: %s", addr)
 	} else {
-		logger.Infof("using existing boson network address: %s", adr)
+		logger.Infof("using existing boson network address: %s", addr)
 	}
 	// }
 
@@ -318,7 +318,7 @@ func (c *command) configureSigner(cmd *cobra.Command, logger logging.Logger) (co
 
 	return &signerConfig{
 		signer:           signer,
-		address:          adr,
+		address:          addr,
 		publicKey:        publicKey,
 		libp2pPrivateKey: libp2pPrivateKey,
 	}, nil

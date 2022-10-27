@@ -84,9 +84,9 @@ func p2pMock(ab addressbook.Interface, overlay boson.Address, signer crypto.Sign
 			}, nil
 		}),
 		p2pmock.WithPeersFunc(func() (out []p2p.Peer) {
-			_ = ab.IterateOverlays(func(adr boson.Address) (bool, error) {
+			_ = ab.IterateOverlays(func(addr boson.Address) (bool, error) {
 				out = append(out, p2p.Peer{
-					Address: adr,
+					Address: addr,
 					Mode:    address.NewModel().SetMode(address.FullNode),
 				})
 				return false, nil
@@ -157,11 +157,11 @@ func randomAddress(t *testing.T, base boson.Address, po int, underlay string) (a
 	if err != nil {
 		t.Fatal(err)
 	}
-	adr, err := address.NewAddress(signer, mu, p, networkId)
+	addr, err = address.NewAddress(signer, mu, p, networkId)
 	if err != nil {
 		t.Fatal(err)
 	}
-	return adr, signer
+	return addr, signer
 }
 
 func (s *Node) addOne(t *testing.T, peer *address.Address, connect bool) {
@@ -187,11 +187,11 @@ func (s *Node) connect(t *testing.T, peer boson.Address, underlay string) {
 	pk, _ := crypto.GenerateSecp256k1Key()
 	signer := crypto.NewDefaultSigner(pk)
 
-	adr, err := address.NewAddress(signer, multiaddr, peer, networkId)
+	addr, err := address.NewAddress(signer, multiaddr, peer, networkId)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err = s.book.Put(peer, *adr); err != nil {
+	if err = s.book.Put(peer, *addr); err != nil {
 		t.Fatal(err)
 	}
 	err = s.kad.Connected(context.TODO(), p2p.Peer{Address: peer}, true)

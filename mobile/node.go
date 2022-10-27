@@ -94,14 +94,14 @@ func configureSigner(path, password string, networkID uint64, logger logging.Log
 	signer := crypto.NewDefaultSigner(PrivateKey)
 	publicKey := &PrivateKey.PublicKey
 
-	adr, err := crypto.NewOverlayAddress(*publicKey, networkID)
+	addr, err := crypto.NewOverlayAddress(*publicKey, networkID)
 	if err != nil {
 		return nil, err
 	}
 	if created {
-		logger.Infof("new boson network address created: %s", adr)
+		logger.Infof("new boson network address created: %s", addr)
 	} else {
-		logger.Infof("using existing boson network address: %s", adr)
+		logger.Infof("using existing boson network address: %s", addr)
 	}
 
 	logger.Infof("boson public key %x", crypto.EncodeSecp256k1PublicKey(publicKey))
@@ -118,7 +118,7 @@ func configureSigner(path, password string, networkID uint64, logger logging.Log
 
 	return &signerConfig{
 		signer:           signer,
-		address:          adr,
+		address:          addr,
 		publicKey:        publicKey,
 		libp2pPrivateKey: libp2pPrivateKey,
 	}, nil

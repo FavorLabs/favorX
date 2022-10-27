@@ -78,7 +78,7 @@ func (m *Mock) ClosestPeer(addr boson.Address, _ bool, _ topology.Filter, skipPe
 	panic("not implemented") // TODO: Implement
 }
 
-func (m *Mock) IsWithinDepth(adr boson.Address) bool {
+func (m *Mock) IsWithinDepth(_ boson.Address) bool {
 	panic("not implemented") // TODO: Implement
 }
 

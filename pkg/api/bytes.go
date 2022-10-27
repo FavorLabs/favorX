@@ -23,7 +23,7 @@ func (s *server) bytesUploadHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	pipe := builder.NewPipelineBuilder(ctx, s.storer, requestModePut(r), requestEncrypt(r))
-	adr, err := builder.FeedPipeline(ctx, pipe, r.Body)
+	addr, err := builder.FeedPipeline(ctx, pipe, r.Body)
 	if err != nil {
 		logger.Debugf("bytes upload: split write all: %v", err)
 		logger.Error("bytes upload: split write all")
@@ -32,8 +32,8 @@ func (s *server) bytesUploadHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if strings.ToLower(r.Header.Get(PinHeader)) == StringTrue {
-		if err := s.pinning.CreatePin(ctx, adr, false); err != nil {
-			logger.Debugf("bytes upload: creation of pin for %q failed: %v", adr, err)
+		if err := s.pinning.CreatePin(ctx, addr, false); err != nil {
+			logger.Debugf("bytes upload: creation of pin for %q failed: %v", addr, err)
 			logger.Error("bytes upload: creation of pin failed")
 			jsonhttp.InternalServerError(w, nil)
 			return
@@ -41,7 +41,7 @@ func (s *server) bytesUploadHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	jsonhttp.Created(w, bytesPostResponse{
-		Reference: adr,
+		Reference: addr,
 	})
 }
 

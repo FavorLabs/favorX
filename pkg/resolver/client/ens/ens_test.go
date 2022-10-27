@@ -152,7 +152,7 @@ func TestResolve(t *testing.T) {
 		{
 			desc: "resolve returns prefixed address",
 			resolveFn: func(*goens.Registry, common.Address, string) (string, error) {
-				return ens.AuroraContentHashPrefix + testAuroraAddr.String(), nil
+				return ens.ContentHashPrefix + testAuroraAddr.String(), nil
 			},
 			wantErr: ens.ErrInvalidContentHash,
 		},
@@ -162,7 +162,7 @@ func TestResolve(t *testing.T) {
 				if c != testContractAddr {
 					return "", errors.New("invalid contract address")
 				}
-				return ens.AuroraContentHashPrefix + testAuroraAddr.String(), nil
+				return ens.ContentHashPrefix + testAuroraAddr.String(), nil
 			},
 		},
 	}

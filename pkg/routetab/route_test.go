@@ -141,11 +141,11 @@ func randomAddress(t *testing.T) (addr *address.Address, signer crypto.Signer) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	adr, err := address.NewAddress(signer, mu, base, networkId)
+	addr, err = address.NewAddress(signer, mu, base, networkId)
 	if err != nil {
 		t.Fatal(err)
 	}
-	return adr, signer
+	return addr, signer
 }
 
 func (s *Node) addOne(t *testing.T, peer *address.Address, connect bool) {

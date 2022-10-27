@@ -313,23 +313,23 @@ func (s *Service) checkAndAddPeers(ctx context.Context, result resultChan) {
 				return
 			}
 
-			adr := address.Address{
+			addr := address.Address{
 				Overlay:   boson.NewAddress(newPeer.Overlay),
 				Underlay:  multiUnderlay,
 				Signature: newPeer.Signature,
 			}
 
-			err = s.addressBook.Put(adr.Overlay, adr)
+			err = s.addressBook.Put(addr.Overlay, addr)
 			if err != nil {
 				s.logger.Warningf("hive2: skipping peer in response %s: %v", newPeer.String(), err)
 				return
 			}
 
 			if s.addPeersHandler != nil {
-				s.addPeersHandler(adr.Overlay)
+				s.addPeersHandler(addr.Overlay)
 			}
 			<-time.After(time.Millisecond * 500)
-			result.syncResult <- adr.Overlay
+			result.syncResult <- addr.Overlay
 
 		}(p)
 	}

@@ -387,7 +387,7 @@ func TestEachNeighbor(t *testing.T) {
 
 	var depth uint8 = 15
 
-	err := kad.EachNeighbor(func(adr boson.Address, po uint8) (stop, jumpToNext bool, err error) {
+	err := kad.EachNeighbor(func(_ boson.Address, po uint8) (stop, jumpToNext bool, err error) {
 
 		if po < depth {
 			depth = po
@@ -403,7 +403,7 @@ func TestEachNeighbor(t *testing.T) {
 	}
 
 	depth = 15
-	err = kad.EachNeighborRev(func(adr boson.Address, po uint8) (stop, jumpToNext bool, err error) {
+	err = kad.EachNeighborRev(func(_ boson.Address, po uint8) (stop, jumpToNext bool, err error) {
 
 		if po < depth {
 			depth = po
@@ -1927,13 +1927,13 @@ func p2pMock(ab addressbook.Interface, signer beeCrypto.Signer, counter, failedC
 				}
 			}
 
-			adr := test.RandomAddress()
-			auroraAddr, err := address.NewAddress(signer, addr, adr, 0)
+			overlay := test.RandomAddress()
+			auroraAddr, err := address.NewAddress(signer, addr, overlay, 0)
 			if err != nil {
 				return nil, err
 			}
 
-			if err := ab.Put(adr, *auroraAddr); err != nil {
+			if err := ab.Put(overlay, *auroraAddr); err != nil {
 				return nil, err
 			}
 

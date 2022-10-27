@@ -21,31 +21,31 @@ type peerConnectResponse struct {
 
 func (s *Service) peerConnectHandler(w http.ResponseWriter, r *http.Request) {
 	dest := mux.Vars(r)["multi-address"]
-	addr, err := multiaddr.NewMultiaddr("/" + dest)
+	ma, err := multiaddr.NewMultiaddr("/" + dest)
 	if err != nil {
-		adr, e := boson.ParseHexAddress(dest)
+		addr, e := boson.ParseHexAddress(dest)
 		if e != nil {
 			s.logger.Debugf("debug api: peer connect: parse multiaddress: %v", err)
 			jsonhttp.BadRequest(w, err)
 			return
 		}
-		err = s.routetab.Connect(r.Context(), adr)
+		err = s.routetab.Connect(r.Context(), addr)
 		if err != nil {
-			s.logger.Debugf("debug api: peer connect %s: %v", adr, err)
-			s.logger.Errorf("unable to connect to peer %s", adr)
+			s.logger.Debugf("debug api: peer connect %s: %v", addr, err)
+			s.logger.Errorf("unable to connect to peer %s", addr)
 			jsonhttp.InternalServerError(w, err)
 			return
 		}
 		jsonhttp.OK(w, peerConnectResponse{
-			Address: adr.String(),
+			Address: addr.String(),
 		})
 		return
 	}
 
-	peer, err := s.p2p.Connect(r.Context(), addr)
+	peer, err := s.p2p.Connect(r.Context(), ma)
 	if err != nil {
-		s.logger.Debugf("debug api: peer connect %s: %v", addr, err)
-		s.logger.Errorf("unable to connect to peer %s", addr)
+		s.logger.Debugf("debug api: peer connect %s: %v", ma, err)
+		s.logger.Errorf("unable to connect to peer %s", ma)
 		jsonhttp.InternalServerError(w, err)
 		return
 	}
@@ -58,14 +58,14 @@ func (s *Service) peerConnectHandler(w http.ResponseWriter, r *http.Request) {
 
 func (s *Service) peerDisconnectHandler(w http.ResponseWriter, r *http.Request) {
 	addr := mux.Vars(r)["address"]
-	adr, err := boson.ParseHexAddress(addr)
+	overlay, err := boson.ParseHexAddress(addr)
 	if err != nil {
 		s.logger.Debugf("debug api: parse peer address %s: %v", addr, err)
 		jsonhttp.BadRequest(w, "invalid peer address")
 		return
 	}
 
-	if err := s.topologyDriver.DisconnectForce(adr, "user requested disconnect"); err != nil {
+	if err := s.topologyDriver.DisconnectForce(overlay, "user requested disconnect"); err != nil {
 		s.logger.Debugf("debug api: peer disconnect %s: %v", addr, err)
 		if errors.Is(err, p2p.ErrPeerNotFound) {
 			jsonhttp.BadRequest(w, "peer not found")

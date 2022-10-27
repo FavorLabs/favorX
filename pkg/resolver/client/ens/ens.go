@@ -17,7 +17,7 @@ import (
 
 const (
 	defaultENSContractAddress = "A959836a03abbc7bF7EFAD8F9422456150bFE567"
-	auroraContentHashPrefix   = "favor://"
+	contentHashPrefix         = "favor://"
 )
 
 // Address is the boson address.
@@ -118,12 +118,12 @@ func (c *Client) Resolve(name string) (Address, error) {
 
 	// Ensure that the content hash string is in a valid format, eg.
 	// "favor://<address>".
-	if !strings.HasPrefix(hash, auroraContentHashPrefix) {
+	if !strings.HasPrefix(hash, contentHashPrefix) {
 		return boson.ZeroAddress, fmt.Errorf("contenthash %s: %w", hash, ErrInvalidContentHash)
 	}
 
 	// Trim the prefix and try to parse the result as an address.
-	return boson.ParseHexAddress(strings.TrimPrefix(hash, auroraContentHashPrefix))
+	return boson.ParseHexAddress(strings.TrimPrefix(hash, contentHashPrefix))
 }
 
 // Close closes the RPC connection with the client, terminating all unfinished
@@ -189,7 +189,7 @@ func wrapResolve(registry *goens.Registry, addr common.Address, name string) (st
 		return "", err
 	}
 
-	subPrefix := []byte(auroraContentHashPrefix)
+	subPrefix := []byte(contentHashPrefix)
 
 	prefixIndex := bytes.Index(decodedMHash.Digest, subPrefix)
 	if prefixIndex != 0 {
