@@ -245,31 +245,33 @@ func (db *DB) setRemove(batch driver.Batching, addr boson.Address, rootItem shed
 		if err != nil && !errors.Is(err, driver.ErrNotFound) {
 			return 0, err
 		}
-		i, err = db.retrievalDataIndex.Get(rootItem)
+	}
+
+	return db.gcRemove(batch, rootItem)
+}
+
+func (db *DB) gcRemove(batch driver.Batching, rootItem shed.Item) (gcSizeChange int64, err error) {
+
+	if rootItem.StoreTimestamp == 0 {
+		i, err := db.retrievalDataIndex.Get(rootItem)
 		if err != nil {
 			return 0, err
 		}
 		rootItem.StoreTimestamp = i.StoreTimestamp
 		rootItem.BinID = i.BinID
-	}
-	// need to get access timestamp here as it is not
-	// provided by the access function, and it is not
-	// a property of a chunk provided to Accessor.Put.
-	i, err = db.retrievalAccessIndex.Get(rootItem)
-	switch {
-	case err == nil:
-		if rootItem.AccessTimestamp == 0 {
+		// need to get access timestamp here as it is not
+		// provided by the access function, and it is not
+		// a property of a chunk provided to Accessor.Put.
+		i, err = db.retrievalAccessIndex.Get(rootItem)
+		switch {
+		case err == nil:
 			rootItem.AccessTimestamp = i.AccessTimestamp
+		case errors.Is(err, driver.ErrNotFound):
+			return 0, nil
+		default:
+			return 0, err
 		}
-	case errors.Is(err, driver.ErrNotFound):
-		return 0, nil
-	default:
-		return 0, err
 	}
-	return db.gcRemove(batch, rootItem)
-}
-
-func (db *DB) gcRemove(batch driver.Batching, rootItem shed.Item) (gcSizeChange int64, err error) {
 	rootCid := boson.NewAddress(rootItem.Address)
 	err = db.deleteFile(rootCid)
 	if err != nil {
