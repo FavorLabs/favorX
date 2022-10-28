@@ -75,7 +75,7 @@ func (db *DB) set(mode storage.ModeSet, rootAddr boson.Address, addrs ...boson.A
 
 	case storage.ModeSetRemove:
 		for _, addr := range addrs {
-			c, err := db.setRemove(batch, addr, rootAddr)
+			c, err := db.setRemove(batch, addr, addressToItem(rootAddr))
 			if err != nil {
 				return err
 			}
@@ -187,12 +187,14 @@ func (db *DB) setSync(batch driver.Batching, addr boson.Address, mode storage.Mo
 //   - delete from retrieve, pull, gc
 //
 // Provided batch is updated.
-func (db *DB) setRemove(batch driver.Batching, addr, rootAddr boson.Address) (gcSizeChange int64, err error) {
+func (db *DB) setRemove(batch driver.Batching, addr boson.Address, rootItem shed.Item) (gcSizeChange int64, err error) {
 	item := addressToItem(addr)
-
 	item, err = db.retrievalDataIndex.Get(item)
-	if err != nil {
+	if err != nil && !errors.Is(err, driver.ErrNotFound) {
 		return 0, err
+	}
+	if errors.Is(err, driver.ErrNotFound) {
+		return db.gcRemove(batch, rootItem)
 	}
 	if item.Counter > 1 {
 		item.Counter--
@@ -234,37 +236,42 @@ func (db *DB) setRemove(batch driver.Batching, addr, rootAddr boson.Address) (gc
 	}
 
 	err = db.retrievalDataIndex.DeleteInBatch(batch, item)
-	if err != nil {
+	if err != nil && !errors.Is(err, driver.ErrNotFound) {
 		return 0, err
 	}
 
-	err = db.retrievalAccessIndex.DeleteInBatch(batch, item)
-	if err != nil {
-		return 0, err
-	}
-	err = db.deleteFile(addr)
-	if err != nil {
-		return 0, err
+	if addr.Equal(boson.NewAddress(rootItem.Address)) {
+		rootItem = item
+	} else {
+		err = db.retrievalAccessIndex.DeleteInBatch(batch, item)
+		if err != nil && !errors.Is(err, driver.ErrNotFound) {
+			return 0, err
+		}
 	}
 	// need to get access timestamp here as it is not
 	// provided by the access function, and it is not
 	// a property of a chunk provided to Accessor.Put.
-	rootItem := addressToItem(rootAddr)
 	i, err = db.retrievalAccessIndex.Get(rootItem)
 	switch {
 	case err == nil:
-		rootItem.AccessTimestamp = i.AccessTimestamp
+		if rootItem.AccessTimestamp == 0 {
+			rootItem.AccessTimestamp = i.AccessTimestamp
+		}
 	case errors.Is(err, driver.ErrNotFound):
 		return 0, nil
 	default:
 		return 0, err
 	}
-	i, err = db.retrievalDataIndex.Get(rootItem)
+	return db.gcRemove(batch, rootItem)
+}
+
+func (db *DB) gcRemove(batch driver.Batching, rootItem shed.Item) (gcSizeChange int64, err error) {
+	rootCid := boson.NewAddress(rootItem.Address)
+	err = db.deleteFile(rootCid)
 	if err != nil {
+		db.logger.Errorf("del file :%s error: %w", rootCid.String(), err)
 		return 0, err
 	}
-	rootItem.StoreTimestamp = i.StoreTimestamp
-	rootItem.BinID = i.BinID
 	// a check is needed for decrementing gcSize
 	// as delete is not reporting if the key/value pair
 	// is deleted or not
@@ -280,6 +287,7 @@ func (db *DB) setRemove(batch driver.Batching, addr, rootAddr boson.Address) (gc
 		gcItem.GCounter--
 		err = db.gcIndex.PutInBatch(batch, gcItem)
 		if err != nil {
+			db.logger.Errorf("put gc err:%w", err)
 			return 0, err
 		}
 	} else {
@@ -288,11 +296,13 @@ func (db *DB) setRemove(batch driver.Batching, addr, rootAddr boson.Address) (gc
 
 		err = db.retrievalAccessIndex.DeleteInBatch(batch, rootItem)
 		if err != nil {
+			db.logger.Errorf("del retrieval gc err:%w", err)
 			return 0, err
 		}
 
 		err = db.gcIndex.DeleteInBatch(batch, gcItem)
 		if err != nil {
+			db.logger.Errorf("del gc err:%w", err)
 			return 0, err
 		}
 	}
@@ -438,17 +448,18 @@ func (db *DB) setRemoveTransfer(batch driver.Batching, rootCid boson.Address) er
 	return err
 }
 
-func (db *DB) setRemoveAll(rootCid boson.Address) error {
+func (db *DB) setRemoveAll(item shed.Item) error {
 	db.batchMu.Lock()
 	defer db.batchMu.Unlock()
 	batch := db.shed.NewBatch()
 	var gcSizeChange int64 // number to add or subtract from gcSize
+	rootCid := boson.NewAddress(item.Address)
 	chunks, err := db.getAllChunks(rootCid)
 	if err != nil {
 		return err
 	}
 	for _, addr := range chunks {
-		c, err := db.setRemove(batch, addr, rootCid)
+		c, err := db.setRemove(batch, addr, item)
 		if err != nil {
 			return err
 		}

@@ -96,9 +96,9 @@ func (ci *ChunkInfo) updateDiscover(rootCid, overlay boson.Address, bv []byte) e
 
 func (ci *ChunkInfo) FindChunkInfo(ctx context.Context, authInfo []byte, rootCid boson.Address, overlays []boson.Address) bool {
 	msgChan := make(chan bool, 1)
+	ci.syncMsg.Store(rootCid.String(), msgChan)
+	ci.findChunkInfo(ctx, authInfo, rootCid, overlays)
 	for {
-		ci.syncMsg.Store(rootCid.String(), msgChan)
-		ci.findChunkInfo(ctx, authInfo, rootCid, overlays)
 		select {
 		case <-ctx.Done():
 			return false

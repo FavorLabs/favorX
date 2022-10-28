@@ -20,10 +20,10 @@ import (
 	"context"
 	"encoding/binary"
 	"errors"
-	"github.com/FavorLabs/favorX/pkg/localstore/chunkstore"
 	"time"
 
 	"github.com/FavorLabs/favorX/pkg/boson"
+	"github.com/FavorLabs/favorX/pkg/localstore/chunkstore"
 	"github.com/FavorLabs/favorX/pkg/sctx"
 	"github.com/FavorLabs/favorX/pkg/shed"
 	"github.com/FavorLabs/favorX/pkg/shed/driver"
@@ -172,10 +172,7 @@ func (db *DB) updateGC(item shed.Item) (err error) {
 	}
 	if item.BinID == 0 {
 		i, err = db.retrievalDataIndex.Get(item)
-		if err != nil {
-			if errors.Is(err, driver.ErrNotFound) {
-				return db.retrievalAccessIndex.DeleteInBatch(batch, item)
-			}
+		if err != nil && !errors.Is(err, driver.ErrNotFound) {
 			return err
 		}
 		item.BinID = i.BinID
@@ -183,13 +180,19 @@ func (db *DB) updateGC(item shed.Item) (err error) {
 	// update the gc item timestamp in case
 	// it exists
 	var gcItem shed.Item
+LOOP:
 	gcItem, err = db.gcIndex.Get(item)
 	if err != nil {
-		if errors.Is(err, driver.ErrNotFound) {
+		if !errors.Is(err, driver.ErrNotFound) {
+			return err
+		}
+		if item.BinID == 0 {
 			return nil
 		}
-		return err
+		item.BinID = 0
+		goto LOOP
 	}
+	item.BinID = i.BinID
 	// delete current entry from the gc index
 	err = db.gcIndex.DeleteInBatch(batch, gcItem)
 	if err != nil {

@@ -1060,7 +1060,7 @@ func TestBrokenPyramid(t *testing.T) {
 	batch := db.shed.NewBatch()
 	for _, chunk := range copyPyramid[:len(copyPyramid)/3] {
 		// call setRemove to skip update gc size
-		_, err = db.setRemove(batch, chunk, boson.ZeroAddress)
+		_, err = db.setRemove(batch, chunk, addressToItem(boson.ZeroAddress))
 		if err != nil {
 			t.Fatal(err)
 		}

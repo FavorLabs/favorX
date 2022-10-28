@@ -21,7 +21,6 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/FavorLabs/favorX/pkg/boson"
 	"github.com/FavorLabs/favorX/pkg/shed"
 	"github.com/FavorLabs/favorX/pkg/shed/driver"
 	"github.com/pbnjay/memory"
@@ -162,14 +161,13 @@ func (db *DB) collectGarbage() (collectedCount uint64, done bool, err error) {
 	defer totalTimeMetric(db.metrics.TotalTimeGCLock, time.Now())
 
 	for _, item := range candidates {
-		addr := boson.NewAddress(item.Address)
-		err = db.DeleteFile(addr)
+		err = db.gcFile(item)
 		if err != nil {
 			db.metrics.GCErrorCounter.Inc()
 		}
 	}
 
-	return collectedCount, done, nil
+	return collectedCount, done, err
 }
 
 func (db *DB) collectMemoryGarbage() (collectedCount uint64, done bool, err error) {
@@ -223,8 +221,7 @@ func (db *DB) collectMemoryGarbage() (collectedCount uint64, done bool, err erro
 	defer totalTimeMetric(db.metrics.TotalTimeGCLock, time.Now())
 
 	for _, item := range candidates {
-		addr := boson.NewAddress(item.Address)
-		err = db.DeleteFile(addr)
+		err = db.gcFile(item)
 		if err != nil {
 			db.metrics.GCErrorCounter.Inc()
 		}

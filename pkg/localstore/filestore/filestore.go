@@ -92,7 +92,7 @@ func (fs *fileStore) GetList(page Page, filter []Filter, sort Sort) ([]FileView,
 	ff := filterFile(fs.files, filter)
 	sf := sortFile(ff, sort.Key, sort.Order)
 	pf := pageFile(sf, page)
-	total := len(pf)
+	total := len(ff)
 	return pf, total
 }
 
