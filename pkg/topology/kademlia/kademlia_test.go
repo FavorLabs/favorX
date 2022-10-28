@@ -4,11 +4,19 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
+	"math/rand"
+	"reflect"
+	"sync"
+	"sync/atomic"
+	"testing"
+	"time"
+
 	"github.com/FavorLabs/favorX/pkg/address"
 	"github.com/FavorLabs/favorX/pkg/addressbook"
 	"github.com/FavorLabs/favorX/pkg/boson"
 	"github.com/FavorLabs/favorX/pkg/boson/test"
-	beeCrypto "github.com/FavorLabs/favorX/pkg/crypto"
+	"github.com/FavorLabs/favorX/pkg/crypto"
 	"github.com/FavorLabs/favorX/pkg/discovery/mock"
 	"github.com/FavorLabs/favorX/pkg/logging"
 	"github.com/FavorLabs/favorX/pkg/p2p"
@@ -22,13 +30,6 @@ import (
 	"github.com/FavorLabs/favorX/pkg/topology/model"
 	"github.com/FavorLabs/favorX/pkg/topology/pslice"
 	ma "github.com/multiformats/go-multiaddr"
-	"io"
-	"math/rand"
-	"reflect"
-	"sync"
-	"sync/atomic"
-	"testing"
-	"time"
 )
 
 func init() {
@@ -1087,9 +1088,9 @@ func TestClosestPeer(t *testing.T) {
 	}
 	defer kad.Close()
 
-	pk, _ := beeCrypto.GenerateSecp256k1Key()
+	pk, _ := crypto.GenerateSecp256k1Key()
 	for _, v := range connectedPeers {
-		addOne(t, beeCrypto.NewDefaultSigner(pk), kad, ab, v.Address)
+		addOne(t, crypto.NewDefaultSigner(pk), kad, ab, v.Address)
 	}
 
 	waitPeers(t, kad, 3)
@@ -1527,8 +1528,8 @@ func TestLatency(t *testing.T) {
 	}
 	defer kad.Close()
 
-	pk, _ := beeCrypto.GenerateSecp256k1Key()
-	signer := beeCrypto.NewDefaultSigner(pk)
+	pk, _ := crypto.GenerateSecp256k1Key()
+	signer := crypto.NewDefaultSigner(pk)
 	addOne(t, signer, kad, ab, p1)
 
 	waitPeers(t, kad, 1)
@@ -1840,7 +1841,7 @@ func newTestKademliaWithAddrDiscovery(
 	disc *mock.Discovery,
 	connCounter, failedConnCounter *int32,
 	kadOpts kademlia.Options,
-) (boson.Address, *kademlia.Kad, addressbook.Interface, *mock.Discovery, beeCrypto.Signer) {
+) (boson.Address, *kademlia.Kad, addressbook.Interface, *mock.Discovery, crypto.Signer) {
 	t.Helper()
 
 	metricsDB, err := shed.NewDB("", &shed.Options{Driver: "leveldb"})
@@ -1853,8 +1854,8 @@ func newTestKademliaWithAddrDiscovery(
 		}
 	})
 	var (
-		pk, _  = beeCrypto.GenerateSecp256k1Key()                    // random private key
-		signer = beeCrypto.NewDefaultSigner(pk)                      // signer
+		pk, _  = crypto.GenerateSecp256k1Key()                       // random private key
+		signer = crypto.NewDefaultSigner(pk)                         // signer
 		ab     = addressbook.New(mockstate.NewStateStore())          // address book
 		p2ps   = p2pMock(ab, signer, connCounter, failedConnCounter) // p2p mock
 		logger = logging.New(io.Discard, 0)                          // logger
@@ -1875,7 +1876,7 @@ func newTestKademliaWithAddrDiscovery(
 	return base, kad, ab, disc, signer
 }
 
-func newTestKademlia(t *testing.T, connCounter, failedConnCounter *int32, kadOpts kademlia.Options) (boson.Address, *kademlia.Kad, addressbook.Interface, *mock.Discovery, beeCrypto.Signer) {
+func newTestKademlia(t *testing.T, connCounter, failedConnCounter *int32, kadOpts kademlia.Options) (boson.Address, *kademlia.Kad, addressbook.Interface, *mock.Discovery, crypto.Signer) {
 	t.Helper()
 
 	base := test.RandomAddress()
@@ -1883,7 +1884,7 @@ func newTestKademlia(t *testing.T, connCounter, failedConnCounter *int32, kadOpt
 	return newTestKademliaWithAddrDiscovery(t, base, disc, connCounter, failedConnCounter, kadOpts)
 }
 
-func newTestKademliaWithAddr(t *testing.T, base boson.Address, connCounter, failedConnCounter *int32, kadOpts kademlia.Options) (boson.Address, *kademlia.Kad, addressbook.Interface, *mock.Discovery, beeCrypto.Signer) {
+func newTestKademliaWithAddr(t *testing.T, base boson.Address, connCounter, failedConnCounter *int32, kadOpts kademlia.Options) (boson.Address, *kademlia.Kad, addressbook.Interface, *mock.Discovery, crypto.Signer) {
 	t.Helper()
 
 	disc := mock.NewDiscovery() // mock discovery protocol
@@ -1895,14 +1896,14 @@ func newTestKademliaWithDiscovery(
 	disc *mock.Discovery,
 	connCounter, failedConnCounter *int32,
 	kadOpts kademlia.Options,
-) (boson.Address, *kademlia.Kad, addressbook.Interface, *mock.Discovery, beeCrypto.Signer) {
+) (boson.Address, *kademlia.Kad, addressbook.Interface, *mock.Discovery, crypto.Signer) {
 	t.Helper()
 
 	base := test.RandomAddress()
 	return newTestKademliaWithAddrDiscovery(t, base, disc, connCounter, failedConnCounter, kadOpts)
 }
 
-func p2pMock(ab addressbook.Interface, signer beeCrypto.Signer, counter, failedCounter *int32) p2p.Service {
+func p2pMock(ab addressbook.Interface, signer crypto.Signer, counter, failedCounter *int32) p2p.Service {
 	p2ps := p2pmock.New(
 		p2pmock.WithConnectFunc(func(ctx context.Context, addr ma.Multiaddr) (*p2p.Peer, error) {
 			if addr.Equal(nonConnectableAddress) {
@@ -1959,7 +1960,7 @@ func removeOne(k *kademlia.Kad, peer boson.Address) {
 
 const underlayBase = "/ip4/127.0.0.1/tcp/1634/dns/"
 
-func connectOne(t *testing.T, signer beeCrypto.Signer, k *kademlia.Kad, ab addressbook.Putter, peer boson.Address, expErr error) {
+func connectOne(t *testing.T, signer crypto.Signer, k *kademlia.Kad, ab addressbook.Putter, peer boson.Address, expErr error) {
 	t.Helper()
 	multiaddr, err := ma.NewMultiaddr(underlayBase + peer.String())
 	if err != nil {
@@ -1980,7 +1981,7 @@ func connectOne(t *testing.T, signer beeCrypto.Signer, k *kademlia.Kad, ab addre
 	}
 }
 
-func addOne(t *testing.T, signer beeCrypto.Signer, k *kademlia.Kad, ab addressbook.Putter, peer boson.Address) {
+func addOne(t *testing.T, signer crypto.Signer, k *kademlia.Kad, ab addressbook.Putter, peer boson.Address) {
 	t.Helper()
 	multiaddr, err := ma.NewMultiaddr(underlayBase + peer.String())
 	if err != nil {
@@ -1996,7 +1997,7 @@ func addOne(t *testing.T, signer beeCrypto.Signer, k *kademlia.Kad, ab addressbo
 	k.AddPeers(peer)
 }
 
-func add(t *testing.T, signer beeCrypto.Signer, k *kademlia.Kad, ab addressbook.Putter, peers []boson.Address, offset, number int) {
+func add(t *testing.T, signer crypto.Signer, k *kademlia.Kad, ab addressbook.Putter, peers []boson.Address, offset, number int) {
 	t.Helper()
 	for i := offset; i < offset+number; i++ {
 		addOne(t, signer, k, ab, peers[i])
