@@ -4,9 +4,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/FavorLabs/favorX/pkg/boson"
+	"github.com/FavorLabs/favorX/pkg/boson/test"
 	"github.com/FavorLabs/favorX/pkg/routetab"
-	"github.com/gauss-project/aurorafs/pkg/boson"
-	"github.com/gauss-project/aurorafs/pkg/boson/test"
 )
 
 func TestPendCallResTab(t *testing.T) {

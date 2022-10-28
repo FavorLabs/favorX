@@ -28,13 +28,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/FavorLabs/favorX/pkg/boson"
+	"github.com/FavorLabs/favorX/pkg/logging"
 	"github.com/FavorLabs/favorX/pkg/shed"
+	"github.com/FavorLabs/favorX/pkg/shed/driver"
 	mockstate "github.com/FavorLabs/favorX/pkg/statestore/mock"
 	"github.com/FavorLabs/favorX/pkg/storage"
 	chunktesting "github.com/FavorLabs/favorX/pkg/storage/testing"
-	"github.com/gauss-project/aurorafs/pkg/boson"
-	"github.com/gauss-project/aurorafs/pkg/logging"
-	"github.com/gauss-project/aurorafs/pkg/shed/driver"
 )
 
 var dbDriver = "wiredtiger"

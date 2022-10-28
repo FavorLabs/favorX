@@ -3,7 +3,7 @@ package file
 import (
 	"io"
 
-	"github.com/gauss-project/aurorafs/pkg/boson"
+	"github.com/FavorLabs/favorX/pkg/boson"
 )
 
 const (
@@ -19,7 +19,7 @@ type ChunkPipe struct {
 	cursor int
 }
 
-// Creates a new ChunkPipe
+// NewChunkPipe Creates a new ChunkPipe
 func NewChunkPipe() io.ReadWriteCloser {
 	r, w := io.Pipe()
 	return &ChunkPipe{

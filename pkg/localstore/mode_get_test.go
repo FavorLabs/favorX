@@ -19,9 +19,9 @@ package localstore
 import (
 	"bytes"
 	"context"
+	"github.com/FavorLabs/favorX/pkg/boson"
+	filetest "github.com/FavorLabs/favorX/pkg/file/testing"
 	"github.com/FavorLabs/favorX/pkg/storage"
-	"github.com/gauss-project/aurorafs/pkg/boson"
-	filetest "github.com/gauss-project/aurorafs/pkg/file/testing"
 	"testing"
 	"time"
 )

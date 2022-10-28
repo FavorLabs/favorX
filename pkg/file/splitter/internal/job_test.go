@@ -6,11 +6,11 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/FavorLabs/favorX/pkg/boson"
 	"github.com/FavorLabs/favorX/pkg/file/splitter/internal"
 	test "github.com/FavorLabs/favorX/pkg/file/testing"
 	"github.com/FavorLabs/favorX/pkg/storage"
 	"github.com/FavorLabs/favorX/pkg/storage/mock"
-	"github.com/gauss-project/aurorafs/pkg/boson"
 )
 
 var (

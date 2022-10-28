@@ -4,9 +4,9 @@ import (
 	"os"
 	"testing"
 
-	"github.com/gauss-project/aurorafs/pkg/statestore/leveldb"
-	"github.com/gauss-project/aurorafs/pkg/statestore/test"
-	"github.com/gauss-project/aurorafs/pkg/storage"
+	"github.com/FavorLabs/favorX/pkg/statestore/leveldb"
+	"github.com/FavorLabs/favorX/pkg/statestore/test"
+	"github.com/FavorLabs/favorX/pkg/storage"
 )
 
 func TestPersistentStateStore(t *testing.T) {

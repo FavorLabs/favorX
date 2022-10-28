@@ -2,39 +2,38 @@ package p2p
 
 import (
 	"bytes"
-	"github.com/gauss-project/aurorafs/pkg/p2p"
 	"io"
 )
 
-var _ p2p.Stream = (*virtualStream)(nil)
+var _ Stream = (*StreamVirtual)(nil)
 
-type virtualStream struct {
-	p2p.Stream
+type StreamVirtual struct {
+	Stream
 	ReadPipe  *io.PipeReader
 	WritePipe *io.PipeWriter
 }
 
-func NewVirtualStream(s p2p.Stream) *virtualStream {
-	srv := &virtualStream{
+func NewVirtualStream(s Stream) *StreamVirtual {
+	srv := &StreamVirtual{
 		Stream: s,
 	}
 	srv.ReadPipe, srv.WritePipe = io.Pipe()
 	return srv
 }
 
-func (s *virtualStream) Read(p []byte) (int, error) {
+func (s *StreamVirtual) Read(p []byte) (int, error) {
 	return s.ReadPipe.Read(p)
 }
 
-func (s *virtualStream) Reset() error {
+func (s *StreamVirtual) Reset() error {
 	return nil
 }
 
-func (s *virtualStream) FullClose() error {
+func (s *StreamVirtual) FullClose() error {
 	return nil
 }
 
-func (s *virtualStream) Close() error {
+func (s *StreamVirtual) Close() error {
 	return nil
 }
 

@@ -9,11 +9,11 @@ import (
 	"sync"
 	"time"
 
+	"github.com/FavorLabs/favorX/pkg/boson"
+	"github.com/FavorLabs/favorX/pkg/p2p"
 	"github.com/FavorLabs/favorX/pkg/shed"
-	"github.com/gauss-project/aurorafs/pkg/boson"
-	"github.com/gauss-project/aurorafs/pkg/p2p"
-	"github.com/gauss-project/aurorafs/pkg/shed/driver"
-	"github.com/gauss-project/aurorafs/pkg/topology/model"
+	"github.com/FavorLabs/favorX/pkg/shed/driver"
+	"github.com/FavorLabs/favorX/pkg/topology/model"
 )
 
 const ewmaSmoothing = 0.1
@@ -213,7 +213,7 @@ func NewCollector(db *shed.DB) (*Collector, error) {
 }
 
 // Collector collects various metrics about
-// peers specified be the Aurora.Address.
+// peers specified be the address.Address.
 type Collector struct {
 	counters    sync.Map
 	persistence *shed.StructField

@@ -9,10 +9,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/FavorLabs/favorX/pkg/boson"
+	"github.com/FavorLabs/favorX/pkg/logging"
 	traMock "github.com/FavorLabs/favorX/pkg/settlement/traffic/mock"
 	"github.com/FavorLabs/favorX/pkg/statestore/mock"
-	"github.com/gauss-project/aurorafs/pkg/boson"
-	"github.com/gauss-project/aurorafs/pkg/logging"
 )
 
 var (

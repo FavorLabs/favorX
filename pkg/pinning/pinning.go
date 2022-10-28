@@ -11,10 +11,10 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/FavorLabs/favorX/pkg/boson"
 	"github.com/FavorLabs/favorX/pkg/sctx"
 	"github.com/FavorLabs/favorX/pkg/storage"
 	"github.com/FavorLabs/favorX/pkg/traversal"
-	"github.com/gauss-project/aurorafs/pkg/boson"
 	"github.com/hashicorp/go-multierror"
 )
 

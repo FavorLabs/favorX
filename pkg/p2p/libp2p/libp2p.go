@@ -12,23 +12,23 @@ import (
 	"time"
 
 	fx "github.com/FavorLabs/favorX"
+	"github.com/FavorLabs/favorX/pkg/address"
 	"github.com/FavorLabs/favorX/pkg/addressbook"
+	"github.com/FavorLabs/favorX/pkg/boson"
 	beecrypto "github.com/FavorLabs/favorX/pkg/crypto"
+	"github.com/FavorLabs/favorX/pkg/logging"
+	"github.com/FavorLabs/favorX/pkg/p2p"
 	"github.com/FavorLabs/favorX/pkg/p2p/libp2p/internal/blocklist"
 	"github.com/FavorLabs/favorX/pkg/p2p/libp2p/internal/breaker"
 	"github.com/FavorLabs/favorX/pkg/p2p/libp2p/internal/handshake"
 	"github.com/FavorLabs/favorX/pkg/p2p/libp2p/internal/reacher"
+	"github.com/FavorLabs/favorX/pkg/p2p/protobuf"
 	"github.com/FavorLabs/favorX/pkg/routetab"
+	"github.com/FavorLabs/favorX/pkg/routetab/pb"
 	"github.com/FavorLabs/favorX/pkg/storage"
-	"github.com/gauss-project/aurorafs/pkg/aurora"
-	"github.com/gauss-project/aurorafs/pkg/boson"
-	"github.com/gauss-project/aurorafs/pkg/logging"
-	"github.com/gauss-project/aurorafs/pkg/p2p"
-	"github.com/gauss-project/aurorafs/pkg/p2p/protobuf"
-	"github.com/gauss-project/aurorafs/pkg/routetab/pb"
-	"github.com/gauss-project/aurorafs/pkg/topology/bootnode"
-	"github.com/gauss-project/aurorafs/pkg/topology/lightnode"
-	"github.com/gauss-project/aurorafs/pkg/tracing"
+	"github.com/FavorLabs/favorX/pkg/topology/bootnode"
+	"github.com/FavorLabs/favorX/pkg/topology/lightnode"
+	"github.com/FavorLabs/favorX/pkg/tracing"
 	"github.com/gogf/gf/v2/os/gtimer"
 	"github.com/hashicorp/go-multierror"
 	"github.com/libp2p/go-libp2p"
@@ -43,7 +43,7 @@ import (
 	rcmgr "github.com/libp2p/go-libp2p-resource-manager"
 	basichost "github.com/libp2p/go-libp2p/p2p/host/basic"
 	"github.com/libp2p/go-libp2p/p2p/net/connmgr"
-	nat "github.com/libp2p/go-libp2p/p2p/net/nat"
+	"github.com/libp2p/go-libp2p/p2p/net/nat"
 	lp2pswarm "github.com/libp2p/go-libp2p/p2p/net/swarm"
 	libp2pping "github.com/libp2p/go-libp2p/p2p/protocol/ping"
 	libp2pquic "github.com/libp2p/go-libp2p/p2p/transport/quic"
@@ -89,7 +89,7 @@ type Service struct {
 	protocolsmu       sync.RWMutex
 	route             routetab.RelayStream
 	self              boson.Address
-	nodeMode          aurora.Model
+	nodeMode          address.Model
 	reacher           p2p.Reacher
 	networkStatus     atomic.Int32
 }
@@ -99,7 +99,7 @@ type Options struct {
 	NATAddr        string
 	EnableWS       bool
 	EnableQUIC     bool
-	NodeMode       aurora.Model
+	NodeMode       address.Model
 	LightNodeLimit int
 	KadBinMaxPeers int
 	WelcomeMessage string
@@ -308,7 +308,7 @@ func New(ctx context.Context, signer beecrypto.Signer, networkID uint64, overlay
 	return s, nil
 }
 
-func (s *Service) ApplyRoute(self boson.Address, rt routetab.RelayStream, mode aurora.Model) {
+func (s *Service) ApplyRoute(self boson.Address, rt routetab.RelayStream, mode address.Model) {
 	s.route = rt
 	s.self = self
 	s.nodeMode = mode

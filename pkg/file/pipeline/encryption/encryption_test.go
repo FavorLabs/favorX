@@ -5,10 +5,10 @@ import (
 	"encoding/binary"
 	"testing"
 
-	mockenc "github.com/gauss-project/aurorafs/pkg/encryption/mock"
-	"github.com/gauss-project/aurorafs/pkg/file/pipeline"
-	"github.com/gauss-project/aurorafs/pkg/file/pipeline/encryption"
-	mock "github.com/gauss-project/aurorafs/pkg/file/pipeline/mock"
+	mockenc "github.com/FavorLabs/favorX/pkg/encryption/mock"
+	"github.com/FavorLabs/favorX/pkg/file/pipeline"
+	"github.com/FavorLabs/favorX/pkg/file/pipeline/encryption"
+	"github.com/FavorLabs/favorX/pkg/file/pipeline/mock"
 )
 
 var (

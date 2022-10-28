@@ -4,20 +4,21 @@ import (
 	"bytes"
 	"context"
 	"crypto/ecdsa"
+	"github.com/FavorLabs/favorX/pkg/address"
 	"io"
 	"sort"
 	"testing"
 	"time"
 
 	"github.com/FavorLabs/favorX/pkg/addressbook"
+	"github.com/FavorLabs/favorX/pkg/boson"
 	"github.com/FavorLabs/favorX/pkg/crypto"
+	"github.com/FavorLabs/favorX/pkg/logging"
+	"github.com/FavorLabs/favorX/pkg/p2p"
 	"github.com/FavorLabs/favorX/pkg/p2p/libp2p"
 	"github.com/FavorLabs/favorX/pkg/statestore/mock"
-	"github.com/gauss-project/aurorafs/pkg/boson"
-	"github.com/gauss-project/aurorafs/pkg/logging"
-	"github.com/gauss-project/aurorafs/pkg/p2p"
-	"github.com/gauss-project/aurorafs/pkg/topology/bootnode"
-	"github.com/gauss-project/aurorafs/pkg/topology/lightnode"
+	"github.com/FavorLabs/favorX/pkg/topology/bootnode"
+	"github.com/FavorLabs/favorX/pkg/topology/lightnode"
 	"github.com/multiformats/go-multiaddr"
 )
 
@@ -36,12 +37,12 @@ type libp2pServiceOpts struct {
 func newService(t *testing.T, networkID uint64, o libp2pServiceOpts) (s *libp2p.Service, overlay boson.Address) {
 	t.Helper()
 
-	auroraKey, err := crypto.GenerateSecp256k1Key()
+	k, err := crypto.GenerateSecp256k1Key()
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	overlay, err = crypto.NewOverlayAddress(auroraKey.PublicKey, networkID)
+	overlay, err = crypto.NewOverlayAddress(k.PublicKey, networkID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -74,9 +75,12 @@ func newService(t *testing.T, networkID uint64, o libp2pServiceOpts) (s *libp2p.
 	if o.bootNodes == nil {
 		o.bootNodes = bootnode.NewContainer(overlay)
 	}
+	if o.libp2pOpts.NodeMode.Bv == nil {
+		o.libp2pOpts.NodeMode = address.NewModel()
+	}
 	opts := o.libp2pOpts
 
-	s, err = libp2p.New(ctx, crypto.NewDefaultSigner(auroraKey), networkID, overlay, addr, o.Addressbook, statestore, o.lightNodes, o.bootNodes, o.Logger, nil, opts)
+	s, err = libp2p.New(ctx, crypto.NewDefaultSigner(k), networkID, overlay, addr, o.Addressbook, statestore, o.lightNodes, o.bootNodes, o.Logger, nil, opts)
 	if err != nil {
 		t.Fatal(err)
 	}

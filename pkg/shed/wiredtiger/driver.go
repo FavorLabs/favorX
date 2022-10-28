@@ -35,7 +35,7 @@ import (
 	"path/filepath"
 	"unsafe"
 
-	"github.com/gauss-project/aurorafs/pkg/shed/driver"
+	"github.com/FavorLabs/favorX/pkg/shed/driver"
 )
 
 // Driver is exported to make the driver directly accessible.

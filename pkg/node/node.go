@@ -13,9 +13,11 @@ import (
 	"time"
 
 	"github.com/FavorLabs/favorX/pkg/accounting"
+	"github.com/FavorLabs/favorX/pkg/address"
 	"github.com/FavorLabs/favorX/pkg/addressbook"
 	"github.com/FavorLabs/favorX/pkg/api"
 	"github.com/FavorLabs/favorX/pkg/auth"
+	"github.com/FavorLabs/favorX/pkg/boson"
 	"github.com/FavorLabs/favorX/pkg/chunkinfo"
 	"github.com/FavorLabs/favorX/pkg/crypto"
 	"github.com/FavorLabs/favorX/pkg/crypto/cert"
@@ -23,27 +25,25 @@ import (
 	"github.com/FavorLabs/favorX/pkg/fileinfo"
 	"github.com/FavorLabs/favorX/pkg/hive2"
 	"github.com/FavorLabs/favorX/pkg/localstore"
+	"github.com/FavorLabs/favorX/pkg/logging"
 	"github.com/FavorLabs/favorX/pkg/multicast"
 	"github.com/FavorLabs/favorX/pkg/multicast/model"
 	"github.com/FavorLabs/favorX/pkg/netrelay"
 	"github.com/FavorLabs/favorX/pkg/netstore"
 	"github.com/FavorLabs/favorX/pkg/p2p/libp2p"
+	"github.com/FavorLabs/favorX/pkg/pingpong"
 	"github.com/FavorLabs/favorX/pkg/pinning"
+	"github.com/FavorLabs/favorX/pkg/resolver/multiresolver"
 	"github.com/FavorLabs/favorX/pkg/retrieval"
 	"github.com/FavorLabs/favorX/pkg/routetab"
+	"github.com/FavorLabs/favorX/pkg/rpc"
 	"github.com/FavorLabs/favorX/pkg/shed"
+	"github.com/FavorLabs/favorX/pkg/subscribe"
+	"github.com/FavorLabs/favorX/pkg/topology/bootnode"
 	"github.com/FavorLabs/favorX/pkg/topology/kademlia"
+	"github.com/FavorLabs/favorX/pkg/topology/lightnode"
+	"github.com/FavorLabs/favorX/pkg/tracing"
 	"github.com/FavorLabs/favorX/pkg/traversal"
-	"github.com/gauss-project/aurorafs/pkg/aurora"
-	"github.com/gauss-project/aurorafs/pkg/boson"
-	"github.com/gauss-project/aurorafs/pkg/logging"
-	"github.com/gauss-project/aurorafs/pkg/pingpong"
-	"github.com/gauss-project/aurorafs/pkg/resolver/multiresolver"
-	"github.com/gauss-project/aurorafs/pkg/rpc"
-	"github.com/gauss-project/aurorafs/pkg/subscribe"
-	"github.com/gauss-project/aurorafs/pkg/topology/bootnode"
-	"github.com/gauss-project/aurorafs/pkg/topology/lightnode"
-	"github.com/gauss-project/aurorafs/pkg/tracing"
 	"github.com/gogf/gf/v2/util/gconv"
 	crypto2 "github.com/libp2p/go-libp2p-core/crypto"
 	ma "github.com/multiformats/go-multiaddr"
@@ -108,7 +108,7 @@ type Options struct {
 	TlsKeyFile             string
 }
 
-func NewNode(nodeMode aurora.Model, addr string, bosonAddress boson.Address, publicKey ecdsa.PublicKey, signer crypto.Signer, networkID uint64, logger logging.Logger, libp2pPrivateKey crypto2.PrivKey, o Options) (b *Favor, err error) {
+func NewNode(nodeMode address.Model, addr string, bosonAddress boson.Address, publicKey ecdsa.PublicKey, signer crypto.Signer, networkID uint64, logger logging.Logger, libp2pPrivateKey crypto2.PrivKey, o Options) (b *Favor, err error) {
 	tracer, tracerCloser, err := tracing.NewTracer(&tracing.Options{
 		Enabled:     o.TracingEnabled,
 		Endpoint:    o.TracingEndpoint,

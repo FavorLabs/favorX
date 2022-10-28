@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/gauss-project/aurorafs/pkg/jsonhttp/jsonhttptest"
+	"github.com/FavorLabs/favorX/pkg/jsonhttp/jsonhttptest"
 )
 
 func TestTopologyOK(t *testing.T) {

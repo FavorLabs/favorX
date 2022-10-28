@@ -11,13 +11,13 @@ import (
 	"sync"
 	"time"
 
+	"github.com/FavorLabs/favorX/pkg/crypto"
+	"github.com/FavorLabs/favorX/pkg/logging"
 	"github.com/FavorLabs/favorX/pkg/settlement/chain"
 	"github.com/FavorLabs/favorX/pkg/storage"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/gauss-project/aurorafs/pkg/crypto"
-	"github.com/gauss-project/aurorafs/pkg/logging"
 	"golang.org/x/net/context"
 )
 

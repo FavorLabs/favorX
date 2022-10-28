@@ -9,25 +9,25 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gauss-project/aurorafs/pkg/bitvector"
-	"github.com/gauss-project/aurorafs/pkg/boson"
-	"github.com/gauss-project/aurorafs/pkg/boson/test"
-	"github.com/gauss-project/aurorafs/pkg/chunkinfo/pb"
-	"github.com/gauss-project/aurorafs/pkg/file/loadsave"
-	"github.com/gauss-project/aurorafs/pkg/file/pipeline"
-	"github.com/gauss-project/aurorafs/pkg/file/pipeline/builder"
-	"github.com/gauss-project/aurorafs/pkg/logging"
-	"github.com/gauss-project/aurorafs/pkg/manifest"
-	"github.com/gauss-project/aurorafs/pkg/p2p"
-	"github.com/gauss-project/aurorafs/pkg/p2p/protobuf"
-	"github.com/gauss-project/aurorafs/pkg/p2p/streamtest"
-	rmock "github.com/gauss-project/aurorafs/pkg/routetab/mock"
-	omock "github.com/gauss-project/aurorafs/pkg/settlement/chain/oracle/mock"
-	smock "github.com/gauss-project/aurorafs/pkg/statestore/mock"
-	"github.com/gauss-project/aurorafs/pkg/storage"
-	"github.com/gauss-project/aurorafs/pkg/storage/mock"
-	"github.com/gauss-project/aurorafs/pkg/subscribe"
-	"github.com/gauss-project/aurorafs/pkg/traversal"
+	"github.com/FavorLabs/favorX/pkg/bitvector"
+	"github.com/FavorLabs/favorX/pkg/boson"
+	"github.com/FavorLabs/favorX/pkg/boson/test"
+	"github.com/FavorLabs/favorX/pkg/chunkinfo/pb"
+	"github.com/FavorLabs/favorX/pkg/file/loadsave"
+	"github.com/FavorLabs/favorX/pkg/file/pipeline"
+	"github.com/FavorLabs/favorX/pkg/file/pipeline/builder"
+	"github.com/FavorLabs/favorX/pkg/logging"
+	"github.com/FavorLabs/favorX/pkg/manifest"
+	"github.com/FavorLabs/favorX/pkg/p2p"
+	"github.com/FavorLabs/favorX/pkg/p2p/protobuf"
+	"github.com/FavorLabs/favorX/pkg/p2p/streamtest"
+	rmock "github.com/FavorLabs/favorX/pkg/routetab/mock"
+	omock "github.com/FavorLabs/favorX/pkg/settlement/chain/oracle/mock"
+	smock "github.com/FavorLabs/favorX/pkg/statestore/mock"
+	"github.com/FavorLabs/favorX/pkg/storage"
+	"github.com/FavorLabs/favorX/pkg/storage/mock"
+	"github.com/FavorLabs/favorX/pkg/subscribe"
+	"github.com/FavorLabs/favorX/pkg/traversal"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -49,7 +49,7 @@ func TestInit(t *testing.T) {
 
 	server := mockChunkInfo(s, recorder, serverAddress)
 
-	if server.Discover(context.Background(), nil, rootCid) {
+	if server.Discover(context.Background(), nil, rootCid, true) {
 		t.Fatalf(" want false")
 	}
 }

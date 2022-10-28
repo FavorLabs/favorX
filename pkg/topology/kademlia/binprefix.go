@@ -1,7 +1,7 @@
 package kademlia
 
 import (
-	"github.com/gauss-project/aurorafs/pkg/boson"
+	"github.com/FavorLabs/favorX/pkg/boson"
 	"math"
 	"math/bits"
 )

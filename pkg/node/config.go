@@ -4,8 +4,8 @@ import (
 	"errors"
 	"time"
 
-	"github.com/gauss-project/aurorafs/pkg/logging"
-	"github.com/gauss-project/aurorafs/pkg/rpc"
+	"github.com/FavorLabs/favorX/pkg/logging"
+	"github.com/FavorLabs/favorX/pkg/rpc"
 )
 
 var (

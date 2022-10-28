@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gauss-project/aurorafs/pkg/boson"
-	// "github.com/gauss-project/aurorafs/pkg/retrieval/aco"
+	"github.com/FavorLabs/favorX/pkg/boson"
+	// "github.com/FavorLabs/favorX/pkg/retrieval/aco"
 )
 
 func TestUsingCount(t *testing.T) {

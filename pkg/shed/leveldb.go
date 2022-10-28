@@ -1,6 +1,6 @@
 package shed
 
-import "github.com/gauss-project/aurorafs/pkg/shed/leveldb"
+import "github.com/FavorLabs/favorX/pkg/shed/leveldb"
 
 const LEVELDB = "leveldb"
 

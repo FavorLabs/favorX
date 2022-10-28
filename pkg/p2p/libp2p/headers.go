@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/FavorLabs/favorX/pkg/boson"
+	"github.com/FavorLabs/favorX/pkg/p2p"
 	hpb "github.com/FavorLabs/favorX/pkg/p2p/libp2p/internal/headers/pb"
-	"github.com/gauss-project/aurorafs/pkg/boson"
-	"github.com/gauss-project/aurorafs/pkg/p2p"
-	"github.com/gauss-project/aurorafs/pkg/p2p/protobuf"
+	"github.com/FavorLabs/favorX/pkg/p2p/protobuf"
 )
 
 var sendHeadersTimeout = 2 * time.Second

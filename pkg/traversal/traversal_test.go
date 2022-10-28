@@ -15,19 +15,19 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gauss-project/aurorafs/pkg/boson"
-	"github.com/gauss-project/aurorafs/pkg/file/loadsave"
-	"github.com/gauss-project/aurorafs/pkg/file/pipeline"
-	"github.com/gauss-project/aurorafs/pkg/file/pipeline/builder"
-	"github.com/gauss-project/aurorafs/pkg/manifest"
-	"github.com/gauss-project/aurorafs/pkg/storage"
-	"github.com/gauss-project/aurorafs/pkg/storage/mock"
-	"github.com/gauss-project/aurorafs/pkg/traversal"
+	"github.com/FavorLabs/favorX/pkg/boson"
+	"github.com/FavorLabs/favorX/pkg/file/loadsave"
+	"github.com/FavorLabs/favorX/pkg/file/pipeline"
+	"github.com/FavorLabs/favorX/pkg/file/pipeline/builder"
+	"github.com/FavorLabs/favorX/pkg/manifest"
+	"github.com/FavorLabs/favorX/pkg/storage"
+	"github.com/FavorLabs/favorX/pkg/storage/mock"
+	"github.com/FavorLabs/favorX/pkg/traversal"
 )
 
 var (
 	dataCorpus       = []byte("hello test world") // fixed, 16 bytes
-	defaultMediaType = "aurora-manifest-mantaray"
+	defaultMediaType = "manifest-mantaray"
 	enableLargeTest  = false
 )
 
@@ -321,7 +321,7 @@ func TestTraversalFiles(t *testing.T) {
 			rootMtdt := map[string]string{
 				manifest.WebsiteIndexDocumentSuffixKey: filename,
 			}
-			err = fManifest.Add(ctx, "/", manifest.NewEntry(boson.ZeroAddress, rootMtdt))
+			err = fManifest.Add(ctx, "/", manifest.NewEntry(boson.ZeroAddress, rootMtdt, 0))
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -330,7 +330,7 @@ func TestTraversalFiles(t *testing.T) {
 				manifest.EntryMetadataFilenameKey:    filename,
 				manifest.EntryMetadataContentTypeKey: tc.contentType,
 			}
-			err = fManifest.Add(ctx, filename, manifest.NewEntry(fr, fileMtdt))
+			err = fManifest.Add(ctx, filename, manifest.NewEntry(fr, fileMtdt, 0))
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -485,7 +485,7 @@ func TestTraversalManifest(t *testing.T) {
 				}
 				filePath := path.Join(f.dir, fileName)
 
-				err = dirManifest.Add(ctx, filePath, manifest.NewEntry(fr, nil))
+				err = dirManifest.Add(ctx, filePath, manifest.NewEntry(fr, nil, 0))
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -618,7 +618,7 @@ func TestGetPyramid(t *testing.T) {
 				}
 				filePath := path.Join(f.dir, fileName)
 
-				err = dirManifest.Add(ctx, filePath, manifest.NewEntry(fr, nil))
+				err = dirManifest.Add(ctx, filePath, manifest.NewEntry(fr, nil, 0))
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -729,7 +729,7 @@ func TestGetChunkHashes(t *testing.T) {
 				}
 				filePath := path.Join(f.dir, fileName)
 
-				err = dirManifest.Add(ctx, filePath, manifest.NewEntry(fr, nil))
+				err = dirManifest.Add(ctx, filePath, manifest.NewEntry(fr, nil, 0))
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -761,7 +761,7 @@ func TestGetChunkHashes(t *testing.T) {
 			data := bytes.NewBuffer([]byte{})
 			for i, f := range filesHashes {
 				for j, h := range f {
-					ch, err := storerMockA.Get(ctx, storage.ModeGetRequest, boson.NewAddress(h))
+					ch, err := storerMockA.Get(ctx, storage.ModeGetRequest, boson.NewAddress(h), 0)
 					if err != nil {
 						t.Fatalf("%d chunks: %v\n", j, err)
 					}
@@ -833,7 +833,7 @@ func TestGetChunkHashesForLarge(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = dirManifest.Add(ctx, "largefile", manifest.NewEntry(fr, nil))
+	err = dirManifest.Add(ctx, "largefile", manifest.NewEntry(fr, nil, 0))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -996,7 +996,7 @@ func TestGetChunkHashesForInvalidPyramid(t *testing.T) {
 					if err != nil {
 						t.Fatal(err)
 					}
-					_, err = mockStore.Get(ctx, storage.ModeGetRequest, boson.NewAddress(addr))
+					_, err = mockStore.Get(ctx, storage.ModeGetRequest, boson.NewAddress(addr), 0)
 					if !errors.Is(err, storage.ErrNotFound) {
 						t.Fatal(err)
 					}

@@ -3,10 +3,10 @@ package routetab_test
 import (
 	"bytes"
 	"errors"
+	"github.com/FavorLabs/favorX/pkg/boson/test"
 	"github.com/FavorLabs/favorX/pkg/routetab"
+	"github.com/FavorLabs/favorX/pkg/routetab/pb"
 	mockstate "github.com/FavorLabs/favorX/pkg/statestore/mock"
-	"github.com/gauss-project/aurorafs/pkg/boson/test"
-	"github.com/gauss-project/aurorafs/pkg/routetab/pb"
 	"testing"
 	"time"
 )

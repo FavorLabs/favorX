@@ -5,16 +5,15 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/FavorLabs/favorX/pkg/boson"
 	"github.com/FavorLabs/favorX/pkg/file"
-
 	"github.com/FavorLabs/manifest/simple"
-	"github.com/gauss-project/aurorafs/pkg/boson"
 )
 
 const (
 	// ManifestSimpleContentType represents content type used for noting that
 	// specific file should be processed as 'simple' manifest
-	ManifestSimpleContentType = "application/aurora-manifest-simple+json"
+	ManifestSimpleContentType = "application/manifest-simple+json"
 )
 
 type simpleManifest struct {

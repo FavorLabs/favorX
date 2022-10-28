@@ -26,10 +26,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/FavorLabs/favorX/pkg/boson"
 	"github.com/FavorLabs/favorX/pkg/sctx"
+	"github.com/FavorLabs/favorX/pkg/shed/driver"
 	"github.com/FavorLabs/favorX/pkg/storage"
-	"github.com/gauss-project/aurorafs/pkg/boson"
-	"github.com/gauss-project/aurorafs/pkg/shed/driver"
 )
 
 // TestModePutRequest validates ModePutRequest index values on the provided DB.

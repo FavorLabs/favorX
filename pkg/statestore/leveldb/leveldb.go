@@ -6,10 +6,10 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/FavorLabs/favorX/pkg/logging"
+	"github.com/FavorLabs/favorX/pkg/shed/driver"
+	"github.com/FavorLabs/favorX/pkg/shed/leveldb"
 	"github.com/FavorLabs/favorX/pkg/storage"
-	"github.com/gauss-project/aurorafs/pkg/logging"
-	"github.com/gauss-project/aurorafs/pkg/shed/driver"
-	"github.com/gauss-project/aurorafs/pkg/shed/leveldb"
 	ldberr "github.com/syndtr/goleveldb/leveldb/errors"
 )
 
@@ -54,7 +54,7 @@ func NewStateStore(path string, l logging.Logger) (storage.StateStorer, error) {
 		// if err != nil {
 		// 	return nil, fmt.Errorf("statestore recovery: %w", err)
 		// }
-		// l.Warning("statestore recovery ok! you are kindly request to inform us about the steps that preceded the last aurora shutdown.")
+		// l.Warning("statestore recovery ok! you are kindly request to inform us about the steps that preceded the last node shutdown.")
 	}
 
 	s := &store{

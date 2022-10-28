@@ -8,13 +8,13 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gauss-project/aurorafs/pkg/boson"
-	"github.com/gauss-project/aurorafs/pkg/file"
-	"github.com/gauss-project/aurorafs/pkg/file/joiner"
-	"github.com/gauss-project/aurorafs/pkg/file/pipeline/builder"
-	test "github.com/gauss-project/aurorafs/pkg/file/testing"
-	"github.com/gauss-project/aurorafs/pkg/storage"
-	"github.com/gauss-project/aurorafs/pkg/storage/mock"
+	"github.com/FavorLabs/favorX/pkg/boson"
+	"github.com/FavorLabs/favorX/pkg/file"
+	"github.com/FavorLabs/favorX/pkg/file/joiner"
+	"github.com/FavorLabs/favorX/pkg/file/pipeline/builder"
+	test "github.com/FavorLabs/favorX/pkg/file/testing"
+	"github.com/FavorLabs/favorX/pkg/storage"
+	"github.com/FavorLabs/favorX/pkg/storage/mock"
 )
 
 var (
@@ -54,7 +54,7 @@ func testSplitThenJoin(t *testing.T) {
 	}
 
 	// then join
-	r, l, err := joiner.New(ctx, store, storage.ModeGetRequest, resultAddress)
+	r, l, err := joiner.New(ctx, store, storage.ModeGetRequest, resultAddress, 0)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -1,8 +1,8 @@
 package hive2
 
 import (
-	"github.com/gauss-project/aurorafs/pkg/boson"
-	"github.com/gauss-project/aurorafs/pkg/p2p/streamtest"
+	"github.com/FavorLabs/favorX/pkg/boson"
+	"github.com/FavorLabs/favorX/pkg/p2p/streamtest"
 )
 
 var LookupDistances = lookupDistances

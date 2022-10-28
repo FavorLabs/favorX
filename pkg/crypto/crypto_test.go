@@ -5,7 +5,7 @@ import (
 	"encoding/hex"
 	"testing"
 
-	"github.com/gauss-project/aurorafs/pkg/crypto"
+	"github.com/FavorLabs/favorX/pkg/crypto"
 )
 
 func TestGenerateSecp256k1Key(t *testing.T) {

@@ -6,32 +6,31 @@ import (
 	"crypto/ecdsa"
 	"errors"
 	"fmt"
-	"github.com/gauss-project/aurorafs/pkg/subscribe"
-	"io"
-	"io/ioutil"
-	"math/big"
-	"testing"
-
+	"github.com/FavorLabs/favorX/pkg/address"
 	"github.com/FavorLabs/favorX/pkg/addressbook"
+	"github.com/FavorLabs/favorX/pkg/boson"
 	"github.com/FavorLabs/favorX/pkg/crypto"
 	"github.com/FavorLabs/favorX/pkg/crypto/eip712"
 	signermock "github.com/FavorLabs/favorX/pkg/crypto/mock"
+	"github.com/FavorLabs/favorX/pkg/logging"
 	"github.com/FavorLabs/favorX/pkg/p2p/libp2p"
+	mockp2p "github.com/FavorLabs/favorX/pkg/p2p/mock"
+	"github.com/FavorLabs/favorX/pkg/settlement/chain"
+	chainTraffic "github.com/FavorLabs/favorX/pkg/settlement/chain/traffic"
+	chainTrafficMock "github.com/FavorLabs/favorX/pkg/settlement/chain/traffic/mock"
 	chequePkg "github.com/FavorLabs/favorX/pkg/settlement/traffic/cheque"
 	mockchequestore "github.com/FavorLabs/favorX/pkg/settlement/traffic/cheque/mock"
 	"github.com/FavorLabs/favorX/pkg/settlement/traffic/trafficprotocol"
 	"github.com/FavorLabs/favorX/pkg/statestore/mock"
 	"github.com/FavorLabs/favorX/pkg/storage"
+	"github.com/FavorLabs/favorX/pkg/subscribe"
+	"github.com/FavorLabs/favorX/pkg/topology/bootnode"
+	"github.com/FavorLabs/favorX/pkg/topology/lightnode"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/gauss-project/aurorafs/pkg/aurora"
-	"github.com/gauss-project/aurorafs/pkg/boson"
-	"github.com/gauss-project/aurorafs/pkg/logging"
-	mockp2p "github.com/gauss-project/aurorafs/pkg/p2p/mock"
-	"github.com/gauss-project/aurorafs/pkg/settlement/chain"
-	chainTraffic "github.com/gauss-project/aurorafs/pkg/settlement/chain/traffic"
-	chainTrafficMock "github.com/gauss-project/aurorafs/pkg/settlement/chain/traffic/mock"
-	"github.com/gauss-project/aurorafs/pkg/topology/bootnode"
-	"github.com/gauss-project/aurorafs/pkg/topology/lightnode"
+	"io"
+	"io/ioutil"
+	"math/big"
+	"testing"
 )
 
 type libp2pServiceOpts struct {
@@ -474,7 +473,7 @@ func newTrafficTest(t *testing.T, store storage.StateStorer, logger logging.Logg
 	addressBook Addressbook, chequeSigner chequePkg.ChequeSigner, chainID int64) *Service {
 
 	// protocol := trafficprotocol.New(streamer, logger)
-	p2pServer, _ := newP2pService(t, 1, libp2pServiceOpts{libp2pOpts: libp2p.Options{NodeMode: aurora.NewModel()}})
+	p2pServer, _ := newP2pService(t, 1, libp2pServiceOpts{libp2pOpts: libp2p.Options{NodeMode: address.NewModel()}})
 
 	trafficService := New(
 		logger,

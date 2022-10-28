@@ -2,10 +2,10 @@ package debugapi
 
 import (
 	"errors"
+	"github.com/FavorLabs/favorX/pkg/address"
+	"github.com/FavorLabs/favorX/pkg/boson"
+	"github.com/FavorLabs/favorX/pkg/jsonhttp"
 	"github.com/FavorLabs/favorX/pkg/routetab"
-	"github.com/gauss-project/aurorafs/pkg/aurora"
-	"github.com/gauss-project/aurorafs/pkg/boson"
-	"github.com/gauss-project/aurorafs/pkg/jsonhttp"
 	"github.com/gorilla/mux"
 	"net/http"
 	"time"
@@ -16,7 +16,7 @@ type routeResponse struct {
 }
 
 type addressResponse struct {
-	Address *aurora.Address `json:"address"`
+	Address *address.Address `json:"address"`
 }
 
 func (s *Service) findRouteHandel(w http.ResponseWriter, r *http.Request) {
@@ -26,13 +26,13 @@ func (s *Service) findRouteHandel(w http.ResponseWriter, r *http.Request) {
 	span, logger, ctx := s.tracer.StartSpanFromContext(ctx, "route-api", s.logger)
 	defer span.Finish()
 
-	address, err := boson.ParseHexAddress(peerID)
+	addr, err := boson.ParseHexAddress(peerID)
 	if err != nil {
 		logger.Debugf("route-api: parse peer address %s: %v", peerID, err)
 		jsonhttp.BadRequest(w, "invalid peer address")
 		return
 	}
-	route, err := s.routetab.FindRoute(ctx, address, time.Second*5)
+	route, err := s.routetab.FindRoute(ctx, addr, time.Second*5)
 	if err != nil {
 		logger.Debugf("route-api: findroute %s: %v", peerID, err)
 		jsonhttp.BadRequest(w, err)
@@ -52,13 +52,13 @@ func (s *Service) getRouteHandel(w http.ResponseWriter, r *http.Request) {
 	span, logger, ctx := s.tracer.StartSpanFromContext(ctx, "route-api", s.logger)
 	defer span.Finish()
 
-	address, err := boson.ParseHexAddress(peerID)
+	addr, err := boson.ParseHexAddress(peerID)
 	if err != nil {
 		logger.Debugf("route-api: parse peer address %s: %v", peerID, err)
 		jsonhttp.BadRequest(w, "invalid peer address")
 		return
 	}
-	route, err := s.routetab.GetRoute(ctx, address)
+	route, err := s.routetab.GetRoute(ctx, addr)
 	if err != nil {
 		if errors.Is(err, routetab.ErrNotFound) {
 			jsonhttp.NotFound(w, err)
@@ -82,13 +82,13 @@ func (s *Service) delRouteHandel(w http.ResponseWriter, r *http.Request) {
 	span, logger, ctx := s.tracer.StartSpanFromContext(ctx, "route-api", s.logger)
 	defer span.Finish()
 
-	address, err := boson.ParseHexAddress(peerID)
+	addr, err := boson.ParseHexAddress(peerID)
 	if err != nil {
 		logger.Debugf("route-api: parse peer address %s: %v", peerID, err)
 		jsonhttp.BadRequest(w, "invalid peer address")
 		return
 	}
-	err = s.routetab.DelRoute(ctx, address)
+	err = s.routetab.DelRoute(ctx, addr)
 	if err != nil {
 		if errors.Is(err, routetab.ErrNotFound) {
 			jsonhttp.NotFound(w, err)
@@ -110,13 +110,13 @@ func (s *Service) findUnderlayHandel(w http.ResponseWriter, r *http.Request) {
 	span, logger, ctx := s.tracer.StartSpanFromContext(ctx, "route-api", s.logger)
 	defer span.Finish()
 
-	address, err := boson.ParseHexAddress(peerID)
+	overlay, err := boson.ParseHexAddress(peerID)
 	if err != nil {
 		logger.Debugf("route-api: parse peer address %s: %v", peerID, err)
 		jsonhttp.BadRequest(w, "invalid peer address")
 		return
 	}
-	addr, err := s.routetab.FindUnderlay(ctx, address)
+	addr, err := s.routetab.FindUnderlay(ctx, overlay)
 	if err != nil {
 		if errors.Is(err, routetab.ErrNotFound) {
 			jsonhttp.NotFound(w, err)

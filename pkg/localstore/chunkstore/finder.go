@@ -1,7 +1,7 @@
 package chunkstore
 
 import (
-	"github.com/gauss-project/aurorafs/pkg/boson"
+	"github.com/FavorLabs/favorX/pkg/boson"
 )
 
 func (cs *chunkStore) StartFinder(rootCid boson.Address) {

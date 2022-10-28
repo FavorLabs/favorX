@@ -5,7 +5,7 @@ import (
 	"time"
 
 	favor "github.com/FavorLabs/favorX"
-	"github.com/gauss-project/aurorafs/pkg/logging"
+	"github.com/FavorLabs/favorX/pkg/logging"
 )
 
 const (

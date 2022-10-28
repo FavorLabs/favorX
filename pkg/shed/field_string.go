@@ -20,7 +20,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/gauss-project/aurorafs/pkg/shed/driver"
+	"github.com/FavorLabs/favorX/pkg/shed/driver"
 )
 
 // StringField is the most simple field implementation

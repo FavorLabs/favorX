@@ -4,7 +4,7 @@ import (
 	"encoding/binary"
 	"math/rand"
 
-	"github.com/gauss-project/aurorafs/pkg/boson"
+	"github.com/FavorLabs/favorX/pkg/boson"
 )
 
 // GenerateTestRandomFileChunk generates one single chunk with arbitrary content and address

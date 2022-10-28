@@ -4,8 +4,8 @@ import (
 	"crypto/ecdsa"
 	"hash"
 
+	"github.com/FavorLabs/favorX/pkg/crypto"
 	"github.com/FavorLabs/favorX/pkg/encryption"
-	"github.com/gauss-project/aurorafs/pkg/crypto"
 )
 
 // New constructs an encryption interface (the modified blockcipher) with a base key derived from

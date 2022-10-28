@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/FavorLabs/favorX/pkg/boson"
 	"github.com/FavorLabs/favorX/pkg/encryption"
 	"github.com/FavorLabs/favorX/pkg/file/pipeline"
 	"github.com/FavorLabs/favorX/pkg/file/pipeline/bmt"
@@ -13,7 +14,6 @@ import (
 	"github.com/FavorLabs/favorX/pkg/file/pipeline/hashtrie"
 	"github.com/FavorLabs/favorX/pkg/file/pipeline/store"
 	"github.com/FavorLabs/favorX/pkg/storage"
-	"github.com/gauss-project/aurorafs/pkg/boson"
 )
 
 // NewPipelineBuilder returns the appropriate pipeline according to the specified parameters

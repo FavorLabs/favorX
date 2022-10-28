@@ -8,9 +8,9 @@ import (
 	"net/http"
 	"path/filepath"
 
-	"github.com/gauss-project/aurorafs/pkg/crypto"
-	"github.com/gauss-project/aurorafs/pkg/jsonhttp"
-	"github.com/gauss-project/aurorafs/pkg/keystore/file"
+	"github.com/FavorLabs/favorX/pkg/crypto"
+	"github.com/FavorLabs/favorX/pkg/jsonhttp"
+	"github.com/FavorLabs/favorX/pkg/keystore/file"
 	"github.com/gogf/gf/v2/encoding/gjson"
 )
 

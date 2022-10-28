@@ -15,10 +15,10 @@ type (
 )
 
 var (
-//ErrCantBalance         = errCantBalance
-//ErrCantBalances        = errCantBalances
-//ErrNoBalance           = errNoBalance
-//ErrCantSettlementsPeer = errCantSettlementsPeer
-//ErrCantSettlements     = errCantSettlements
-//ErrInvalidAddress      = errInvalidAddress
+// ErrCantBalance         = errCantBalance
+// ErrCantBalances        = errCantBalances
+// ErrNoBalance           = errNoBalance
+// ErrCantSettlementsPeer = errCantSettlementsPeer
+// ErrCantSettlements     = errCantSettlements
+// ErrInvalidAddress      = errInvalidAddress
 )

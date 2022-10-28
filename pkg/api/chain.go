@@ -5,8 +5,8 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/FavorLabs/favorX/pkg/jsonhttp"
 	"github.com/FavorLabs/favorX/pkg/settlement/chain"
-	"github.com/gauss-project/aurorafs/pkg/jsonhttp"
 )
 
 type AllRequest struct {

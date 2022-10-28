@@ -22,7 +22,7 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/gauss-project/aurorafs/pkg/boson"
+	"github.com/FavorLabs/favorX/pkg/boson"
 )
 
 // BenchmarkRetrievalIndexes uploads a number of chunks in order to measure

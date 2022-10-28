@@ -10,18 +10,17 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/FavorLabs/favorX/pkg/address"
 	"github.com/FavorLabs/favorX/pkg/addressbook"
-	fp2p "github.com/FavorLabs/favorX/pkg/p2p"
+	"github.com/FavorLabs/favorX/pkg/boson"
+	"github.com/FavorLabs/favorX/pkg/logging"
+	"github.com/FavorLabs/favorX/pkg/p2p"
+	"github.com/FavorLabs/favorX/pkg/p2p/protobuf"
+	"github.com/FavorLabs/favorX/pkg/routetab/pb"
 	"github.com/FavorLabs/favorX/pkg/storage"
+	"github.com/FavorLabs/favorX/pkg/topology"
 	"github.com/FavorLabs/favorX/pkg/topology/kademlia"
-	"github.com/gauss-project/aurorafs/pkg/aurora"
-	"github.com/gauss-project/aurorafs/pkg/boson"
-	"github.com/gauss-project/aurorafs/pkg/logging"
-	"github.com/gauss-project/aurorafs/pkg/p2p"
-	"github.com/gauss-project/aurorafs/pkg/p2p/protobuf"
-	"github.com/gauss-project/aurorafs/pkg/routetab/pb"
-	"github.com/gauss-project/aurorafs/pkg/topology"
-	"github.com/gauss-project/aurorafs/pkg/topology/lightnode"
+	"github.com/FavorLabs/favorX/pkg/topology/lightnode"
 	"resenje.org/singleflight"
 )
 
@@ -623,7 +622,7 @@ func (s *Service) getOrFindRoute(ctx context.Context, target boson.Address) (pat
 	return
 }
 
-func (s *Service) FindUnderlay(ctx context.Context, target boson.Address) (addr *aurora.Address, err error) {
+func (s *Service) FindUnderlay(ctx context.Context, target boson.Address) (addr *address.Address, err error) {
 	stream, err := s.stream.NewRelayStream(ctx, target, nil, ProtocolName, ProtocolVersion, streamOnFindUnderlay, true)
 	if err != nil {
 		return nil, err
@@ -652,7 +651,7 @@ func (s *Service) FindUnderlay(ctx context.Context, target boson.Address) (addr 
 		return nil, err
 	}
 
-	addr, err = aurora.ParseAddress(resp.Underlay, resp.Dest, resp.Signature, s.networkID)
+	addr, err = address.ParseAddress(resp.Underlay, resp.Dest, resp.Signature, s.networkID)
 	if err != nil {
 		s.logger.Errorf("find underlay dest %s parse err %s", target.String(), err.Error())
 		return nil, err
@@ -752,7 +751,7 @@ func (s *Service) onRelay(ctx context.Context, p p2p.Peer, stream p2p.Stream) (e
 		return
 	}
 
-	buf := &fp2p.BuffMessage{}
+	buf := &p2p.BuffMessage{}
 	if len(req.Data) == 0 {
 		err = r.ReadMsgWithContext(ctx, buf)
 		if err != nil {
@@ -767,7 +766,7 @@ func (s *Service) onRelay(ctx context.Context, p p2p.Peer, stream p2p.Stream) (e
 		}
 	}
 
-	md, err := aurora.NewModelFromBytes(req.SrcMode)
+	md, err := address.NewModelFromBytes(req.SrcMode)
 	if err != nil {
 		return
 	}
@@ -786,7 +785,7 @@ func (s *Service) onRelay(ctx context.Context, p p2p.Peer, stream p2p.Stream) (e
 	kv["sName"] = string(req.StreamName)
 	ctxV := context.WithValue(ctx, "req_stream", kv)
 
-	vst := fp2p.NewVirtualStream(stream)
+	vst := p2p.NewVirtualStream(stream)
 	defer func() {
 		_ = vst.WritePipe.Close()
 		_ = vst.ReadPipe.Close()
@@ -879,7 +878,7 @@ func (s *Service) convUnderlayList(uType int32, target, last boson.Address, old 
 
 func (s *Service) saveUnderlay(uList []*pb.UnderlayResp) {
 	for _, v := range uList {
-		addr, err := aurora.ParseAddress(v.Underlay, v.Dest, v.Signature, s.networkID)
+		addr, err := address.ParseAddress(v.Underlay, v.Dest, v.Signature, s.networkID)
 		if err != nil {
 			s.logger.Errorf("route: parse address %s", err.Error())
 		} else {
@@ -912,7 +911,7 @@ func (s *Service) onRelayConnChain(ctx context.Context, p p2p.Peer, stream p2p.S
 	req.Paths = append(req.Paths, s.self.Bytes())
 	target := boson.NewAddress(req.Dest)
 	if target.Equal(s.self) {
-		md, err := aurora.NewModelFromBytes(req.SrcMode)
+		md, err := address.NewModelFromBytes(req.SrcMode)
 		if err != nil {
 			return err
 		}

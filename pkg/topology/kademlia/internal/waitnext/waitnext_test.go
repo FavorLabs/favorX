@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gauss-project/aurorafs/pkg/boson/test"
-	"github.com/gauss-project/aurorafs/pkg/topology/kademlia/internal/waitnext"
+	"github.com/FavorLabs/favorX/pkg/boson/test"
+	"github.com/FavorLabs/favorX/pkg/topology/kademlia/internal/waitnext"
 )
 
 func TestSet(t *testing.T) {

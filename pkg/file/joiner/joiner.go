@@ -9,10 +9,10 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/FavorLabs/favorX/pkg/boson"
 	"github.com/FavorLabs/favorX/pkg/encryption/store"
 	"github.com/FavorLabs/favorX/pkg/file"
 	"github.com/FavorLabs/favorX/pkg/storage"
-	"github.com/gauss-project/aurorafs/pkg/boson"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -38,7 +38,7 @@ type joiner struct {
 // New creates a new Joiner. A Joiner provides Read, Seek and Size functionalities.
 func New(ctx context.Context, getter storage.Getter, getMode storage.ModeGet, address boson.Address, index int64) (file.Joiner, int64, error) {
 	getter = store.New(getter)
-	// retrieve the root chunk to read the total data length the be retrieved
+	// retrieve the root chunk to read the total data length to be retrieved
 	rootChunk, err := getter.Get(ctx, getMode, address, index)
 	if err != nil {
 		return nil, 0, err
@@ -136,7 +136,7 @@ func (j *joiner) readAtOffset(b, data []byte, index, lastIndex, cur, subTrieSize
 			break
 		}
 
-		// fast forward the cursor
+		// fast-forward the cursor
 		sec := subtrieSection(data, cursor, j.refLength, subTrieSize)
 		if cur+sec < off {
 			cur += sec
@@ -190,7 +190,7 @@ func (j *joiner) readAtOffset(b, data []byte, index, lastIndex, cur, subTrieSize
 
 // brute-forces the subtrie size for each of the sections in this intermediate chunk
 func subtrieSection(data []byte, startIdx, refLen int, subtrieSize int64) int64 {
-	// assume we have a trie of size `y` then we can assume that all of
+	// assume we have a trie of size `y` then we can assume that all
 	// the forks except for the last one on the right are of equal size
 	// this is due to how the splitter wraps levels.
 	// so for the branches on the left, we can assume that

@@ -20,14 +20,14 @@ import (
 	"context"
 	"encoding/binary"
 	"errors"
-	"github.com/FavorLabs/favorX/pkg/localstore/chunkstore"
 	"time"
 
+	"github.com/FavorLabs/favorX/pkg/boson"
+	"github.com/FavorLabs/favorX/pkg/localstore/chunkstore"
 	"github.com/FavorLabs/favorX/pkg/sctx"
 	"github.com/FavorLabs/favorX/pkg/shed"
+	"github.com/FavorLabs/favorX/pkg/shed/driver"
 	"github.com/FavorLabs/favorX/pkg/storage"
-	"github.com/gauss-project/aurorafs/pkg/boson"
-	"github.com/gauss-project/aurorafs/pkg/shed/driver"
 )
 
 // Get returns a chunk from the database. If the chunk is

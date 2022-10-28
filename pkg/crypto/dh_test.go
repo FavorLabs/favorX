@@ -8,8 +8,8 @@ import (
 	"io"
 	"testing"
 
+	"github.com/FavorLabs/favorX/pkg/crypto"
 	"github.com/btcsuite/btcd/btcec"
-	"github.com/gauss-project/aurorafs/pkg/crypto"
 )
 
 func TestECDHCorrect(t *testing.T) {
