@@ -1,7 +1,7 @@
 package node
 
 import (
-	"github.com/gauss-project/aurorafs/pkg/rpc"
+	"github.com/FavorLabs/favorX/pkg/rpc"
 )
 
 // apis returns the collection of built-in RPC APIs.

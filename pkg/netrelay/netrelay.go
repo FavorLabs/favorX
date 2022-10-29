@@ -3,18 +3,17 @@ package netrelay
 import (
 	"bufio"
 	"fmt"
+	"github.com/FavorLabs/favorX/pkg/address"
+	"github.com/FavorLabs/favorX/pkg/boson"
+	"github.com/FavorLabs/favorX/pkg/jsonhttp"
+	"github.com/FavorLabs/favorX/pkg/logging"
+	"github.com/FavorLabs/favorX/pkg/multicast"
+	"github.com/FavorLabs/favorX/pkg/multicast/model"
+	"github.com/FavorLabs/favorX/pkg/p2p"
+	"github.com/FavorLabs/favorX/pkg/routetab"
 	"io"
 	"net/http"
 	"strings"
-
-	"github.com/FavorLabs/favorX/pkg/multicast"
-	"github.com/FavorLabs/favorX/pkg/multicast/model"
-	"github.com/FavorLabs/favorX/pkg/routetab"
-	"github.com/gauss-project/aurorafs/pkg/aurora"
-	"github.com/gauss-project/aurorafs/pkg/boson"
-	"github.com/gauss-project/aurorafs/pkg/jsonhttp"
-	"github.com/gauss-project/aurorafs/pkg/logging"
-	"github.com/gauss-project/aurorafs/pkg/p2p"
 )
 
 type NetRelay interface {
@@ -33,10 +32,10 @@ func New(streamer p2p.Streamer, logging logging.Logger, groups []model.ConfigNod
 	return &Service{streamer: streamer, logger: logging, groups: groups, route: route, multicast: multicast}
 }
 
-func (s *Service) RelayHttpDo(w http.ResponseWriter, r *http.Request, address boson.Address) {
-	url := strings.ReplaceAll(r.URL.String(), aurora.RelayPrefixHttp, "")
+func (s *Service) RelayHttpDo(w http.ResponseWriter, r *http.Request, addr boson.Address) {
+	url := strings.ReplaceAll(r.URL.String(), address.RelayPrefixHttp, "")
 	var forward []boson.Address
-	if boson.ZeroAddress.Equal(address) {
+	if boson.ZeroAddress.Equal(addr) {
 		urls := strings.Split(url, "/")
 		group := urls[1]
 		nodes, err1 := s.multicast.GetGroupPeers(group)
@@ -52,7 +51,7 @@ func (s *Service) RelayHttpDo(w http.ResponseWriter, r *http.Request, address bo
 		forward = append(forward, nodes.Connected...)
 		forward = append(forward, nodes.Keep...)
 	} else {
-		forward = append(forward, address)
+		forward = append(forward, addr)
 	}
 
 	var err error

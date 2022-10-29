@@ -9,7 +9,7 @@ import (
 
 	"github.com/FavorLabs/favorX/pkg/file/pipeline"
 	"github.com/FavorLabs/favorX/pkg/file/pipeline/bmt"
-	mock "github.com/FavorLabs/favorX/pkg/file/pipeline/mock"
+	"github.com/FavorLabs/favorX/pkg/file/pipeline/mock"
 )
 
 // TestStoreWriter tests that store writer stores the provided data and calls the next chain writer.

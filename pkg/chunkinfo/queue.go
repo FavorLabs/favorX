@@ -3,7 +3,7 @@ package chunkinfo
 import (
 	"bytes"
 	"context"
-	"github.com/gauss-project/aurorafs/pkg/boson"
+	"github.com/FavorLabs/favorX/pkg/boson"
 	"sync"
 )
 

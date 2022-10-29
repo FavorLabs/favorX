@@ -6,9 +6,9 @@ import (
 	"io"
 	"testing"
 
+	"github.com/FavorLabs/favorX/pkg/boson"
+	"github.com/FavorLabs/favorX/pkg/crypto"
 	"github.com/FavorLabs/favorX/pkg/encryption/elgamal"
-	"github.com/gauss-project/aurorafs/pkg/boson"
-	"github.com/gauss-project/aurorafs/pkg/crypto"
 )
 
 func TestElgamalCorrect(t *testing.T) {

@@ -4,10 +4,10 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/FavorLabs/favorX/pkg/boson"
 	"github.com/FavorLabs/favorX/pkg/file/pipeline/builder"
-	"github.com/gauss-project/aurorafs/pkg/boson"
-	"github.com/gauss-project/aurorafs/pkg/jsonhttp"
-	"github.com/gauss-project/aurorafs/pkg/tracing"
+	"github.com/FavorLabs/favorX/pkg/jsonhttp"
+	"github.com/FavorLabs/favorX/pkg/tracing"
 	"github.com/gorilla/mux"
 )
 
@@ -23,7 +23,7 @@ func (s *server) bytesUploadHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	pipe := builder.NewPipelineBuilder(ctx, s.storer, requestModePut(r), requestEncrypt(r))
-	address, err := builder.FeedPipeline(ctx, pipe, r.Body)
+	addr, err := builder.FeedPipeline(ctx, pipe, r.Body)
 	if err != nil {
 		logger.Debugf("bytes upload: split write all: %v", err)
 		logger.Error("bytes upload: split write all")
@@ -32,8 +32,8 @@ func (s *server) bytesUploadHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if strings.ToLower(r.Header.Get(PinHeader)) == StringTrue {
-		if err := s.pinning.CreatePin(ctx, address, false); err != nil {
-			logger.Debugf("bytes upload: creation of pin for %q failed: %v", address, err)
+		if err := s.pinning.CreatePin(ctx, addr, false); err != nil {
+			logger.Debugf("bytes upload: creation of pin for %q failed: %v", addr, err)
 			logger.Error("bytes upload: creation of pin failed")
 			jsonhttp.InternalServerError(w, nil)
 			return
@@ -41,7 +41,7 @@ func (s *server) bytesUploadHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	jsonhttp.Created(w, bytesPostResponse{
-		Reference: address,
+		Reference: addr,
 	})
 }
 

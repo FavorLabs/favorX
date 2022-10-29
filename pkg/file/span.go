@@ -3,7 +3,7 @@ package file
 import (
 	"math"
 
-	"github.com/gauss-project/aurorafs/pkg/boson"
+	"github.com/FavorLabs/favorX/pkg/boson"
 )
 
 var Spans []int64

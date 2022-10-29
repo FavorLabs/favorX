@@ -8,9 +8,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/FavorLabs/favorX/pkg/address"
+	"github.com/FavorLabs/favorX/pkg/p2p"
 	"github.com/FavorLabs/favorX/pkg/p2p/libp2p"
-	"github.com/gauss-project/aurorafs/pkg/aurora"
-	"github.com/gauss-project/aurorafs/pkg/p2p"
 	libp2pm "github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p-core/host"
 	bhost "github.com/libp2p/go-libp2p/p2p/host/basic"
@@ -23,10 +23,10 @@ func TestNewStream(t *testing.T) {
 	defer cancel()
 
 	s1, overlay1 := newService(t, 1, libp2pServiceOpts{libp2pOpts: libp2p.Options{
-		NodeMode: aurora.NewModel().SetMode(aurora.FullNode),
+		NodeMode: address.NewModel().SetMode(address.FullNode),
 	}})
 
-	s2, _ := newService(t, 1, libp2pServiceOpts{libp2pOpts: libp2p.Options{NodeMode: aurora.NewModel()}})
+	s2, _ := newService(t, 1, libp2pServiceOpts{libp2pOpts: libp2p.Options{NodeMode: address.NewModel()}})
 
 	if err := s1.AddProtocol(newTestProtocol(func(_ context.Context, p p2p.Peer, _ p2p.Stream) error {
 		return nil
@@ -56,11 +56,11 @@ func TestNewStream_OnlyFull(t *testing.T) {
 	defer cancel()
 
 	s1, overlay1 := newService(t, 1, libp2pServiceOpts{libp2pOpts: libp2p.Options{
-		NodeMode: aurora.NewModel().SetMode(aurora.FullNode),
+		NodeMode: address.NewModel().SetMode(address.FullNode),
 	}})
 
 	s2, _ := newService(t, 1, libp2pServiceOpts{libp2pOpts: libp2p.Options{
-		NodeMode: aurora.NewModel().SetMode(aurora.FullNode),
+		NodeMode: address.NewModel().SetMode(address.FullNode),
 	}})
 
 	if err := s1.AddProtocol(newTestProtocol(func(_ context.Context, p p2p.Peer, _ p2p.Stream) error {
@@ -94,10 +94,10 @@ func TestNewStream_Mixed(t *testing.T) {
 	defer cancel()
 
 	s1, overlay1 := newService(t, 1, libp2pServiceOpts{libp2pOpts: libp2p.Options{
-		NodeMode: aurora.NewModel().SetMode(aurora.FullNode),
+		NodeMode: address.NewModel().SetMode(address.FullNode),
 	}})
 
-	s2, _ := newService(t, 1, libp2pServiceOpts{libp2pOpts: libp2p.Options{NodeMode: aurora.NewModel()}})
+	s2, _ := newService(t, 1, libp2pServiceOpts{libp2pOpts: libp2p.Options{NodeMode: address.NewModel()}})
 
 	if err := s1.AddProtocol(newTestProtocol(func(_ context.Context, p p2p.Peer, _ p2p.Stream) error {
 		if p.Mode.IsFull() {
@@ -131,7 +131,7 @@ func TestNewStreamMulti(t *testing.T) {
 	defer cancel()
 
 	s1, overlay1 := newService(t, 1, libp2pServiceOpts{libp2pOpts: libp2p.Options{
-		NodeMode: aurora.NewModel().SetMode(aurora.FullNode),
+		NodeMode: address.NewModel().SetMode(address.FullNode),
 	}})
 
 	var (
@@ -147,7 +147,7 @@ func TestNewStreamMulti(t *testing.T) {
 			return nil
 		}
 	)
-	s2, _ := newService(t, 1, libp2pServiceOpts{libp2pOpts: libp2p.Options{NodeMode: aurora.NewModel()}})
+	s2, _ := newService(t, 1, libp2pServiceOpts{libp2pOpts: libp2p.Options{NodeMode: address.NewModel()}})
 
 	if err := s1.AddProtocol(newTestMultiProtocol(h1, h2)); err != nil {
 		t.Fatal(err)
@@ -179,10 +179,10 @@ func TestNewStream_errNotSupported(t *testing.T) {
 	defer cancel()
 
 	s1, overlay1 := newService(t, 1, libp2pServiceOpts{libp2pOpts: libp2p.Options{
-		NodeMode: aurora.NewModel().SetMode(aurora.FullNode),
+		NodeMode: address.NewModel().SetMode(address.FullNode),
 	}})
 
-	s2, _ := newService(t, 1, libp2pServiceOpts{libp2pOpts: libp2p.Options{NodeMode: aurora.NewModel()}})
+	s2, _ := newService(t, 1, libp2pServiceOpts{libp2pOpts: libp2p.Options{NodeMode: address.NewModel()}})
 
 	addr := serviceUnderlayAddress(t, s1)
 
@@ -216,10 +216,10 @@ func TestNewStream_semanticVersioning(t *testing.T) {
 	defer cancel()
 
 	s1, overlay1 := newService(t, 1, libp2pServiceOpts{libp2pOpts: libp2p.Options{
-		NodeMode: aurora.NewModel().SetMode(aurora.FullNode),
+		NodeMode: address.NewModel().SetMode(address.FullNode),
 	}})
 
-	s2, _ := newService(t, 1, libp2pServiceOpts{libp2pOpts: libp2p.Options{NodeMode: aurora.NewModel()}})
+	s2, _ := newService(t, 1, libp2pServiceOpts{libp2pOpts: libp2p.Options{NodeMode: address.NewModel()}})
 
 	addr := serviceUnderlayAddress(t, s1)
 
@@ -277,10 +277,10 @@ func TestDisconnectError(t *testing.T) {
 	defer cancel()
 
 	s1, overlay1 := newService(t, 1, libp2pServiceOpts{libp2pOpts: libp2p.Options{
-		NodeMode: aurora.NewModel().SetMode(aurora.FullNode),
+		NodeMode: address.NewModel().SetMode(address.FullNode),
 	}})
 
-	s2, overlay2 := newService(t, 1, libp2pServiceOpts{libp2pOpts: libp2p.Options{NodeMode: aurora.NewModel()}})
+	s2, overlay2 := newService(t, 1, libp2pServiceOpts{libp2pOpts: libp2p.Options{NodeMode: address.NewModel()}})
 
 	if err := s1.AddProtocol(newTestProtocol(func(_ context.Context, _ p2p.Peer, _ p2p.Stream) error {
 		return p2p.NewDisconnectError(errors.New("test error"))
@@ -307,10 +307,10 @@ func TestConnectDisconnectEvents(t *testing.T) {
 	defer cancel()
 
 	s1, overlay1 := newService(t, 1, libp2pServiceOpts{libp2pOpts: libp2p.Options{
-		NodeMode: aurora.NewModel().SetMode(aurora.FullNode),
+		NodeMode: address.NewModel().SetMode(address.FullNode),
 	}})
 
-	s2, _ := newService(t, 1, libp2pServiceOpts{libp2pOpts: libp2p.Options{NodeMode: aurora.NewModel()}})
+	s2, _ := newService(t, 1, libp2pServiceOpts{libp2pOpts: libp2p.Options{NodeMode: address.NewModel()}})
 	testProtocol := newTestProtocol(func(_ context.Context, _ p2p.Peer, _ p2p.Stream) error {
 		return nil
 	})

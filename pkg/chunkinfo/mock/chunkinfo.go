@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/FavorLabs/favorX/pkg/address"
+	"github.com/FavorLabs/favorX/pkg/boson"
 	"github.com/FavorLabs/favorX/pkg/chunkinfo"
 	"github.com/FavorLabs/favorX/pkg/retrieval/aco"
 	"github.com/FavorLabs/favorX/pkg/routetab/mock"
-	"github.com/gauss-project/aurorafs/pkg/aurora"
-	"github.com/gauss-project/aurorafs/pkg/boson"
 )
 
 var (
@@ -71,11 +71,11 @@ func (ci *ChunkInfo) GetChunkInfo(rootCid boson.Address, cid boson.Address) []ac
 	return chunkMap[mapKey]
 }
 
-func (ci *ChunkInfo) GetChunkInfoDiscoverOverlays(rootCid boson.Address) []aurora.ChunkInfoOverlay {
+func (ci *ChunkInfo) GetChunkInfoDiscoverOverlays(rootCid boson.Address) []address.ChunkInfoOverlay {
 	panic("not implemented")
 }
 
-func (ci *ChunkInfo) GetChunkInfoServerOverlays(rootCid boson.Address) []aurora.ChunkInfoOverlay {
+func (ci *ChunkInfo) GetChunkInfoServerOverlays(rootCid boson.Address) []address.ChunkInfoOverlay {
 	panic("not implemented")
 }
 
@@ -149,6 +149,6 @@ func (ci *ChunkInfo) OnChunkRetrieved(cid, rootCid, sourceOverlay boson.Address)
 	return nil
 }
 
-func (ci *ChunkInfo) GetChunkInfoSource(rootCid boson.Address) aurora.ChunkInfoSourceApi {
-	return aurora.ChunkInfoSourceApi{}
+func (ci *ChunkInfo) GetChunkInfoSource(rootCid boson.Address) address.ChunkInfoSourceApi {
+	return address.ChunkInfoSourceApi{}
 }

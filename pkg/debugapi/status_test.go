@@ -1,12 +1,11 @@
 package debugapi_test
 
 import (
+	favor "github.com/FavorLabs/favorX"
+	"github.com/FavorLabs/favorX/pkg/debugapi"
+	"github.com/FavorLabs/favorX/pkg/jsonhttp/jsonhttptest"
 	"net/http"
 	"testing"
-
-	"github.com/FavorLabs/favorX/pkg/debugapi"
-	"github.com/gauss-project/aurorafs"
-	"github.com/gauss-project/aurorafs/pkg/jsonhttp/jsonhttptest"
 )
 
 func TestHealth(t *testing.T) {
@@ -15,7 +14,7 @@ func TestHealth(t *testing.T) {
 	jsonhttptest.Request(t, testServer.Client, http.MethodGet, "/health", http.StatusOK,
 		jsonhttptest.WithExpectedJSONResponse(debugapi.StatusResponse{
 			Status:  "ok",
-			Version: aufs.Version,
+			Version: favor.Version,
 		}),
 	)
 }
@@ -26,7 +25,7 @@ func TestReadiness(t *testing.T) {
 	jsonhttptest.Request(t, testServer.Client, http.MethodGet, "/readiness", http.StatusOK,
 		jsonhttptest.WithExpectedJSONResponse(debugapi.StatusResponse{
 			Status:  "ok",
-			Version: aufs.Version,
+			Version: favor.Version,
 		}),
 	)
 }

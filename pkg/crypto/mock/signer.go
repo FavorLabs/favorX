@@ -4,10 +4,10 @@ import (
 	"crypto/ecdsa"
 	"math/big"
 
+	"github.com/FavorLabs/favorX/pkg/crypto"
+	"github.com/FavorLabs/favorX/pkg/crypto/eip712"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/gauss-project/aurorafs/pkg/crypto"
-	"github.com/gauss-project/aurorafs/pkg/crypto/eip712"
 )
 
 type signerMock struct {

@@ -3,16 +3,15 @@ package debugapi_test
 import (
 	"encoding/hex"
 	"errors"
+	"github.com/FavorLabs/favorX/pkg/boson"
+	"github.com/FavorLabs/favorX/pkg/crypto"
 	"github.com/FavorLabs/favorX/pkg/debugapi"
+	"github.com/FavorLabs/favorX/pkg/jsonhttp"
+	"github.com/FavorLabs/favorX/pkg/jsonhttp/jsonhttptest"
+	"github.com/FavorLabs/favorX/pkg/p2p/mock"
+	"github.com/multiformats/go-multiaddr"
 	"net/http"
 	"testing"
-
-	"github.com/gauss-project/aurorafs/pkg/boson"
-	"github.com/gauss-project/aurorafs/pkg/crypto"
-	"github.com/gauss-project/aurorafs/pkg/jsonhttp"
-	"github.com/gauss-project/aurorafs/pkg/jsonhttp/jsonhttptest"
-	"github.com/gauss-project/aurorafs/pkg/p2p/mock"
-	"github.com/multiformats/go-multiaddr"
 )
 
 func TestAddresses(t *testing.T) {

@@ -3,10 +3,10 @@ package multicast
 import (
 	"context"
 
+	"github.com/FavorLabs/favorX/pkg/boson"
 	"github.com/FavorLabs/favorX/pkg/multicast/model"
 	"github.com/FavorLabs/favorX/pkg/multicast/pb"
-	"github.com/gauss-project/aurorafs/pkg/boson"
-	"github.com/gauss-project/aurorafs/pkg/rpc"
+	"github.com/FavorLabs/favorX/pkg/rpc"
 )
 
 type GroupInterface interface {

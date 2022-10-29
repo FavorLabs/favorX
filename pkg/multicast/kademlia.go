@@ -10,19 +10,19 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/FavorLabs/favorX/pkg/address"
+	"github.com/FavorLabs/favorX/pkg/boson"
+	"github.com/FavorLabs/favorX/pkg/logging"
 	"github.com/FavorLabs/favorX/pkg/multicast/model"
 	"github.com/FavorLabs/favorX/pkg/multicast/pb"
+	"github.com/FavorLabs/favorX/pkg/p2p"
+	"github.com/FavorLabs/favorX/pkg/p2p/protobuf"
 	"github.com/FavorLabs/favorX/pkg/routetab"
-	"github.com/gauss-project/aurorafs/pkg/aurora"
-	"github.com/gauss-project/aurorafs/pkg/boson"
-	"github.com/gauss-project/aurorafs/pkg/logging"
-	"github.com/gauss-project/aurorafs/pkg/p2p"
-	"github.com/gauss-project/aurorafs/pkg/p2p/protobuf"
-	"github.com/gauss-project/aurorafs/pkg/rpc"
-	"github.com/gauss-project/aurorafs/pkg/subscribe"
-	"github.com/gauss-project/aurorafs/pkg/topology"
-	topModel "github.com/gauss-project/aurorafs/pkg/topology/model"
-	"github.com/gauss-project/aurorafs/pkg/topology/pslice"
+	"github.com/FavorLabs/favorX/pkg/rpc"
+	"github.com/FavorLabs/favorX/pkg/subscribe"
+	"github.com/FavorLabs/favorX/pkg/topology"
+	topModel "github.com/FavorLabs/favorX/pkg/topology/model"
+	"github.com/FavorLabs/favorX/pkg/topology/pslice"
 	"github.com/gogf/gf/v2/util/gconv"
 )
 
@@ -50,7 +50,7 @@ const (
 
 type Service struct {
 	o              Option
-	nodeMode       aurora.Model
+	nodeMode       address.Model
 	self           boson.Address
 	p2ps           p2p.Service
 	stream         p2p.Streamer
@@ -128,7 +128,7 @@ type Option struct {
 	Dev bool
 }
 
-func NewService(self boson.Address, nodeMode aurora.Model, service p2p.Service, streamer p2p.Streamer, kad topology.Driver, route routetab.RouteTab, logger logging.Logger, subPub subscribe.SubPub, o Option) *Service {
+func NewService(self boson.Address, nodeMode address.Model, service p2p.Service, streamer p2p.Streamer, kad topology.Driver, route routetab.RouteTab, logger logging.Logger, subPub subscribe.SubPub, o Option) *Service {
 	srv := &Service{
 		o:        o,
 		nodeMode: nodeMode,

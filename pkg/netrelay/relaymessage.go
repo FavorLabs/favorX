@@ -11,9 +11,9 @@ import (
 	"net/http/httputil"
 	"strings"
 
+	"github.com/FavorLabs/favorX/pkg/address"
 	"github.com/FavorLabs/favorX/pkg/multicast/model"
-	"github.com/gauss-project/aurorafs/pkg/aurora"
-	"github.com/gauss-project/aurorafs/pkg/p2p"
+	"github.com/FavorLabs/favorX/pkg/p2p"
 )
 
 const (
@@ -75,7 +75,7 @@ func (s *Service) onRelayHttpReqV2(ctx context.Context, p p2p.Peer, stream p2p.S
 	req = req.WithContext(ctx)
 	defer req.Body.Close()
 
-	url := strings.ReplaceAll(req.URL.String(), aurora.RelayPrefixHttp, "")
+	url := strings.ReplaceAll(req.URL.String(), address.RelayPrefixHttp, "")
 	urls := strings.Split(url, "/")
 
 	var reqWS bool

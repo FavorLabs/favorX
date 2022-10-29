@@ -6,12 +6,12 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/gauss-project/aurorafs/pkg/boson"
-	"github.com/gauss-project/aurorafs/pkg/file/pipeline"
-	mock "github.com/gauss-project/aurorafs/pkg/file/pipeline/mock"
-	"github.com/gauss-project/aurorafs/pkg/file/pipeline/store"
-	"github.com/gauss-project/aurorafs/pkg/storage"
-	storer "github.com/gauss-project/aurorafs/pkg/storage/mock"
+	"github.com/FavorLabs/favorX/pkg/boson"
+	"github.com/FavorLabs/favorX/pkg/file/pipeline"
+	"github.com/FavorLabs/favorX/pkg/file/pipeline/mock"
+	"github.com/FavorLabs/favorX/pkg/file/pipeline/store"
+	"github.com/FavorLabs/favorX/pkg/storage"
+	storer "github.com/FavorLabs/favorX/pkg/storage/mock"
 )
 
 // TestStoreWriter tests that store writer stores the provided data and calls the next chain writer.
@@ -48,7 +48,7 @@ func TestStoreWriter(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		d, err := mockStore.Get(ctx, storage.ModeGetRequest, boson.NewAddress(tc.ref))
+		d, err := mockStore.Get(ctx, storage.ModeGetRequest, boson.NewAddress(tc.ref), 0)
 		if err != nil {
 			t.Fatal(err)
 		}

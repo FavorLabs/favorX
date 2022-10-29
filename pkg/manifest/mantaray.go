@@ -7,15 +7,15 @@ import (
 	"fmt"
 	"math"
 
+	"github.com/FavorLabs/favorX/pkg/boson"
 	"github.com/FavorLabs/favorX/pkg/file"
 	"github.com/FavorLabs/manifest/mantaray"
-	"github.com/gauss-project/aurorafs/pkg/boson"
 )
 
 const (
 	// ManifestMantarayContentType represents content type used for noting that
 	// specific file should be processed as mantaray manifest.
-	ManifestMantarayContentType = "application/aurora-manifest-mantaray+octet-stream"
+	ManifestMantarayContentType = "application/manifest-mantaray+octet-stream"
 )
 
 type mantarayManifest struct {

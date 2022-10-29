@@ -4,8 +4,8 @@ import (
 	"context"
 	"sync"
 
+	"github.com/FavorLabs/favorX/pkg/boson"
 	"github.com/FavorLabs/favorX/pkg/storage"
-	"github.com/gauss-project/aurorafs/pkg/boson"
 )
 
 var _ storage.Storer = (*MockStorer)(nil)

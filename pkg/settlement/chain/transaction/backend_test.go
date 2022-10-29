@@ -3,13 +3,12 @@ package transaction_test
 import (
 	"context"
 	"errors"
-	"github.com/gauss-project/aurorafs/pkg/settlement/chain/transaction"
-	"github.com/gauss-project/aurorafs/pkg/settlement/chain/transaction/backendmock"
+	"github.com/FavorLabs/favorX/pkg/settlement/chain/transaction"
+	"github.com/FavorLabs/favorX/pkg/settlement/chain/transaction/backendmock"
+	"github.com/ethereum/go-ethereum/core/types"
 	"math/big"
 	"testing"
 	"time"
-
-	"github.com/ethereum/go-ethereum/core/types"
 )
 
 func TestIsSynced(t *testing.T) {

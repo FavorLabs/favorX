@@ -6,7 +6,7 @@ package cmd
 import (
 	"errors"
 
-	"github.com/gauss-project/aurorafs/pkg/logging"
+	"github.com/FavorLabs/favorX/pkg/logging"
 )
 
 func isWindowsService() (bool, error) {

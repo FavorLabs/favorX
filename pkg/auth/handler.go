@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/gauss-project/aurorafs/pkg/jsonhttp"
+	"github.com/FavorLabs/favorX/pkg/jsonhttp"
 )
 
 type auth interface {

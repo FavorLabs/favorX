@@ -2,9 +2,9 @@ package bmt
 
 import (
 	"errors"
+	"github.com/FavorLabs/favorX/pkg/bmtpool"
+	"github.com/FavorLabs/favorX/pkg/boson"
 	"github.com/FavorLabs/favorX/pkg/file/pipeline"
-	"github.com/gauss-project/aurorafs/pkg/bmtpool"
-	"github.com/gauss-project/aurorafs/pkg/boson"
 )
 
 var (

@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
-	"github.com/gauss-project/aurorafs/pkg/aurora"
-	"github.com/gauss-project/aurorafs/pkg/boson"
+	"github.com/FavorLabs/favorX/pkg/address"
+	"github.com/FavorLabs/favorX/pkg/boson"
 )
 
 type RouteTab interface {
@@ -15,7 +15,7 @@ type RouteTab interface {
 	Connect(ctx context.Context, dest boson.Address) error
 	GetTargetNeighbor(ctx context.Context, dest boson.Address, limit int) (addresses []boson.Address, err error)
 	IsNeighbor(dest boson.Address) (has bool)
-	FindUnderlay(ctx context.Context, target boson.Address) (addr *aurora.Address, err error)
+	FindUnderlay(ctx context.Context, target boson.Address) (addr *address.Address, err error)
 }
 
 type RelayStream interface {

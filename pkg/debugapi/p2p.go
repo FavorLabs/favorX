@@ -6,14 +6,14 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/gauss-project/aurorafs/pkg/boson"
-	"github.com/gauss-project/aurorafs/pkg/crypto"
-	"github.com/gauss-project/aurorafs/pkg/jsonhttp"
-	"github.com/gauss-project/aurorafs/pkg/logging"
+	"github.com/FavorLabs/favorX/pkg/boson"
+	"github.com/FavorLabs/favorX/pkg/crypto"
+	"github.com/FavorLabs/favorX/pkg/jsonhttp"
+	"github.com/FavorLabs/favorX/pkg/logging"
 	"github.com/multiformats/go-multiaddr"
 )
 
-type publicIP struct {
+type PublicIP struct {
 	IPv4 string `json:"ipv4"`
 	IPv6 string `json:"ipv6"`
 }
@@ -22,12 +22,12 @@ type addressesResponse struct {
 	Overlay   boson.Address         `json:"overlay"`
 	Underlay  []multiaddr.Multiaddr `json:"underlay"`
 	NATRoute  []string              `json:"nat_route"`
-	PublicIP  publicIP              `json:"public_ip"`
+	PublicIP  PublicIP              `json:"public_ip"`
 	NetworkID uint64                `json:"network_id"`
 	PublicKey string                `json:"public_key"`
 }
 
-func GetPublicIp(loger logging.Logger) *publicIP {
+func GetPublicIp(logger logging.Logger) *PublicIP {
 	var (
 		ip4ServiceUrl = "https://api.ipify.org"
 		ip6ServiceUrl = "https://api6.ipify.org"
@@ -40,34 +40,34 @@ func GetPublicIp(loger logging.Logger) *publicIP {
 	}
 	ip4Resp, err := client.Get(ip4ServiceUrl)
 	if err != nil {
-		loger.Debugf("debug api: p2p request public ipv4: %v", err)
+		logger.Debugf("debug api: p2p request public ipv4: %v", err)
 	} else {
 		if ip4Resp.StatusCode < 200 || ip4Resp.StatusCode >= 300 {
-			loger.Debugf("debug api: http service(%s) report http code %s(%d)", ip4ServiceUrl, ip4Resp.Status, ip4Resp.StatusCode)
+			logger.Debugf("debug api: http service(%s) report http code %s(%d)", ip4ServiceUrl, ip4Resp.Status, ip4Resp.StatusCode)
 		} else {
 			_, err = ip4Content.ReadFrom(ip4Resp.Body)
 			if err != nil {
-				loger.Debugf("debug api: p2p parse ipv4 service response: %v", err)
+				logger.Debugf("debug api: p2p parse ipv4 service response: %v", err)
 			}
 		}
 	}
 	ip6Resp, err := client.Get(ip6ServiceUrl)
 	if err != nil {
-		loger.Debugf("debug api: p2p request public ipv6: %v", err)
+		logger.Debugf("debug api: p2p request public ipv6: %v", err)
 	} else {
 		if ip6Resp.StatusCode < 200 || ip6Resp.StatusCode >= 300 {
-			loger.Debugf("debug api: http service(%s) report http code %s(%d)", ip6ServiceUrl, ip6Resp.Status, ip6Resp.StatusCode)
+			logger.Debugf("debug api: http service(%s) report http code %s(%d)", ip6ServiceUrl, ip6Resp.Status, ip6Resp.StatusCode)
 		} else {
 			_, err = ip6Content.ReadFrom(ip6Resp.Body)
 			if err != nil {
-				loger.Debugf("debug api: p2p parse ipv6 service response: %v", err)
+				logger.Debugf("debug api: p2p parse ipv6 service response: %v", err)
 			}
 		}
 	}
-	return &publicIP{IPv4: ip4Content.String(), IPv6: ip6Content.String()}
+	return &PublicIP{IPv4: ip4Content.String(), IPv6: ip6Content.String()}
 }
 
-var pubIP = &publicIP{
+var pubIP = &PublicIP{
 	IPv4: "",
 	IPv6: "",
 }

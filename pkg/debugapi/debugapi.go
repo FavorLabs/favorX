@@ -6,23 +6,23 @@ import (
 	"net/http"
 	"sync"
 
+	"github.com/FavorLabs/favorX/pkg/address"
 	"github.com/FavorLabs/favorX/pkg/addressbook"
+	"github.com/FavorLabs/favorX/pkg/boson"
 	"github.com/FavorLabs/favorX/pkg/chunkinfo"
 	"github.com/FavorLabs/favorX/pkg/fileinfo"
+	"github.com/FavorLabs/favorX/pkg/logging"
 	"github.com/FavorLabs/favorX/pkg/multicast"
+	"github.com/FavorLabs/favorX/pkg/p2p"
+	"github.com/FavorLabs/favorX/pkg/pingpong"
 	"github.com/FavorLabs/favorX/pkg/retrieval"
 	"github.com/FavorLabs/favorX/pkg/routetab"
 	"github.com/FavorLabs/favorX/pkg/settlement/traffic"
 	"github.com/FavorLabs/favorX/pkg/storage"
-	"github.com/gauss-project/aurorafs/pkg/aurora"
-	"github.com/gauss-project/aurorafs/pkg/boson"
-	"github.com/gauss-project/aurorafs/pkg/logging"
-	"github.com/gauss-project/aurorafs/pkg/p2p"
-	"github.com/gauss-project/aurorafs/pkg/pingpong"
-	"github.com/gauss-project/aurorafs/pkg/topology"
-	"github.com/gauss-project/aurorafs/pkg/topology/bootnode"
-	"github.com/gauss-project/aurorafs/pkg/topology/lightnode"
-	"github.com/gauss-project/aurorafs/pkg/tracing"
+	"github.com/FavorLabs/favorX/pkg/topology"
+	"github.com/FavorLabs/favorX/pkg/topology/bootnode"
+	"github.com/FavorLabs/favorX/pkg/topology/lightnode"
+	"github.com/FavorLabs/favorX/pkg/tracing"
 	"github.com/gogf/gf/v2/os/gcache"
 	"github.com/gogf/gf/v2/os/gctx"
 	"github.com/prometheus/client_golang/prometheus"
@@ -70,7 +70,7 @@ type Options struct {
 	NATAddr        string
 	EnableWS       bool
 	EnableQUIC     bool
-	NodeMode       aurora.Model
+	NodeMode       address.Model
 	LightNodeLimit int
 	WelcomeMessage string
 	Transaction    []byte

@@ -9,11 +9,11 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/FavorLabs/favorX/pkg/boson"
 	"github.com/FavorLabs/favorX/pkg/file/pipeline/builder"
 	test "github.com/FavorLabs/favorX/pkg/file/testing"
 	"github.com/FavorLabs/favorX/pkg/storage"
 	"github.com/FavorLabs/favorX/pkg/storage/mock"
-	"github.com/gauss-project/aurorafs/pkg/boson"
 )
 
 func TestPartialWrites(t *testing.T) {
@@ -100,7 +100,7 @@ func TestAllVectors(t *testing.T) {
 go test -v -bench=. -run Bench -benchmem
 goos: linux
 goarch: amd64
-pkg: github.com/gauss-project/aurorafs/pkg/file/pipeline/builder
+pkg: github.com/FavorLabs/favorX/pkg/file/pipeline/builder
 BenchmarkPipeline
 BenchmarkPipeline/1000-bytes
 BenchmarkPipeline/1000-bytes-4         	   14475	     75170 ns/op	   63611 B/op	     333 allocs/op
@@ -115,8 +115,7 @@ BenchmarkPipeline/10000000-bytes-4     	       4	 304759595 ns/op	175378648 B/op
 BenchmarkPipeline/100000000-bytes
 BenchmarkPipeline/100000000-bytes-4    	       1	3064439098 ns/op	1751509528 B/op	11342736 allocs/op
 PASS
-ok  	github.com/gauss-project/aurorafs/pkg/file/pipeline/builder	17.599s
-
+ok  	github.com/FavorLabs/favorX/pkg/file/pipeline/builder	17.599s
 */
 func BenchmarkPipeline(b *testing.B) {
 	for _, count := range []int{

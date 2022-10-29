@@ -1,19 +1,17 @@
 package multicast
 
 import (
-	"github.com/gauss-project/aurorafs/pkg/subscribe"
+	"github.com/FavorLabs/favorX/pkg/address"
+	"github.com/FavorLabs/favorX/pkg/boson/test"
+	"github.com/FavorLabs/favorX/pkg/logging"
+	"github.com/FavorLabs/favorX/pkg/multicast/model"
+	mockRoute "github.com/FavorLabs/favorX/pkg/routetab/mock"
+	"github.com/FavorLabs/favorX/pkg/subscribe"
+	"github.com/FavorLabs/favorX/pkg/topology/kademlia/mock"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/sirupsen/logrus"
 	"io"
 	"testing"
-
-	"github.com/gauss-project/aurorafs/pkg/aurora"
-
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/gauss-project/aurorafs/pkg/boson/test"
-	"github.com/gauss-project/aurorafs/pkg/logging"
-	"github.com/gauss-project/aurorafs/pkg/multicast/model"
-	mockRoute "github.com/gauss-project/aurorafs/pkg/routetab/mock"
-	"github.com/gauss-project/aurorafs/pkg/topology/kademlia/mock"
-	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -47,7 +45,7 @@ func TestService_ObserveGroup(t *testing.T) {
 	gid := GenerateGID("gid1")
 	route := mockRoute.NewMockRouteTable()
 	kad := mock.NewMockKademlia()
-	s := NewService(test.RandomAddress(), aurora.NewModel(), nil, nil, kad, &route, logger, subscribe.NewSubPub(), Option{Dev: true})
+	s := NewService(test.RandomAddress(), address.NewModel(), nil, nil, kad, &route, logger, subscribe.NewSubPub(), Option{Dev: true})
 	err := s.observeGroup(gid, model.ConfigNodeGroup{})
 	if err != nil {
 		t.Fatal(err)

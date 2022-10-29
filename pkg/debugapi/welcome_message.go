@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/gauss-project/aurorafs/pkg/jsonhttp"
+	"github.com/FavorLabs/favorX/pkg/jsonhttp"
 )
 
 const welcomeMessageMaxRequestSize = 512

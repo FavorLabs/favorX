@@ -6,7 +6,7 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/gauss-project/aurorafs/pkg/jsonhttp"
+	"github.com/FavorLabs/favorX/pkg/jsonhttp"
 )
 
 func (s *Service) topologyHandler(w http.ResponseWriter, r *http.Request) {

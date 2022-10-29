@@ -8,8 +8,8 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/FavorLabs/favorX/pkg/boson"
 	"github.com/btcsuite/btcd/btcec"
-	"github.com/gauss-project/aurorafs/pkg/boson"
 	"golang.org/x/crypto/sha3"
 )
 

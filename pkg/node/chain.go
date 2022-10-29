@@ -5,7 +5,9 @@ import (
 	"fmt"
 
 	"github.com/FavorLabs/favorX/pkg/crypto"
+	"github.com/FavorLabs/favorX/pkg/logging"
 	"github.com/FavorLabs/favorX/pkg/p2p/libp2p"
+	"github.com/FavorLabs/favorX/pkg/settlement"
 	"github.com/FavorLabs/favorX/pkg/settlement/chain"
 	chainCommon "github.com/FavorLabs/favorX/pkg/settlement/chain/common"
 	"github.com/FavorLabs/favorX/pkg/settlement/chain/oracle"
@@ -16,11 +18,9 @@ import (
 	chequePkg "github.com/FavorLabs/favorX/pkg/settlement/traffic/cheque"
 	"github.com/FavorLabs/favorX/pkg/settlement/traffic/trafficprotocol"
 	"github.com/FavorLabs/favorX/pkg/storage"
+	"github.com/FavorLabs/favorX/pkg/subscribe"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/gauss-project/aurorafs/pkg/logging"
-	"github.com/gauss-project/aurorafs/pkg/settlement"
-	"github.com/gauss-project/aurorafs/pkg/subscribe"
 )
 
 // InitChain will initialize the Ethereum backend at the given endpoint and

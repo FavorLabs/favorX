@@ -7,13 +7,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/FavorLabs/favorX/pkg/boson"
 	"github.com/FavorLabs/favorX/pkg/file"
 	"github.com/FavorLabs/favorX/pkg/file/addresses"
 	"github.com/FavorLabs/favorX/pkg/file/joiner"
 	filetest "github.com/FavorLabs/favorX/pkg/file/testing"
 	"github.com/FavorLabs/favorX/pkg/storage"
 	"github.com/FavorLabs/favorX/pkg/storage/mock"
-	"github.com/gauss-project/aurorafs/pkg/boson"
 )
 
 func TestAddressesGetterIterateChunkAddresses(t *testing.T) {
@@ -58,7 +58,7 @@ func TestAddressesGetterIterateChunkAddresses(t *testing.T) {
 
 	addressesGetter := addresses.NewGetter(store, addressIterFunc)
 
-	j, _, err := joiner.New(ctx, addressesGetter, storage.ModeGetRequest, rootChunk.Address())
+	j, _, err := joiner.New(ctx, addressesGetter, storage.ModeGetRequest, rootChunk.Address(), 0)
 	if err != nil {
 		t.Fatal(err)
 	}

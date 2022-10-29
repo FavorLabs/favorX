@@ -9,21 +9,21 @@ import (
 	"testing"
 	"time"
 
+	"github.com/FavorLabs/favorX/pkg/address"
 	"github.com/FavorLabs/favorX/pkg/addressbook"
+	"github.com/FavorLabs/favorX/pkg/boson"
 	"github.com/FavorLabs/favorX/pkg/crypto"
+	"github.com/FavorLabs/favorX/pkg/discovery/mock"
+	"github.com/FavorLabs/favorX/pkg/logging"
+	"github.com/FavorLabs/favorX/pkg/p2p"
+	p2pmock "github.com/FavorLabs/favorX/pkg/p2p/mock"
+	"github.com/FavorLabs/favorX/pkg/p2p/streamtest"
 	"github.com/FavorLabs/favorX/pkg/routetab"
 	"github.com/FavorLabs/favorX/pkg/shed"
 	mockstate "github.com/FavorLabs/favorX/pkg/statestore/mock"
+	"github.com/FavorLabs/favorX/pkg/subscribe"
 	"github.com/FavorLabs/favorX/pkg/topology/kademlia"
-	"github.com/gauss-project/aurorafs/pkg/aurora"
-	"github.com/gauss-project/aurorafs/pkg/boson"
-	"github.com/gauss-project/aurorafs/pkg/discovery/mock"
-	"github.com/gauss-project/aurorafs/pkg/logging"
-	"github.com/gauss-project/aurorafs/pkg/p2p"
-	p2pmock "github.com/gauss-project/aurorafs/pkg/p2p/mock"
-	"github.com/gauss-project/aurorafs/pkg/p2p/streamtest"
-	"github.com/gauss-project/aurorafs/pkg/subscribe"
-	"github.com/gauss-project/aurorafs/pkg/topology/lightnode"
+	"github.com/FavorLabs/favorX/pkg/topology/lightnode"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/sirupsen/logrus"
 )
@@ -43,7 +43,7 @@ var (
 type Node struct {
 	*routetab.Service
 	overlay boson.Address
-	addr    *aurora.Address
+	addr    *address.Address
 	peer    p2p.Peer
 	signer  crypto.Signer
 	book    addressbook.Interface
@@ -67,12 +67,12 @@ func p2pMock(ab addressbook.Interface, overlay boson.Address, signer crypto.Sign
 				if a.Underlay.Equal(underlay) {
 					return &p2p.Peer{
 						Address: a.Overlay,
-						Mode:    aurora.NewModel().SetMode(aurora.FullNode),
+						Mode:    address.NewModel().SetMode(address.FullNode),
 					}, nil
 				}
 			}
 
-			bzzAddr, err := aurora.NewAddress(signer, underlay, overlay, networkId)
+			bzzAddr, err := address.NewAddress(signer, underlay, overlay, networkId)
 			if err != nil {
 				return nil, err
 			}
@@ -83,7 +83,7 @@ func p2pMock(ab addressbook.Interface, overlay boson.Address, signer crypto.Sign
 
 			return &p2p.Peer{
 				Address: bzzAddr.Overlay,
-				Mode:    aurora.NewModel().SetMode(aurora.FullNode),
+				Mode:    address.NewModel().SetMode(address.FullNode),
 			}, nil
 		}),
 		p2pmock.WithDisconnectFunc(func(boson.Address, string) error {
@@ -111,7 +111,7 @@ func newTestNode(t *testing.T) *Node {
 	ab := addressbook.New(mockstate.NewStateStore()) // address book
 	p2ps := p2pMock(ab, base.Overlay, signer)
 	disc := mock.NewDiscovery()
-	kad, err := kademlia.New(base.Overlay, ab, disc, p2ps, nil, nil, nil, metricsDB, noopLogger, subscribe.NewSubPub(), kademlia.Options{BinMaxPeers: 10, NodeMode: aurora.NewModel().SetMode(aurora.FullNode)}) // kademlia instance
+	kad, err := kademlia.New(base.Overlay, ab, disc, p2ps, nil, nil, nil, metricsDB, noopLogger, subscribe.NewSubPub(), kademlia.Options{BinMaxPeers: 10, NodeMode: address.NewModel().SetMode(address.FullNode)}) // kademlia instance
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -133,7 +133,7 @@ func newTestNode(t *testing.T) *Node {
 	}
 }
 
-func randomAddress(t *testing.T) (addr *aurora.Address, signer crypto.Signer) {
+func randomAddress(t *testing.T) (addr *address.Address, signer crypto.Signer) {
 	pk, _ := crypto.GenerateSecp256k1Key()
 	signer = crypto.NewDefaultSigner(pk)
 	base, _ := crypto.NewOverlayAddress(pk.PublicKey, networkId)
@@ -141,21 +141,21 @@ func randomAddress(t *testing.T) (addr *aurora.Address, signer crypto.Signer) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	auroraAddr, err := aurora.NewAddress(signer, mu, base, networkId)
+	addr, err = address.NewAddress(signer, mu, base, networkId)
 	if err != nil {
 		t.Fatal(err)
 	}
-	return auroraAddr, signer
+	return addr, signer
 }
 
-func (s *Node) addOne(t *testing.T, peer *aurora.Address, connect bool) {
+func (s *Node) addOne(t *testing.T, peer *address.Address, connect bool) {
 	t.Helper()
 
 	if err := s.book.Put(peer.Overlay, *peer); err != nil {
 		t.Fatal(err)
 	}
 	if connect {
-		err := s.kad.Connected(context.TODO(), p2p.Peer{Address: peer.Overlay, Mode: aurora.NewModel().SetMode(aurora.FullNode)}, true)
+		err := s.kad.Connected(context.TODO(), p2p.Peer{Address: peer.Overlay, Mode: address.NewModel().SetMode(address.FullNode)}, true)
 		if err != nil {
 			t.Fatal(err)
 		}

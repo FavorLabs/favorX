@@ -2,7 +2,7 @@ package filestore
 
 import (
 	"fmt"
-	"github.com/gauss-project/aurorafs/pkg/boson"
+	"github.com/FavorLabs/favorX/pkg/boson"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 	"reflect"

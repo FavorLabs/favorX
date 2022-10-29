@@ -3,9 +3,9 @@ package mock
 import (
 	"context"
 	"fmt"
+	"github.com/FavorLabs/favorX/pkg/address"
+	"github.com/FavorLabs/favorX/pkg/boson"
 	"github.com/FavorLabs/favorX/pkg/routetab"
-	"github.com/gauss-project/aurorafs/pkg/aurora"
-	"github.com/gauss-project/aurorafs/pkg/boson"
 	"time"
 )
 
@@ -44,6 +44,6 @@ func (r *MockRouteTable) DelRoute(ctx context.Context, dest boson.Address) (err 
 	return nil
 }
 
-func (r *MockRouteTable) FindUnderlay(ctx context.Context, target boson.Address) (addr *aurora.Address, err error) {
+func (r *MockRouteTable) FindUnderlay(ctx context.Context, target boson.Address) (addr *address.Address, err error) {
 	return nil, err
 }

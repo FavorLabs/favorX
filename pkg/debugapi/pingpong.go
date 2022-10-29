@@ -4,9 +4,9 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/gauss-project/aurorafs/pkg/boson"
-	"github.com/gauss-project/aurorafs/pkg/jsonhttp"
-	"github.com/gauss-project/aurorafs/pkg/p2p"
+	"github.com/FavorLabs/favorX/pkg/boson"
+	"github.com/FavorLabs/favorX/pkg/jsonhttp"
+	"github.com/FavorLabs/favorX/pkg/p2p"
 	"github.com/gorilla/mux"
 )
 

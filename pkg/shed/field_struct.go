@@ -20,7 +20,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/gauss-project/aurorafs/pkg/shed/driver"
+	"github.com/FavorLabs/favorX/pkg/shed/driver"
 )
 
 // StructField is a helper to store complex structure by

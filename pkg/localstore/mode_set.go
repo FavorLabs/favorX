@@ -21,11 +21,11 @@ import (
 	"errors"
 	"time"
 
+	"github.com/FavorLabs/favorX/pkg/boson"
 	"github.com/FavorLabs/favorX/pkg/sctx"
 	"github.com/FavorLabs/favorX/pkg/shed"
+	"github.com/FavorLabs/favorX/pkg/shed/driver"
 	"github.com/FavorLabs/favorX/pkg/storage"
-	"github.com/gauss-project/aurorafs/pkg/boson"
-	"github.com/gauss-project/aurorafs/pkg/shed/driver"
 )
 
 // Set updates database indexes for
@@ -125,9 +125,10 @@ func (db *DB) set(mode storage.ModeSet, rootAddr boson.Address, addrs ...boson.A
 }
 
 // setSync adds the chunk to the garbage collection after syncing by updating indexes
-// - ModeSetSync - the corresponding tag is incremented, then item is removed
-//   from push sync index
-// - update to gc index happens given item does not exist in pin index
+//   - ModeSetSync - the corresponding tag is incremented, then item is removed
+//     from push sync index
+//   - update to gc index happens given item does not exist in pin index
+//
 // Provided batch is updated.
 func (db *DB) setSync(batch driver.Batching, addr boson.Address, mode storage.ModeSet) (gcSizeChange int64, err error) {
 	item := addressToItem(addr)
@@ -183,7 +184,8 @@ func (db *DB) setSync(batch driver.Batching, addr boson.Address, mode storage.Mo
 }
 
 // setRemove removes the chunk by updating indexes:
-//  - delete from retrieve, pull, gc
+//   - delete from retrieve, pull, gc
+//
 // Provided batch is updated.
 func (db *DB) setRemove(batch driver.Batching, addr boson.Address, rootItem shed.Item) (gcSizeChange int64, err error) {
 	item := addressToItem(addr)

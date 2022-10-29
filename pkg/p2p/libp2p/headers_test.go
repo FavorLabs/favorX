@@ -6,10 +6,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/FavorLabs/favorX/pkg/address"
+	"github.com/FavorLabs/favorX/pkg/boson"
+	"github.com/FavorLabs/favorX/pkg/p2p"
 	"github.com/FavorLabs/favorX/pkg/p2p/libp2p"
-	"github.com/gauss-project/aurorafs/pkg/aurora"
-	"github.com/gauss-project/aurorafs/pkg/boson"
-	"github.com/gauss-project/aurorafs/pkg/p2p"
 )
 
 func TestHeaders(t *testing.T) {
@@ -22,10 +22,10 @@ func TestHeaders(t *testing.T) {
 	defer cancel()
 
 	s1, overlay1 := newService(t, 1, libp2pServiceOpts{libp2pOpts: libp2p.Options{
-		NodeMode: aurora.NewModel().SetMode(aurora.FullNode),
+		NodeMode: address.NewModel().SetMode(address.FullNode),
 	}})
 
-	s2, overlay2 := newService(t, 1, libp2pServiceOpts{libp2pOpts: libp2p.Options{NodeMode: aurora.NewModel()}})
+	s2, overlay2 := newService(t, 1, libp2pServiceOpts{libp2pOpts: libp2p.Options{NodeMode: address.NewModel()}})
 
 	var gotHeaders p2p.Headers
 	handled := make(chan struct{})
@@ -71,10 +71,10 @@ func TestHeaders_empty(t *testing.T) {
 	defer cancel()
 
 	s1, overlay1 := newService(t, 1, libp2pServiceOpts{libp2pOpts: libp2p.Options{
-		NodeMode: aurora.NewModel().SetMode(aurora.FullNode),
+		NodeMode: address.NewModel().SetMode(address.FullNode),
 	}})
 
-	s2, overlay2 := newService(t, 1, libp2pServiceOpts{libp2pOpts: libp2p.Options{NodeMode: aurora.NewModel()}})
+	s2, overlay2 := newService(t, 1, libp2pServiceOpts{libp2pOpts: libp2p.Options{NodeMode: address.NewModel()}})
 
 	var gotHeaders p2p.Headers
 	handled := make(chan struct{})
@@ -129,10 +129,10 @@ func TestHeadler(t *testing.T) {
 	defer cancel()
 
 	s1, overlay1 := newService(t, 1, libp2pServiceOpts{libp2pOpts: libp2p.Options{
-		NodeMode: aurora.NewModel().SetMode(aurora.FullNode),
+		NodeMode: address.NewModel().SetMode(address.FullNode),
 	}})
 
-	s2, _ := newService(t, 1, libp2pServiceOpts{libp2pOpts: libp2p.Options{NodeMode: aurora.NewModel()}})
+	s2, _ := newService(t, 1, libp2pServiceOpts{libp2pOpts: libp2p.Options{NodeMode: address.NewModel()}})
 
 	var gotReceivedHeaders p2p.Headers
 	handled := make(chan struct{})

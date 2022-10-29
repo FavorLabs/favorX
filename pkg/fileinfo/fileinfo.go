@@ -4,14 +4,14 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
+	"github.com/FavorLabs/favorX/pkg/address"
+	"github.com/FavorLabs/favorX/pkg/boson"
 	"github.com/FavorLabs/favorX/pkg/localstore"
 	"github.com/FavorLabs/favorX/pkg/localstore/chunkstore"
 	"github.com/FavorLabs/favorX/pkg/localstore/filestore"
+	"github.com/FavorLabs/favorX/pkg/logging"
+	"github.com/FavorLabs/favorX/pkg/resolver"
 	"github.com/FavorLabs/favorX/pkg/storage"
-	"github.com/gauss-project/aurorafs/pkg/aurora"
-	"github.com/gauss-project/aurorafs/pkg/boson"
-	"github.com/gauss-project/aurorafs/pkg/logging"
-	"github.com/gauss-project/aurorafs/pkg/resolver"
 )
 
 type FileView struct {
@@ -21,8 +21,8 @@ type FileView struct {
 }
 
 type ChunkInfoSource struct {
-	Len         int                     `json:"len"`
-	ChunkSource []aurora.ChunkSourceApi `json:"chunkSource"`
+	Len         int                      `json:"len"`
+	ChunkSource []address.ChunkSourceApi `json:"chunkSource"`
 }
 
 type Interface interface {
@@ -33,8 +33,8 @@ type Interface interface {
 	DeleteFile(rootCid boson.Address) error
 	PinFile(rootCid boson.Address, pinned bool) error
 	RegisterFile(rootCid boson.Address, registered bool) error
-	GetChunkInfoDiscoverOverlays(rootCid boson.Address) []aurora.ChunkInfoOverlay
-	GetChunkInfoServerOverlays(rootCid boson.Address) []aurora.ChunkInfoOverlay
+	GetChunkInfoDiscoverOverlays(rootCid boson.Address) []address.ChunkInfoOverlay
+	GetChunkInfoServerOverlays(rootCid boson.Address) []address.ChunkInfoOverlay
 	GetChunkInfoSource(rootCid boson.Address) ChunkInfoSource
 	AddFileMirror(next, rootCid boson.Address, ope filestore.Operation) error
 	FileCounter(rootCid boson.Address) error
@@ -167,31 +167,31 @@ func (f *FileInfo) RegisterFile(rootCid boson.Address, registered bool) error {
 	return nil
 }
 
-func (f *FileInfo) GetChunkInfoDiscoverOverlays(rootCid boson.Address) []aurora.ChunkInfoOverlay {
-	res := make([]aurora.ChunkInfoOverlay, 0)
+func (f *FileInfo) GetChunkInfoDiscoverOverlays(rootCid boson.Address) []address.ChunkInfoOverlay {
+	res := make([]address.ChunkInfoOverlay, 0)
 	consumerList, err := f.localStore.GetChunk(chunkstore.DISCOVER, rootCid)
 	if err != nil {
 		f.logger.Errorf("fileInfo GetChunkInfoDiscoverOverlays:%w", err)
 		return res
 	}
 	for _, c := range consumerList {
-		bv := aurora.BitVectorApi{B: c.B, Len: c.Len}
-		cio := aurora.ChunkInfoOverlay{Overlay: c.Overlay.String(), Bit: bv}
+		bv := address.BitVectorApi{B: c.B, Len: c.Len}
+		cio := address.ChunkInfoOverlay{Overlay: c.Overlay.String(), Bit: bv}
 		res = append(res, cio)
 	}
 	return res
 }
 
-func (f *FileInfo) GetChunkInfoServerOverlays(rootCid boson.Address) []aurora.ChunkInfoOverlay {
-	res := make([]aurora.ChunkInfoOverlay, 0)
+func (f *FileInfo) GetChunkInfoServerOverlays(rootCid boson.Address) []address.ChunkInfoOverlay {
+	res := make([]address.ChunkInfoOverlay, 0)
 	consumerList, err := f.localStore.GetChunk(chunkstore.SERVICE, rootCid)
 	if err != nil {
 		f.logger.Errorf("fileInfo GetChunkInfoServerOverlays:%w", err)
 		return res
 	}
 	for _, c := range consumerList {
-		bv := aurora.BitVectorApi{Len: c.Len, B: c.B}
-		cio := aurora.ChunkInfoOverlay{Overlay: c.Overlay.String(), Bit: bv}
+		bv := address.BitVectorApi{Len: c.Len, B: c.B}
+		cio := address.ChunkInfoOverlay{Overlay: c.Overlay.String(), Bit: bv}
 		res = append(res, cio)
 	}
 	return res
@@ -206,11 +206,11 @@ func (f *FileInfo) GetChunkInfoSource(rootCid boson.Address) ChunkInfoSource {
 	}
 
 	for _, c := range consumerList {
-		chunkBit := aurora.BitVectorApi{
+		chunkBit := address.BitVectorApi{
 			Len: c.Len,
 			B:   c.B,
 		}
-		source := aurora.ChunkSourceApi{
+		source := address.ChunkSourceApi{
 			Overlay:  c.Overlay.String(),
 			ChunkBit: chunkBit,
 		}

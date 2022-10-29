@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"github.com/FavorLabs/favorX/pkg/boson"
+	"github.com/FavorLabs/favorX/pkg/logging"
 	"github.com/FavorLabs/favorX/pkg/statestore/leveldb"
 	"github.com/FavorLabs/favorX/pkg/statestore/mock"
 	"github.com/FavorLabs/favorX/pkg/storage"
-	"github.com/gauss-project/aurorafs/pkg/boson"
-	"github.com/gauss-project/aurorafs/pkg/logging"
 )
 
 // InitStateStore will initialize the stateStore with the given path to the

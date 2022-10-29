@@ -1,5 +1,5 @@
 // Package netstore provides an abstraction layer over the
-// Aurora local storage layer that leverages connectivity
+// File local storage layer that leverages connectivity
 // with other peers in order to retrieve chunks from the network that cannot
 // be found locally.
 package netstore
@@ -9,12 +9,12 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/FavorLabs/favorX/pkg/boson"
 	"github.com/FavorLabs/favorX/pkg/chunkinfo"
+	"github.com/FavorLabs/favorX/pkg/logging"
 	"github.com/FavorLabs/favorX/pkg/retrieval"
 	"github.com/FavorLabs/favorX/pkg/sctx"
 	"github.com/FavorLabs/favorX/pkg/storage"
-	"github.com/gauss-project/aurorafs/pkg/boson"
-	"github.com/gauss-project/aurorafs/pkg/logging"
 )
 
 type Store struct {

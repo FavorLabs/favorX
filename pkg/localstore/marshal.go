@@ -10,7 +10,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"github.com/gauss-project/aurorafs/pkg/boson"
+	"github.com/FavorLabs/favorX/pkg/boson"
 )
 
 // Version constants.
@@ -104,7 +104,7 @@ func (bb *bitsForBytes) set(b byte) {
 	bb.bits[b/8] |= 1 << (b % 8)
 }
 
-//nolint,unused
+// nolint,unused
 func (bb *bitsForBytes) get(b byte) bool {
 	return bb.getUint8(b)
 }

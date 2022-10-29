@@ -4,10 +4,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/FavorLabs/favorX/pkg/boson"
+	"github.com/FavorLabs/favorX/pkg/p2p"
 	"github.com/FavorLabs/favorX/pkg/p2p/libp2p/internal/blocklist"
 	"github.com/FavorLabs/favorX/pkg/statestore/mock"
-	"github.com/gauss-project/aurorafs/pkg/boson"
-	"github.com/gauss-project/aurorafs/pkg/p2p"
 )
 
 func TestExist(t *testing.T) {

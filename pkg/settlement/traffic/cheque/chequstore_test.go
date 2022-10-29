@@ -3,9 +3,9 @@ package cheque_test
 import (
 	"context"
 	"errors"
+	chequePkg "github.com/FavorLabs/favorX/pkg/settlement/traffic/cheque"
+	"github.com/FavorLabs/favorX/pkg/statestore/mock"
 	"github.com/ethereum/go-ethereum/common"
-	chequePkg "github.com/gauss-project/aurorafs/pkg/settlement/traffic/cheque"
-	"github.com/gauss-project/aurorafs/pkg/statestore/mock"
 	"math/big"
 	"testing"
 )

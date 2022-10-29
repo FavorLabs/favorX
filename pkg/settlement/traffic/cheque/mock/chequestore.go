@@ -8,7 +8,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-// Service is the mock chequeStore service.
+// ChequeStoreMock Service is the mock chequeStore service.
 type ChequeStoreMock struct {
 	// ReceiveCheque verifies and stores a cheque. It returns the totam amount earned.
 	receiveCheque func(ctx context.Context, cheque *cheque.SignedCheque) (*big.Int, error)

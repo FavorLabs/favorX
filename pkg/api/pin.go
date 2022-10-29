@@ -5,10 +5,10 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/FavorLabs/favorX/pkg/boson"
+	"github.com/FavorLabs/favorX/pkg/jsonhttp"
 	"github.com/FavorLabs/favorX/pkg/pinning"
 	"github.com/FavorLabs/favorX/pkg/storage"
-	"github.com/gauss-project/aurorafs/pkg/boson"
-	"github.com/gauss-project/aurorafs/pkg/jsonhttp"
 	"github.com/gorilla/mux"
 )
 
@@ -46,7 +46,7 @@ func (s *server) pinRootHash(w http.ResponseWriter, r *http.Request) {
 	}
 	err = s.fileInfo.PinFile(ref, true)
 	if err != nil {
-		s.logger.Errorf("aurora upload file:update fileinfo pin failed:%v", err)
+		s.logger.Errorf("upload file:update fileinfo pin failed:%v", err)
 	}
 
 	jsonhttp.Created(w, nil)
@@ -87,7 +87,7 @@ func (s *server) unpinRootHash(w http.ResponseWriter, r *http.Request) {
 	}
 	err = s.fileInfo.PinFile(ref, false)
 	if err != nil {
-		s.logger.Errorf("aurora upload file:update fileinfo unpin failed:%v", err)
+		s.logger.Errorf("upload file:update fileinfo unpin failed:%v", err)
 	}
 
 	jsonhttp.OK(w, nil)

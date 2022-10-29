@@ -6,9 +6,9 @@ import (
 	"sort"
 	"sync"
 
-	"github.com/gauss-project/aurorafs/pkg/aurora"
-	"github.com/gauss-project/aurorafs/pkg/boson"
-	"github.com/gauss-project/aurorafs/pkg/p2p"
+	"github.com/FavorLabs/favorX/pkg/address"
+	"github.com/FavorLabs/favorX/pkg/boson"
+	"github.com/FavorLabs/favorX/pkg/p2p"
 	"github.com/libp2p/go-libp2p-core/network"
 	libp2ppeer "github.com/libp2p/go-libp2p-core/peer"
 	ma "github.com/multiformats/go-multiaddr"
@@ -17,7 +17,7 @@ import (
 type peerRegistry struct {
 	underlays   map[string]libp2ppeer.ID                    // map overlay address to underlay peer id
 	overlays    map[libp2ppeer.ID]boson.Address             // map underlay peer id to overlay address
-	modes       map[libp2ppeer.ID]aurora.Model              // map to track whether a node mode
+	modes       map[libp2ppeer.ID]address.Model             // map to track whether a node mode
 	connections map[libp2ppeer.ID]map[network.Conn]struct{} // list of connections for safe removal on Disconnect notification
 	streams     map[libp2ppeer.ID]map[network.Stream]context.CancelFunc
 	mu          sync.RWMutex
@@ -34,7 +34,7 @@ func newPeerRegistry() *peerRegistry {
 	return &peerRegistry{
 		underlays:   make(map[string]libp2ppeer.ID),
 		overlays:    make(map[libp2ppeer.ID]boson.Address),
-		modes:       make(map[libp2ppeer.ID]aurora.Model),
+		modes:       make(map[libp2ppeer.ID]address.Model),
 		connections: make(map[libp2ppeer.ID]map[network.Conn]struct{}),
 		streams:     make(map[libp2ppeer.ID]map[network.Stream]context.CancelFunc),
 
@@ -131,7 +131,7 @@ func (r *peerRegistry) peers() []p2p.Peer {
 	return peers
 }
 
-func (r *peerRegistry) addIfNotExists(c network.Conn, overlay boson.Address, md aurora.Model) (exists bool) {
+func (r *peerRegistry) addIfNotExists(c network.Conn, overlay boson.Address, md address.Model) (exists bool) {
 	peerID := c.RemotePeer()
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -169,7 +169,7 @@ func (r *peerRegistry) overlay(peerID libp2ppeer.ID) (boson.Address, bool) {
 	return overlay, found
 }
 
-func (r *peerRegistry) mode(peerID libp2ppeer.ID) (aurora.Model, bool) {
+func (r *peerRegistry) mode(peerID libp2ppeer.ID) (address.Model, bool) {
 	r.mu.RLock()
 	md, found := r.modes[peerID]
 	r.mu.RUnlock()
@@ -208,7 +208,7 @@ func (r *peerRegistry) isConnected(peerID libp2ppeer.ID, remoteAddr ma.Multiaddr
 	return nil, false
 }
 
-func (r *peerRegistry) remove(overlay boson.Address) (found bool, md aurora.Model, peerID libp2ppeer.ID) {
+func (r *peerRegistry) remove(overlay boson.Address) (found bool, md address.Model, peerID libp2ppeer.ID) {
 	r.mu.Lock()
 	peerID, found = r.underlays[overlay.ByteString()]
 	delete(r.overlays, peerID)

@@ -9,23 +9,22 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/gauss-project/aurorafs/pkg/aurora"
-
+	favor "github.com/FavorLabs/favorX"
+	accountingmock "github.com/FavorLabs/favorX/pkg/accounting/mock"
+	"github.com/FavorLabs/favorX/pkg/address"
+	"github.com/FavorLabs/favorX/pkg/boson"
+	"github.com/FavorLabs/favorX/pkg/crypto"
 	"github.com/FavorLabs/favorX/pkg/debugapi"
+	"github.com/FavorLabs/favorX/pkg/jsonhttp/jsonhttptest"
+	"github.com/FavorLabs/favorX/pkg/logging"
+	"github.com/FavorLabs/favorX/pkg/p2p/mock"
+	p2pmock "github.com/FavorLabs/favorX/pkg/p2p/mock"
+	"github.com/FavorLabs/favorX/pkg/pingpong"
+	"github.com/FavorLabs/favorX/pkg/resolver"
 	"github.com/FavorLabs/favorX/pkg/storage"
-	"github.com/gauss-project/aurorafs"
-	accountingmock "github.com/gauss-project/aurorafs/pkg/accounting/mock"
-	"github.com/gauss-project/aurorafs/pkg/boson"
-	"github.com/gauss-project/aurorafs/pkg/crypto"
-	"github.com/gauss-project/aurorafs/pkg/jsonhttp/jsonhttptest"
-	"github.com/gauss-project/aurorafs/pkg/logging"
-	"github.com/gauss-project/aurorafs/pkg/p2p/mock"
-	p2pmock "github.com/gauss-project/aurorafs/pkg/p2p/mock"
-	"github.com/gauss-project/aurorafs/pkg/pingpong"
-	"github.com/gauss-project/aurorafs/pkg/resolver"
-	"github.com/gauss-project/aurorafs/pkg/topology/bootnode"
-	"github.com/gauss-project/aurorafs/pkg/topology/lightnode"
-	topologymock "github.com/gauss-project/aurorafs/pkg/topology/mock"
+	"github.com/FavorLabs/favorX/pkg/topology/bootnode"
+	"github.com/FavorLabs/favorX/pkg/topology/lightnode"
+	topologymock "github.com/FavorLabs/favorX/pkg/topology/mock"
 	"github.com/multiformats/go-multiaddr"
 	"resenje.org/web"
 )
@@ -57,7 +56,7 @@ func newTestServer(t *testing.T, o testServerOptions) *testServer {
 	// swapserv := swapmock.NewApiInterface(o.SwapOpts...)
 	ln := lightnode.NewContainer(o.Overlay)
 	bn := bootnode.NewContainer(o.Overlay)
-	s := debugapi.New(o.Overlay, o.PublicKey, logging.New(io.Discard, 0), nil, o.CORSAllowedOrigins, false, nil, debugapi.Options{NodeMode: aurora.NewModel()})
+	s := debugapi.New(o.Overlay, o.PublicKey, logging.New(io.Discard, 0), nil, o.CORSAllowedOrigins, false, nil, debugapi.Options{NodeMode: address.NewModel()})
 	s.Configure(o.P2P, o.Pingpong, nil, topologyDriver, ln, bn, o.Storer, nil, nil, nil, nil, nil)
 	ts := httptest.NewServer(s)
 	t.Cleanup(ts.Close)
@@ -89,7 +88,7 @@ func mustMultiaddr(t *testing.T, s string) multiaddr.Multiaddr {
 }
 
 // TestServer_Configure validates that http routes are correct when server is
-// constructed with only basic routes and after it is configured with
+// constructed with only basic routes, and after it is configured with
 // dependencies.
 func TestServer_Configure(t *testing.T) {
 	privateKey, err := crypto.GenerateSecp256k1Key()
@@ -119,7 +118,7 @@ func TestServer_Configure(t *testing.T) {
 	ln := lightnode.NewContainer(o.Overlay)
 	bn := bootnode.NewContainer(o.Overlay)
 	s := debugapi.New(o.Overlay, o.PublicKey, logger, nil, nil, false, nil, debugapi.Options{
-		NodeMode: aurora.NewModel(),
+		NodeMode: address.NewModel(),
 	})
 	ts := httptest.NewServer(s)
 	t.Cleanup(ts.Close)
@@ -154,7 +153,7 @@ func TestServer_Configure(t *testing.T) {
 	jsonhttptest.Request(t, client, http.MethodGet, "/readiness", http.StatusOK,
 		jsonhttptest.WithExpectedJSONResponse(debugapi.StatusResponse{
 			Status:       "ok",
-			Version:      aufs.Version,
+			Version:      favor.Version,
 			FullNode:     false,
 			BootNodeMode: false,
 		}),
@@ -177,7 +176,7 @@ func testBasicRouter(t *testing.T, client *http.Client) {
 	jsonhttptest.Request(t, client, http.MethodGet, "/health", http.StatusOK,
 		jsonhttptest.WithExpectedJSONResponse(debugapi.StatusResponse{
 			Status:       "ok",
-			Version:      aufs.Version,
+			Version:      favor.Version,
 			FullNode:     false,
 			BootNodeMode: false,
 		}),

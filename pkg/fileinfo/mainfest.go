@@ -6,11 +6,11 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"github.com/FavorLabs/favorX/pkg/boson"
 	"github.com/FavorLabs/favorX/pkg/file/loadsave"
 	"github.com/FavorLabs/favorX/pkg/manifest"
 	"github.com/FavorLabs/favorX/pkg/storage"
-	"github.com/gauss-project/aurorafs/pkg/boson"
-	"github.com/gauss-project/aurorafs/pkg/tracing"
+	"github.com/FavorLabs/favorX/pkg/tracing"
 	"strings"
 )
 
@@ -54,8 +54,8 @@ func (f *FileInfo) ManifestView(ctx context.Context, nameOrHex string, pathVar s
 		ls,
 	)
 	if err != nil {
-		logger.Debugf("aurora download: not manifest %s: %v", address, err)
-		logger.Errorf("aurora download: not manifest %s", address)
+		logger.Debugf("download: not manifest %s: %v", address, err)
+		logger.Errorf("download: not manifest %s", address)
 		return nil, ErrNotFound
 	}
 

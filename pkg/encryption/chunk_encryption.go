@@ -1,7 +1,7 @@
 package encryption
 
 import (
-	"github.com/gauss-project/aurorafs/pkg/boson"
+	"github.com/FavorLabs/favorX/pkg/boson"
 	"golang.org/x/crypto/sha3"
 )
 

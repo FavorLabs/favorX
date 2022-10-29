@@ -6,11 +6,11 @@ import (
 	"io/ioutil"
 	"net/http"
 
+	"github.com/FavorLabs/favorX/pkg/boson"
+	"github.com/FavorLabs/favorX/pkg/jsonhttp"
 	"github.com/FavorLabs/favorX/pkg/multicast"
 	"github.com/FavorLabs/favorX/pkg/multicast/model"
 	"github.com/FavorLabs/favorX/pkg/multicast/pb"
-	"github.com/gauss-project/aurorafs/pkg/boson"
-	"github.com/gauss-project/aurorafs/pkg/jsonhttp"
 	"github.com/gorilla/mux"
 )
 

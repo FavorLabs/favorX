@@ -5,11 +5,11 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/gauss-project/aurorafs/pkg/boson"
-	"github.com/gauss-project/aurorafs/pkg/jsonhttp"
-	"github.com/gauss-project/aurorafs/pkg/jsonhttp/jsonhttptest"
-	"github.com/gauss-project/aurorafs/pkg/storage"
-	"github.com/gauss-project/aurorafs/pkg/storage/mock"
+	"github.com/FavorLabs/favorX/pkg/boson"
+	"github.com/FavorLabs/favorX/pkg/jsonhttp"
+	"github.com/FavorLabs/favorX/pkg/jsonhttp/jsonhttptest"
+	"github.com/FavorLabs/favorX/pkg/storage"
+	"github.com/FavorLabs/favorX/pkg/storage/mock"
 )
 
 func TestHasChunkHandler(t *testing.T) {

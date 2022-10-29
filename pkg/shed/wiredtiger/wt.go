@@ -16,7 +16,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/gauss-project/aurorafs/pkg/shed/driver"
+	"github.com/FavorLabs/favorX/pkg/shed/driver"
 	"github.com/sirupsen/logrus"
 )
 

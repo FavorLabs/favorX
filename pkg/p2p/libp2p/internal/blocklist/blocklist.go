@@ -4,9 +4,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/FavorLabs/favorX/pkg/boson"
+	"github.com/FavorLabs/favorX/pkg/p2p"
 	"github.com/FavorLabs/favorX/pkg/storage"
-	"github.com/gauss-project/aurorafs/pkg/boson"
-	"github.com/gauss-project/aurorafs/pkg/p2p"
 )
 
 var keyPrefix = "blocklist-"

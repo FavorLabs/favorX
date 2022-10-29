@@ -1,7 +1,7 @@
 package wiredtiger
 
 import (
-	"github.com/gauss-project/aurorafs/pkg/shed/driver"
+	"github.com/FavorLabs/favorX/pkg/shed/driver"
 )
 
 type batch struct {

@@ -3,11 +3,11 @@ package mock
 import (
 	"context"
 
+	"github.com/FavorLabs/favorX/pkg/boson"
+	"github.com/FavorLabs/favorX/pkg/rpc"
+	"github.com/FavorLabs/favorX/pkg/settlement/chain"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/gauss-project/aurorafs/pkg/boson"
-	"github.com/gauss-project/aurorafs/pkg/rpc"
-	"github.com/gauss-project/aurorafs/pkg/settlement/chain"
 )
 
 type ChainOracle struct {
@@ -24,7 +24,7 @@ func NewServer() *ChainOracle {
 	return &ChainOracle{}
 }
 
-func (ora *ChainOracle) GetCid(aufsUri string) []byte {
+func (ora *ChainOracle) GetCid(_ string) []byte {
 	return nil
 }
 
@@ -33,7 +33,7 @@ func (ora *ChainOracle) GetNodesFromCid(cid []byte) []boson.Address {
 	return overs
 }
 
-func (ora *ChainOracle) GetSourceNodes(aufsUri string) []boson.Address {
+func (ora *ChainOracle) GetSourceNodes(_ string) []boson.Address {
 
 	return nil
 }

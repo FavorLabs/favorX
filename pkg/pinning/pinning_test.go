@@ -9,16 +9,16 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gauss-project/aurorafs/pkg/file/pipeline/builder"
-	"github.com/gauss-project/aurorafs/pkg/pinning"
-	statestorem "github.com/gauss-project/aurorafs/pkg/statestore/mock"
-	"github.com/gauss-project/aurorafs/pkg/storage"
-	storagem "github.com/gauss-project/aurorafs/pkg/storage/mock"
-	"github.com/gauss-project/aurorafs/pkg/traversal"
+	"github.com/FavorLabs/favorX/pkg/file/pipeline/builder"
+	"github.com/FavorLabs/favorX/pkg/pinning"
+	statestorem "github.com/FavorLabs/favorX/pkg/statestore/mock"
+	"github.com/FavorLabs/favorX/pkg/storage"
+	storagem "github.com/FavorLabs/favorX/pkg/storage/mock"
+	"github.com/FavorLabs/favorX/pkg/traversal"
 )
 
 func TestPinningService(t *testing.T) {
-	const content = "Hello, Aurora!"
+	const content = "Hello, FavorX!"
 
 	var (
 		ctx        = context.Background()

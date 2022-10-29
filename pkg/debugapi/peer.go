@@ -6,10 +6,10 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/gauss-project/aurorafs/pkg/boson"
-	"github.com/gauss-project/aurorafs/pkg/jsonhttp"
-	"github.com/gauss-project/aurorafs/pkg/p2p"
-	"github.com/gauss-project/aurorafs/pkg/topology/model"
+	"github.com/FavorLabs/favorX/pkg/boson"
+	"github.com/FavorLabs/favorX/pkg/jsonhttp"
+	"github.com/FavorLabs/favorX/pkg/p2p"
+	"github.com/FavorLabs/favorX/pkg/topology/model"
 	"github.com/gorilla/mux"
 	"github.com/multiformats/go-multiaddr"
 	manet "github.com/multiformats/go-multiaddr/net"
@@ -21,31 +21,31 @@ type peerConnectResponse struct {
 
 func (s *Service) peerConnectHandler(w http.ResponseWriter, r *http.Request) {
 	dest := mux.Vars(r)["multi-address"]
-	addr, err := multiaddr.NewMultiaddr("/" + dest)
+	ma, err := multiaddr.NewMultiaddr("/" + dest)
 	if err != nil {
-		auroraAddr, e := boson.ParseHexAddress(dest)
+		addr, e := boson.ParseHexAddress(dest)
 		if e != nil {
-			s.logger.Debugf("debug api: peer connect: parse multiaddress: %v", err)
+			s.logger.Debugf("debug api: peer connect: parse multi address: %v", err)
 			jsonhttp.BadRequest(w, err)
 			return
 		}
-		err = s.routetab.Connect(r.Context(), auroraAddr)
+		err = s.routetab.Connect(r.Context(), addr)
 		if err != nil {
-			s.logger.Debugf("debug api: peer connect %s: %v", auroraAddr, err)
-			s.logger.Errorf("unable to connect to peer %s", auroraAddr)
+			s.logger.Debugf("debug api: peer connect %s: %v", addr, err)
+			s.logger.Errorf("unable to connect to peer %s", addr)
 			jsonhttp.InternalServerError(w, err)
 			return
 		}
 		jsonhttp.OK(w, peerConnectResponse{
-			Address: auroraAddr.String(),
+			Address: addr.String(),
 		})
 		return
 	}
 
-	peer, err := s.p2p.Connect(r.Context(), addr)
+	peer, err := s.p2p.Connect(r.Context(), ma)
 	if err != nil {
-		s.logger.Debugf("debug api: peer connect %s: %v", addr, err)
-		s.logger.Errorf("unable to connect to peer %s", addr)
+		s.logger.Debugf("debug api: peer connect %s: %v", ma, err)
+		s.logger.Errorf("unable to connect to peer %s", ma)
 		jsonhttp.InternalServerError(w, err)
 		return
 	}
@@ -58,14 +58,14 @@ func (s *Service) peerConnectHandler(w http.ResponseWriter, r *http.Request) {
 
 func (s *Service) peerDisconnectHandler(w http.ResponseWriter, r *http.Request) {
 	addr := mux.Vars(r)["address"]
-	auroraAddr, err := boson.ParseHexAddress(addr)
+	overlay, err := boson.ParseHexAddress(addr)
 	if err != nil {
 		s.logger.Debugf("debug api: parse peer address %s: %v", addr, err)
 		jsonhttp.BadRequest(w, "invalid peer address")
 		return
 	}
 
-	if err := s.topologyDriver.DisconnectForce(auroraAddr, "user requested disconnect"); err != nil {
+	if err := s.topologyDriver.DisconnectForce(overlay, "user requested disconnect"); err != nil {
 		s.logger.Debugf("debug api: peer disconnect %s: %v", addr, err)
 		if errors.Is(err, p2p.ErrPeerNotFound) {
 			jsonhttp.BadRequest(w, "peer not found")

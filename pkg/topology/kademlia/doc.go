@@ -33,15 +33,15 @@ a bin size too short, which in turn means that connections should be established
 within this bin. Empty bins have special status in terms of depth calculation
 and as mentioned before they are prioritized over deeper, non empty bins and
 they constitute as the node's depth when the latter is recalculated.
-For the rationale behind this please refer to the appropriate chapters in the book of Aurora.
+For the rationale behind this please refer to the appropriate chapters in the book
 
 A special case of the `manage()` functionality is that when we iterate over
 peers and we come across a peer that has PO >= depth, we would always like
 to connect to that peer. This should always be enforced within the bounds of
 the `binSaturated` function and guarantees an ever increasing kademlia depth
-in an ever-increasing size of Aurora, resulting in smaller areas of responsibility
+in an ever-increasing size of FavorX, resulting in smaller areas of responsibility
 for the nodes, maintaining a general upper bound of the assigned nominal
-area of responsibility in terms of actual storage requirement. See book of Aurora for more details.
+area of responsibility in terms of actual storage requirement. See book of FavorX for more details.
 
 Worth to note is that `manage()` will always try to initiate connections when
 a bin is not saturated, however currently it will not try to eliminate connections
@@ -86,7 +86,6 @@ bin | nodes
 3			0
 4			0
 depth: 0
-
 
 2. less or equal to two peers (nnLowWatermark=2) (a)
 bin | nodes

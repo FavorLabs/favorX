@@ -2,9 +2,9 @@ package traffic
 
 import (
 	"context"
+	"github.com/FavorLabs/favorX/pkg/boson"
+	"github.com/FavorLabs/favorX/pkg/rpc"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/gauss-project/aurorafs/pkg/boson"
-	"github.com/gauss-project/aurorafs/pkg/rpc"
 )
 
 func (s *Service) API() rpc.API {

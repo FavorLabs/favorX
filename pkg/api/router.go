@@ -5,13 +5,11 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/gauss-project/aurorafs/pkg/aurora"
-
-	"github.com/gauss-project/aurorafs/pkg/auth"
-
-	"github.com/gauss-project/aurorafs/pkg/boson"
-	"github.com/gauss-project/aurorafs/pkg/jsonhttp"
-	"github.com/gauss-project/aurorafs/pkg/logging/httpaccess"
+	"github.com/FavorLabs/favorX/pkg/address"
+	"github.com/FavorLabs/favorX/pkg/auth"
+	"github.com/FavorLabs/favorX/pkg/boson"
+	"github.com/FavorLabs/favorX/pkg/jsonhttp"
+	"github.com/FavorLabs/favorX/pkg/logging/httpaccess"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
@@ -44,7 +42,7 @@ func (s *server) setupRouting() {
 		fmt.Fprintln(w, "User-agent: *\nDisallow: /")
 	})
 
-	router.PathPrefix(aurora.RelayPrefixHttp + "/{gname}/{domain}").HandlerFunc(s.relayDo)
+	router.PathPrefix(address.RelayPrefixHttp + "/{gname}/{domain}").HandlerFunc(s.relayDo)
 
 	if s.Restricted {
 		router.Handle("/auth", jsonhttp.MethodHandler{

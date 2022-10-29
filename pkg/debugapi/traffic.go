@@ -1,8 +1,8 @@
 package debugapi
 
 import (
+	"github.com/FavorLabs/favorX/pkg/jsonhttp"
 	"github.com/FavorLabs/favorX/pkg/settlement/traffic"
-	"github.com/gauss-project/aurorafs/pkg/jsonhttp"
 	"net/http"
 )
 

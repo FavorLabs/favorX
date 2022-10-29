@@ -4,10 +4,10 @@ import (
 	"context"
 	"errors"
 
+	"github.com/FavorLabs/favorX/pkg/boson"
 	"github.com/FavorLabs/favorX/pkg/settlement/chain"
 	"github.com/FavorLabs/favorX/pkg/storage"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/gauss-project/aurorafs/pkg/boson"
 )
 
 // CashoutService is the service responsible for managing cashout actions

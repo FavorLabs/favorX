@@ -6,11 +6,10 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/FavorLabs/favorX/pkg/boson"
+	"github.com/FavorLabs/favorX/pkg/cac"
 	"github.com/FavorLabs/favorX/pkg/encryption"
 	"github.com/FavorLabs/favorX/pkg/file"
-	"github.com/gauss-project/aurorafs/pkg/boson"
-	"github.com/gauss-project/aurorafs/pkg/cac"
-
 	"golang.org/x/crypto/sha3"
 )
 
@@ -27,7 +26,7 @@ const levelBufferLimit = 9
 //
 // After the job is constructed, Write must be called with up to ChunkSize byte slices
 // until the full data length has been written. The Sum should be called which will
-// return the AuroraAddrHash of the data.
+// return the File AddrHash of the data.
 //
 // Called Sum before the last Write, or Write after Sum has been called, may result in
 // error and will may result in undefined result.
@@ -95,7 +94,7 @@ func (j *SimpleSplitterJob) Write(b []byte) (int, error) {
 	return len(b), nil
 }
 
-// Sum returns the Aurora hash of the data.
+// Sum returns the FavorX hash of the data.
 func (j *SimpleSplitterJob) Sum(b []byte) []byte {
 	return j.digest()
 }
@@ -202,16 +201,18 @@ func (s *SimpleSplitterJob) hashUnfinished() error {
 // Let F be full chunks (disregarding branching factor) and S be single references
 // in the following scenario:
 //
-//       S
-//     F   F
-//   F   F   F
+//	    S
+//	  F   F
+//	F   F   F
+//
 // F   F   F   F S
 //
 // The result will be:
 //
-//       SS
-//     F    F
-//   F   F   F
+//	    SS
+//	  F    F
+//	F   F   F
+//
 // F   F   F   F
 //
 // After which the SS will be hashed to obtain the final root hash

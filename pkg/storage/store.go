@@ -1,5 +1,5 @@
 // Package storage provides implementation contracts and notions
-// used across storage-aware components in aurora.
+// used across storage-aware components
 package storage
 
 import (
@@ -8,8 +8,8 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/gauss-project/aurorafs/pkg/boson"
-	"github.com/gauss-project/aurorafs/pkg/shed/driver"
+	"github.com/FavorLabs/favorX/pkg/boson"
+	"github.com/FavorLabs/favorX/pkg/shed/driver"
 )
 
 var (

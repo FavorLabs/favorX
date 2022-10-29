@@ -2,8 +2,8 @@ package multicast
 
 import (
 	"context"
-	"github.com/gauss-project/aurorafs/pkg/boson"
-	"github.com/gauss-project/aurorafs/pkg/rpc"
+	"github.com/FavorLabs/favorX/pkg/boson"
+	"github.com/FavorLabs/favorX/pkg/rpc"
 )
 
 func (s *Service) API() rpc.API {

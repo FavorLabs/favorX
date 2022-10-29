@@ -7,12 +7,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/FavorLabs/favorX/pkg/boson"
 	"github.com/FavorLabs/favorX/pkg/debugapi"
-	"github.com/gauss-project/aurorafs/pkg/boson"
-	"github.com/gauss-project/aurorafs/pkg/jsonhttp"
-	"github.com/gauss-project/aurorafs/pkg/jsonhttp/jsonhttptest"
-	"github.com/gauss-project/aurorafs/pkg/p2p"
-	pingpongmock "github.com/gauss-project/aurorafs/pkg/pingpong/mock"
+	"github.com/FavorLabs/favorX/pkg/jsonhttp"
+	"github.com/FavorLabs/favorX/pkg/jsonhttp/jsonhttptest"
+	"github.com/FavorLabs/favorX/pkg/p2p"
+	pingpongmock "github.com/FavorLabs/favorX/pkg/pingpong/mock"
 )
 
 func TestPingpong(t *testing.T) {

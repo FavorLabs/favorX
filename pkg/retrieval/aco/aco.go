@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gauss-project/aurorafs/pkg/boson"
+	"github.com/FavorLabs/favorX/pkg/boson"
 )
 
 const (

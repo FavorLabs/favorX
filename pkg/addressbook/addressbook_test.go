@@ -3,12 +3,11 @@ package addressbook_test
 import (
 	"testing"
 
-	"github.com/gauss-project/aurorafs/pkg/addressbook"
-	"github.com/gauss-project/aurorafs/pkg/aurora"
-	"github.com/gauss-project/aurorafs/pkg/boson"
-	"github.com/gauss-project/aurorafs/pkg/crypto"
-	"github.com/gauss-project/aurorafs/pkg/statestore/mock"
-
+	"github.com/FavorLabs/favorX/pkg/address"
+	"github.com/FavorLabs/favorX/pkg/addressbook"
+	"github.com/FavorLabs/favorX/pkg/boson"
+	"github.com/FavorLabs/favorX/pkg/crypto"
+	"github.com/FavorLabs/favorX/pkg/statestore/mock"
 	ma "github.com/multiformats/go-multiaddr"
 )
 
@@ -36,7 +35,7 @@ func run(t *testing.T, f bookFunc) {
 		t.Fatal(err)
 	}
 
-	bzzAddr, err := aurora.NewAddress(crypto.NewDefaultSigner(pk), multiaddr, addr1, 1)
+	bzzAddr, err := address.NewAddress(crypto.NewDefaultSigner(pk), multiaddr, addr1, 1)
 	if err != nil {
 		t.Fatal(err)
 	}

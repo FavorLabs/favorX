@@ -5,7 +5,7 @@ import (
 	"io"
 	"time"
 
-	"github.com/gauss-project/aurorafs/pkg/p2p"
+	"github.com/FavorLabs/favorX/pkg/p2p"
 	"github.com/libp2p/go-libp2p-core/network"
 )
 
@@ -52,7 +52,7 @@ func (s *stream) FullClose() error {
 	// Now, technically, we should do this *before*
 	// returning from SendMessage as the message
 	// hasn't really been sent yet until we see the
-	// EOF but we don't actually *know* what
+	// EOF, but we don't actually *know* what
 	// protocol the other side is speaking.
 	n, err := s.Read([]byte{0})
 	if n > 0 || err == nil {
