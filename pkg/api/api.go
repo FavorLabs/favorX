@@ -166,7 +166,6 @@ func New(storer storage.Storer, resolver resolver.Interface, addr boson.Address,
 
 	BufferSizeMul = o.BufferSizeMul
 	s.setupRouting()
-	s.transactionReceiptUpdate()
 
 	return s
 }
@@ -364,35 +363,6 @@ func (s *server) newTracingHandler(spanName string) func(h http.Handler) http.Ha
 			h.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
-}
-
-func (s *server) transactionReceiptUpdate() {
-
-	go func() {
-		tranReceipt := func(rootCid boson.Address, txHash common.Hash) (uint64, error) {
-			receipt, err := s.oracleChain.WaitForReceipt(context.Background(), rootCid, txHash)
-			if err != nil {
-				return 0, err
-			}
-			if receipt.Status == 0 {
-				s.logger.Errorf("api:tranReceipt - %s Exchange failed ", txHash.String())
-			}
-			return receipt.Status, nil
-		}
-
-		for trans := range s.transactionChan {
-			status, err := tranReceipt(trans.Address, trans.Hash)
-			if err != nil {
-				continue
-			}
-			if status == 1 {
-				err = s.fileInfo.RegisterFile(trans.Address, true)
-				if err != nil {
-					s.logger.Errorf("fileRegister update info:%v", err)
-				}
-			}
-		}
-	}()
 }
 
 func lookaheadBufferSize(size int64) int {

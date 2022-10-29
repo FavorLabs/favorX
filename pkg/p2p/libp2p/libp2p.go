@@ -15,7 +15,7 @@ import (
 	"github.com/FavorLabs/favorX/pkg/address"
 	"github.com/FavorLabs/favorX/pkg/addressbook"
 	"github.com/FavorLabs/favorX/pkg/boson"
-	beecrypto "github.com/FavorLabs/favorX/pkg/crypto"
+	"github.com/FavorLabs/favorX/pkg/crypto"
 	"github.com/FavorLabs/favorX/pkg/logging"
 	"github.com/FavorLabs/favorX/pkg/p2p"
 	"github.com/FavorLabs/favorX/pkg/p2p/libp2p/internal/blocklist"
@@ -32,7 +32,7 @@ import (
 	"github.com/gogf/gf/v2/os/gtimer"
 	"github.com/hashicorp/go-multierror"
 	"github.com/libp2p/go-libp2p"
-	"github.com/libp2p/go-libp2p-core/crypto"
+	crypto2 "github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/event"
 	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/libp2p/go-libp2p-core/network"
@@ -95,7 +95,7 @@ type Service struct {
 }
 
 type Options struct {
-	PrivateKey     crypto.PrivKey
+	PrivateKey     crypto2.PrivKey
 	NATAddr        string
 	EnableWS       bool
 	EnableQUIC     bool
@@ -107,7 +107,7 @@ type Options struct {
 	hostFactory    func(...libp2p.Option) (host.Host, error)
 }
 
-func New(ctx context.Context, signer beecrypto.Signer, networkID uint64, overlay boson.Address, addr string, ab addressbook.Putter, storer storage.StateStorer, lightNodes *lightnode.Container, bootNodes *bootnode.Container, logger logging.Logger, tracer *tracing.Tracer, o Options) (*Service, error) {
+func New(ctx context.Context, signer crypto.Signer, networkID uint64, overlay boson.Address, addr string, ab addressbook.Putter, storer storage.StateStorer, lightNodes *lightnode.Container, bootNodes *bootnode.Container, logger logging.Logger, tracer *tracing.Tracer, o Options) (*Service, error) {
 	hostObj, port, err := net.SplitHostPort(addr)
 	if err != nil {
 		return nil, fmt.Errorf("address: %w", err)
