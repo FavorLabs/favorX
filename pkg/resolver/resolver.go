@@ -9,7 +9,7 @@ import (
 // Address is the boson address.
 type Address = boson.Address
 
-// Interface can resolve an URL into an associated Ethereum address.
+// Interface can resolve a URL into an associated Ethereum address.
 type Interface interface {
 	Resolve(url string) (Address, error)
 	io.Closer

@@ -107,7 +107,7 @@ func ParseAddress(underlay, overlay, signature []byte, networkID uint64) (*Addre
 func generateSignData(underlay, overlay []byte, networkID uint64) []byte {
 	networkIDBytes := make([]byte, 8)
 	binary.BigEndian.PutUint64(networkIDBytes, networkID)
-	signData := append([]byte("aurorafs-handshake-"), underlay...)
+	signData := append([]byte("favorx-handshake-"), underlay...)
 	signData = append(signData, overlay...)
 	return append(signData, networkIDBytes...)
 }

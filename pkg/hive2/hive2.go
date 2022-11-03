@@ -170,7 +170,7 @@ func (s *Service) onFindNode(ctx context.Context, peer p2p.Peer, stream p2p.Stre
 					skip = append(skip, p.Overlay)
 					return false, false, nil
 				}
-				resp.Peers = append(resp.Peers, &pb.AuroraAddress{
+				resp.Peers = append(resp.Peers, &pb.Address{
 					Underlay:  p.Underlay.Bytes(),
 					Signature: p.Signature,
 					Overlay:   p.Overlay.Bytes(),
@@ -291,7 +291,7 @@ func (s *Service) checkAndAddPeers(ctx context.Context, result resultChan) {
 		}
 
 		wg.Add(1)
-		go func(newPeer *pb.AuroraAddress) {
+		go func(newPeer *pb.Address) {
 			defer func() {
 				s.sem.Release(1)
 				wg.Done()
@@ -357,7 +357,7 @@ func (s *Service) IsHive2() bool {
 	return true
 }
 
-func randPeersLimit(peers []*pb.AuroraAddress, limit int) []*pb.AuroraAddress {
+func randPeersLimit(peers []*pb.Address, limit int) []*pb.Address {
 	total := len(peers)
 	if total > limit {
 		rand.Seed(time.Now().UnixNano())

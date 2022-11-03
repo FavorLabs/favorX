@@ -6,6 +6,11 @@ import (
 	"crypto/ecdsa"
 	"errors"
 	"fmt"
+	"io"
+	"io/ioutil"
+	"math/big"
+	"testing"
+
 	"github.com/FavorLabs/favorX/pkg/address"
 	"github.com/FavorLabs/favorX/pkg/addressbook"
 	"github.com/FavorLabs/favorX/pkg/boson"
@@ -27,10 +32,6 @@ import (
 	"github.com/FavorLabs/favorX/pkg/topology/bootnode"
 	"github.com/FavorLabs/favorX/pkg/topology/lightnode"
 	"github.com/ethereum/go-ethereum/common"
-	"io"
-	"io/ioutil"
-	"math/big"
-	"testing"
 )
 
 type libp2pServiceOpts struct {
@@ -497,12 +498,12 @@ func newP2pService(t *testing.T, networkID uint64, o libp2pServiceOpts) (s *libp
 
 	t.Helper()
 
-	auroraKey, err := crypto.GenerateSecp256k1Key()
+	nodeKey, err := crypto.GenerateSecp256k1Key()
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	overlay, err = crypto.NewOverlayAddress(auroraKey.PublicKey, networkID)
+	overlay, err = crypto.NewOverlayAddress(nodeKey.PublicKey, networkID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -537,7 +538,7 @@ func newP2pService(t *testing.T, networkID uint64, o libp2pServiceOpts) (s *libp
 	}
 	opts := o.libp2pOpts
 
-	s, err = libp2p.New(ctx, crypto.NewDefaultSigner(auroraKey), networkID, overlay, addr, o.Addressbook, statestore, o.lightNodes, o.bootNodes, o.Logger, nil, opts)
+	s, err = libp2p.New(ctx, crypto.NewDefaultSigner(nodeKey), networkID, overlay, addr, o.Addressbook, statestore, o.lightNodes, o.bootNodes, o.Logger, nil, opts)
 	if err != nil {
 		t.Fatal(err)
 	}

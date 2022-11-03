@@ -4,15 +4,16 @@ package p2p
 
 import (
 	"context"
+	"io"
+	"net"
+	"time"
+
 	"github.com/FavorLabs/favorX/pkg/address"
 	"github.com/FavorLabs/favorX/pkg/boson"
 	"github.com/FavorLabs/favorX/pkg/routetab/pb"
 	"github.com/libp2p/go-libp2p-core/network"
 	libp2ppeer "github.com/libp2p/go-libp2p-core/peer"
 	ma "github.com/multiformats/go-multiaddr"
-	"io"
-	"net"
-	"time"
 )
 
 // ReachabilityStatus represents the node reachability status.
@@ -247,9 +248,9 @@ const (
 	HeaderNameTracingSpanContext = "tracing-span-context"
 )
 
-// NewAuroraStreamName constructs a libp2p compatible stream name out of
+// NewStreamName constructs a libp2p compatible stream name out of
 // protocol name and version and stream name.
-func NewAuroraStreamName(protocol, version, stream string) string {
+func NewStreamName(protocol, version, stream string) string {
 	return "/boson/" + protocol + "/" + version + "/" + stream
 }
 

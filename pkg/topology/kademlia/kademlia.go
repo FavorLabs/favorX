@@ -5,6 +5,13 @@ import (
 	random "crypto/rand"
 	"encoding/json"
 	"errors"
+	"math/big"
+	"net"
+	"sort"
+	"sync"
+	"syscall"
+	"time"
+
 	"github.com/FavorLabs/favorX/pkg/address"
 	"github.com/FavorLabs/favorX/pkg/addressbook"
 	"github.com/FavorLabs/favorX/pkg/blocker"
@@ -25,12 +32,6 @@ import (
 	"github.com/libp2p/go-libp2p-core/network"
 	ma "github.com/multiformats/go-multiaddr"
 	"golang.org/x/sync/errgroup"
-	"math/big"
-	"net"
-	"sort"
-	"sync"
-	"syscall"
-	"time"
 )
 
 const (
@@ -354,7 +355,7 @@ func (k *Kad) connectNeighbours(wg *sync.WaitGroup, peerConnChan chan<- *peerCon
 	})
 }
 
-func (k *Kad) GetAuroraAddress(overlay boson.Address) (addr *address.Address, err error) {
+func (k *Kad) GetFullAddress(overlay boson.Address) (addr *address.Address, err error) {
 	addr, err = k.addressBook.Get(overlay)
 	switch {
 	case errors.Is(err, addressbook.ErrNotFound):
@@ -406,7 +407,7 @@ func (k *Kad) Connection(ctx context.Context, addr *address.Address) error {
 // to peers sent by the producers to the peerConnChan.
 func (k *Kad) connectionAttemptsHandler(ctx context.Context, wg *sync.WaitGroup, neighbourhoodChan, balanceChan <-chan *peerConnInfo) {
 	connect := func(peer *peerConnInfo) {
-		addr, err := k.GetAuroraAddress(peer.addr)
+		addr, err := k.GetFullAddress(peer.addr)
 		if err != nil {
 			return
 		}

@@ -222,12 +222,12 @@ func TestService_FindRoute(t *testing.T) {
 		t.Fatalf("expect dest 4 route path len 1,got %d", len(route))
 	}
 
-	// check underlay
-	underlay, err := nodes[0].kad.GetAuroraAddress(nodes[4].overlay)
+	// check address
+	fullAddr, err := nodes[0].kad.GetFullAddress(nodes[4].overlay)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !underlay.Overlay.Equal(nodes[4].overlay) {
+	if !fullAddr.Overlay.Equal(nodes[4].overlay) {
 		t.Fatal(err)
 	}
 	// check route
