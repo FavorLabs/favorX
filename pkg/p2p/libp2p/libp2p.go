@@ -294,7 +294,7 @@ func New(ctx context.Context, signer crypto.Signer, networkID uint64, overlay bo
 	})
 
 	// Construct protocols.
-	id := protocol.ID(p2p.NewAuroraStreamName(handshake.ProtocolName, handshake.ProtocolVersion, handshake.StreamName))
+	id := protocol.ID(p2p.NewStreamName(handshake.ProtocolName, handshake.ProtocolVersion, handshake.StreamName))
 	matcher, err := s.protocolSemverMatcher(id)
 	if err != nil {
 		return nil, fmt.Errorf("protocol version match %s: %w", id, err)
@@ -511,7 +511,7 @@ func (s *Service) SetPickyNotifier(n p2p.PickyNotifier) {
 func (s *Service) AddProtocol(p p2p.ProtocolSpec) (err error) {
 	for _, ss := range p.StreamSpecs {
 		ss := ss
-		id := protocol.ID(p2p.NewAuroraStreamName(p.Name, p.Version, ss.Name))
+		id := protocol.ID(p2p.NewStreamName(p.Name, p.Version, ss.Name))
 		matcher, err := s.protocolSemverMatcher(id)
 		if err != nil {
 			return fmt.Errorf("protocol version match %s: %w", id, err)
@@ -915,7 +915,7 @@ func (s *Service) ResourceManager() network.ResourceManager {
 }
 
 func (s *Service) getProtocolHandler(protocolName, protocolVersion, streamName string) (hand *p2p.StreamSpec, err error) {
-	id := protocol.ID(p2p.NewAuroraStreamName(protocolName, protocolVersion, streamName))
+	id := protocol.ID(p2p.NewStreamName(protocolName, protocolVersion, streamName))
 	matcher, err := s.protocolSemverMatcher(id)
 	if err != nil {
 		err = fmt.Errorf("protocol version match %s: %w", id, err)
@@ -925,7 +925,7 @@ func (s *Service) getProtocolHandler(protocolName, protocolVersion, streamName s
 	for _, ss := range s.protocols {
 		if ss.Name == protocolName {
 			for _, v := range ss.StreamSpecs {
-				if matcher(p2p.NewAuroraStreamName(protocolName, ss.Version, v.Name)) {
+				if matcher(p2p.NewStreamName(protocolName, ss.Version, v.Name)) {
 					spec = v
 					break
 				}
@@ -1138,8 +1138,8 @@ func (s *Service) exchangeHeaders(ctx context.Context, streamlibp2p network.Stre
 }
 
 func (s *Service) newStreamForPeerID(ctx context.Context, peerID libp2ppeer.ID, protocolName, protocolVersion, streamName string) (network.Stream, error) {
-	auroraStreamName := p2p.NewAuroraStreamName(protocolName, protocolVersion, streamName)
-	st, err := s.host.NewStream(ctx, peerID, protocol.ID(auroraStreamName))
+	fullStreamName := p2p.NewStreamName(protocolName, protocolVersion, streamName)
+	st, err := s.host.NewStream(ctx, peerID, protocol.ID(fullStreamName))
 	if err != nil {
 		if st != nil {
 			s.logger.Debug("stream experienced unexpected early close")
@@ -1148,7 +1148,7 @@ func (s *Service) newStreamForPeerID(ctx context.Context, peerID libp2ppeer.ID, 
 		if err == multistream.ErrNotSupported || err == multistream.ErrIncorrectVersion {
 			return nil, p2p.NewIncompatibleStreamError(err)
 		}
-		return nil, fmt.Errorf("create stream %q to %q: %w", auroraStreamName, peerID, err)
+		return nil, fmt.Errorf("create stream %q to %q: %w", fullStreamName, peerID, err)
 	}
 	s.metrics.CreatedStreamCount.Inc()
 	return st, nil

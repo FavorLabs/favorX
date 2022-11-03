@@ -193,7 +193,7 @@ func wrapResolve(registry *goens.Registry, addr common.Address, name string) (st
 
 	prefixIndex := bytes.Index(decodedMHash.Digest, subPrefix)
 	if prefixIndex != 0 {
-		return "", fmt.Errorf("only support aurora-format contenthash")
+		return "", fmt.Errorf("only support digest with leading versioned prefix")
 	}
 
 	contentHash := hex.EncodeToString(decodedMHash.Digest[len(subPrefix):])
