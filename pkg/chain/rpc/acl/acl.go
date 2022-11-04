@@ -2,17 +2,19 @@ package acl
 
 import (
 	"bytes"
+	"context"
 	"errors"
+	"math/big"
 	"strings"
 
 	"github.com/FavorLabs/favorX/pkg/boson"
 	"github.com/FavorLabs/favorX/pkg/chain/rpc/base"
 	"github.com/FavorLabs/favorX/pkg/logging"
-	"github.com/centrifuge/go-substrate-rpc-client/v4/rpc/author"
 	"github.com/centrifuge/go-substrate-rpc-client/v4/scale"
-	"github.com/centrifuge/go-substrate-rpc-client/v4/signature"
 	"github.com/centrifuge/go-substrate-rpc-client/v4/types"
 	"github.com/centrifuge/go-substrate-rpc-client/v4/types/codec"
+	"github.com/ethereum/go-ethereum/common"
+	ethTypes "github.com/ethereum/go-ethereum/core/types"
 )
 
 type Interface interface {
@@ -22,28 +24,128 @@ type Interface interface {
 	GetAccountID(nickname string) (accountID string, err error)
 	SetResolveWatch(uri string, cid []byte) error
 	GetResolve(uri string) (cid []byte, err error)
-	GetNodesFromCid(cid []byte) (overlays []boson.Address, err error)
+
+	// GetNodesFromCid  Get source nodes of specified cid
+	GetNodesFromCid(cid []byte) (overlays []boson.Address)
+
+	// GetCid Resolve cid from  uri
+	GetCid(uri string) []byte
+
+	GetSourceNodes(uri string) []boson.Address
+
+	// OnStoreMatched Notification when new data req matched
+	OnStoreMatched(cid boson.Address, dataLen uint64, salt uint64, address boson.Address)
+
+	// DataStoreFinished when data retrieved and saved, use this function to report onchain
+	DataStoreFinished(cid boson.Address, dataLen uint64, salt uint64, proof []byte, resCh chan ChainResult)
+	RegisterCidAndNode(ctx context.Context, rootCid boson.Address, address boson.Address, gasPrice, minGasPrice *big.Int) (hash common.Hash, err error)
+	RemoveCidAndNode(ctx context.Context, rootCid boson.Address, address boson.Address, gasPrice, minGasPrice *big.Int) (common.Hash, error)
+	GetRegisterState(ctx context.Context, rootCid boson.Address, address boson.Address) (bool, error)
+	WaitForReceipt(ctx context.Context, rootCid boson.Address, txHash common.Hash) (receipt *ethTypes.Receipt, err error)
 }
 
-// oracle exposes methods for querying oracle
-type acl struct {
+type ChainResult struct {
+	// success bool
+	TxHash []byte
+	// reason  string
+}
+
+// exposes methods for querying oracle
+type service struct {
+	base.CheckExtrinsicInterface
 	client *base.SubstrateAPI
 	meta   *types.Metadata
-	signer signature.KeyringPair
 }
 
-// New creates a new oracle struct
-func New(c *base.SubstrateAPI, signer signature.KeyringPair) Interface {
+func (s *service) CheckExtrinsic(block types.Hash, ext types.Extrinsic) (err error) {
+	b, err := ext.MarshalJSON()
+	if err != nil {
+		return
+	}
+	index, err := s.client.GetExtrinsicIndex(block, b)
+	if err != nil {
+		return
+	}
+	recordsRaw, err := s.client.GetEventRecordsRaw(block)
+	if err != nil {
+		return
+	}
+	var ev EventRecords
+	err = recordsRaw.DecodeEventRecords(s.meta, &ev)
+	if err != nil {
+		return
+	}
+
+	for _, v := range ev.System_ExtrinsicFailed {
+		if v.Phase.AsApplyExtrinsic == uint32(index) {
+			if v.DispatchError.IsModule {
+				return NewError(v.DispatchError.ModuleError.Index)
+			}
+			if v.DispatchError.IsToken {
+				return base.TokenError
+			}
+			if v.DispatchError.IsArithmetic {
+				return base.ArithmeticError
+			}
+			if v.DispatchError.IsTransactional {
+				return base.TransactionalError
+			}
+		}
+	}
+	return
+}
+
+func (s *service) GetCid(uri string) []byte {
+	// TODO implement me
+	panic("implement me")
+}
+
+func (s *service) GetSourceNodes(uri string) []boson.Address {
+	// TODO implement me
+	panic("implement me")
+}
+
+func (s *service) OnStoreMatched(cid boson.Address, dataLen uint64, salt uint64, address boson.Address) {
+	// TODO implement me
+	panic("implement me")
+}
+
+func (s *service) DataStoreFinished(cid boson.Address, dataLen uint64, salt uint64, proof []byte, resCh chan ChainResult) {
+	// TODO implement me
+	panic("implement me")
+}
+
+func (s *service) RegisterCidAndNode(ctx context.Context, rootCid boson.Address, address boson.Address, gasPrice, minGasPrice *big.Int) (hash common.Hash, err error) {
+	// TODO implement me
+	panic("implement me")
+}
+
+func (s *service) RemoveCidAndNode(ctx context.Context, rootCid boson.Address, address boson.Address, gasPrice, minGasPrice *big.Int) (common.Hash, error) {
+	// TODO implement me
+	panic("implement me")
+}
+
+func (s *service) GetRegisterState(ctx context.Context, rootCid boson.Address, address boson.Address) (bool, error) {
+	// TODO implement me
+	panic("implement me")
+}
+
+func (s *service) WaitForReceipt(ctx context.Context, rootCid boson.Address, txHash common.Hash) (receipt *ethTypes.Receipt, err error) {
+	// TODO implement me
+	panic("implement me")
+}
+
+// New creates a new service struct
+func New(c *base.SubstrateAPI) Interface {
 	meta, _ := c.RPC.State.GetMetadataLatest()
-	return &acl{
+	return &service{
 		client: c,
 		meta:   meta,
-		signer: signer,
 	}
 }
 
-func (s *acl) GetNodesFromCid(cid []byte) (overlays []boson.Address, err error) {
-	key, err := types.CreateStorageKey(s.meta, "Acl", "Oracles", s.signer.PublicKey, cid)
+func (s *service) GetNodesFromCid(cid []byte) (overlays []boson.Address) {
+	key, err := types.CreateStorageKey(s.meta, "Acl", "Oracles", s.client.Signer.PublicKey, cid)
 	if err != nil {
 		return
 	}
@@ -59,82 +161,16 @@ func (s *acl) GetNodesFromCid(cid []byte) (overlays []boson.Address, err error) 
 	return
 }
 
-func (s *acl) SetNicknameWatch(name string) error {
+func (s *service) SetNicknameWatch(name string) error {
 	c, err := types.NewCall(s.meta, "Acl.set_nickname", name)
 	if err != nil {
 		return err
 	}
 
-	var sub *author.ExtrinsicStatusSubscription
-	for {
-		// Create the extrinsic
-		ext := types.NewExtrinsic(c)
-		genesisHash, err := s.client.RPC.Chain.GetBlockHash(0)
-		if err != nil {
-			return err
-		}
-
-		rv, err := s.client.RPC.State.GetRuntimeVersionLatest()
-		if err != nil {
-			return err
-		}
-
-		// Get the nonce for Alice
-		key, err := types.CreateStorageKey(s.meta, "System", "Account", s.signer.PublicKey)
-		if err != nil {
-			return err
-		}
-
-		var accountInfo types.AccountInfo
-		ok, err := s.client.RPC.State.GetStorageLatest(key, &accountInfo)
-		if err != nil {
-			return err
-		}
-		if !ok {
-			return errors.New("account not found")
-		}
-		nonce := uint32(accountInfo.Nonce)
-		o := types.SignatureOptions{
-			BlockHash:          genesisHash,
-			Era:                types.ExtrinsicEra{IsMortalEra: false},
-			GenesisHash:        genesisHash,
-			Nonce:              types.NewUCompactFromUInt(uint64(nonce)),
-			SpecVersion:        rv.SpecVersion,
-			Tip:                types.NewUCompactFromUInt(0),
-			TransactionVersion: rv.TransactionVersion,
-		}
-
-		logging.Infof("set nickname %s\n", name)
-
-		// Sign the transaction using Alice's default account
-		err = ext.Sign(s.signer, o)
-		if err != nil {
-			return err
-		}
-
-		// Do the transfer and track the actual status
-		sub, err = s.client.RPC.Author.SubmitAndWatchExtrinsic(ext)
-		if err != nil {
-			logging.Warningf("set_nickname submit failed: %v", err)
-			continue
-		}
-		break
-	}
-	defer sub.Unsubscribe()
-	for {
-		status := <-sub.Chan()
-
-		// wait until finalisation
-		if status.IsInBlock || status.IsFinalized {
-			break
-		}
-
-		logging.Infof("waiting for the set_nickname to be included/finalized")
-	}
-	return nil
+	return s.client.SubmitExtrinsicAndWatch(c, s)
 }
 
-func (s *acl) GetNickName(accountId string) (name string, err error) {
+func (s *service) GetNickName(accountId string) (name string, err error) {
 	key, err := types.CreateStorageKey(s.meta, "Acl", "AccountNickname", codec.MustHexDecodeString(accountId))
 	if err != nil {
 		return
@@ -151,7 +187,7 @@ func (s *acl) GetNickName(accountId string) (name string, err error) {
 	return
 }
 
-func (s *acl) GetAccountID(nickname string) (accountID string, err error) {
+func (s *service) GetAccountID(nickname string) (accountID string, err error) {
 	// SCALE encode nickname bytes
 	buf := bytes.NewBuffer(nil)
 	enc := scale.NewEncoder(buf)
@@ -176,8 +212,8 @@ func (s *acl) GetAccountID(nickname string) (accountID string, err error) {
 	return res.ToHexString(), nil
 }
 
-func (s *acl) SelfNickname() (name string, err error) {
-	key, err := types.CreateStorageKey(s.meta, "Acl", "AccountNickname", s.signer.PublicKey)
+func (s *service) SelfNickname() (name string, err error) {
+	key, err := types.CreateStorageKey(s.meta, "Acl", "AccountNickname", s.client.Signer.PublicKey)
 	if err != nil {
 		return
 	}
@@ -193,85 +229,19 @@ func (s *acl) SelfNickname() (name string, err error) {
 	return
 }
 
-func (s *acl) SetResolveWatch(uri string, cid []byte) error {
+func (s *service) SetResolveWatch(uri string, cid []byte) (err error) {
 	accountID, err := types.NewAccountID(cid)
 	if err != nil {
-		return err
+		return
 	}
 	c, err := types.NewCall(s.meta, "Acl.set_resolve", uri, accountID)
 	if err != nil {
-		return err
+		return
 	}
-	var sub *author.ExtrinsicStatusSubscription
-	for {
-		// Create the extrinsic
-		ext := types.NewExtrinsic(c)
-		genesisHash, err := s.client.RPC.Chain.GetBlockHash(0)
-		if err != nil {
-			return err
-		}
-
-		rv, err := s.client.RPC.State.GetRuntimeVersionLatest()
-		if err != nil {
-			return err
-		}
-
-		// Get the nonce for Alice
-		key, err := types.CreateStorageKey(s.meta, "System", "Account", s.signer.PublicKey)
-		if err != nil {
-			return err
-		}
-
-		var accountInfo types.AccountInfo
-		ok, err := s.client.RPC.State.GetStorageLatest(key, &accountInfo)
-		if err != nil {
-			return err
-		}
-		if !ok {
-			return errors.New("account not found")
-		}
-		nonce := uint32(accountInfo.Nonce)
-		o := types.SignatureOptions{
-			BlockHash:          genesisHash,
-			Era:                types.ExtrinsicEra{IsMortalEra: false},
-			GenesisHash:        genesisHash,
-			Nonce:              types.NewUCompactFromUInt(uint64(nonce)),
-			SpecVersion:        rv.SpecVersion,
-			Tip:                types.NewUCompactFromUInt(0),
-			TransactionVersion: rv.TransactionVersion,
-		}
-
-		logging.Infof("set resolve %s\n", uri)
-
-		// Sign the transaction using Alice's default account
-		err = ext.Sign(s.signer, o)
-		if err != nil {
-			return err
-		}
-
-		// Do the transfer and track the actual status
-		sub, err = s.client.RPC.Author.SubmitAndWatchExtrinsic(ext)
-		if err != nil {
-			logging.Warningf("set_resolve submit failed: %v", err)
-			continue
-		}
-		break
-	}
-	defer sub.Unsubscribe()
-	for {
-		status := <-sub.Chan()
-
-		// wait until finalisation
-		if status.IsInBlock || status.IsFinalized {
-			break
-		}
-
-		logging.Infof("waiting for the set_resolve to be included/finalized")
-	}
-	return nil
+	return s.client.SubmitExtrinsicAndWatch(c, s)
 }
 
-func (s *acl) GetResolve(uri string) (cid []byte, err error) {
+func (s *service) GetResolve(uri string) (cid []byte, err error) {
 	aid, path, err := s.parseUri(uri)
 	if err != nil {
 		return nil, err
@@ -293,14 +263,14 @@ func (s *acl) GetResolve(uri string) (cid []byte, err error) {
 	return res.ToBytes(), nil
 }
 
-func (s *acl) parseUri(uri string) (accountId, path []byte, err error) {
+func (s *service) parseUri(uri string) (accountId, path []byte, err error) {
 	list := strings.Split(uri, "/")
 	if len(list) < 2 {
 		err = errors.New("uri invalid")
 		return
 	}
 	if list[0] == "" {
-		accountId = s.signer.PublicKey
+		accountId = s.client.Signer.PublicKey
 	} else {
 		// get accountId
 		id, e := s.GetAccountID(list[0])
