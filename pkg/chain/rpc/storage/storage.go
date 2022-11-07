@@ -18,7 +18,7 @@ type Interface interface {
 	RemoveCidAndNode(rootCid []byte, address []byte) (hash types.Hash, err error)
 	RemoveCidAndNodeWatch(ctx context.Context, cid []byte, overlay []byte) (err error)
 	StorageFileWatch(ctx context.Context, buyer boson.Address, cid []byte, overlay []byte) (err error)
-	PlaceOrderWatch(ctx context.Context, cid []byte, fileSize, fileCopy uint64, expire uint32) (err error)
+	PlaceOrderWatch(ctx context.Context, cid []byte, fileSize, fileCopy uint64, expire uint32) (users []types.AccountID, err error)
 	MerchantRegisterWatch(ctx context.Context, diskTotal uint64) (err error)
 	MerchantUnregisterWatch(ctx context.Context) (err error)
 }
@@ -74,6 +74,7 @@ func (s *service) CheckExtrinsic(block types.Hash, txn types.Hash) (has bool, er
 				err = base.TransactionalError
 				return
 			}
+			break
 		}
 	}
 	return
@@ -110,7 +111,7 @@ func (s *service) RegisterCidAndNodeWatch(ctx context.Context, rootCid []byte, a
 		return
 	}
 
-	return s.client.SubmitExtrinsicAndWatch(ctx, c, s)
+	return s.client.SubmitExtrinsicAndWatch(ctx, c, s.CheckExtrinsic)
 }
 
 func (s *service) RemoveCidAndNodeWatch(ctx context.Context, rootCid []byte, address []byte) (err error) {
@@ -127,7 +128,7 @@ func (s *service) RemoveCidAndNodeWatch(ctx context.Context, rootCid []byte, add
 		return
 	}
 
-	return s.client.SubmitExtrinsicAndWatch(ctx, c, s)
+	return s.client.SubmitExtrinsicAndWatch(ctx, c, s.CheckExtrinsic)
 }
 
 func (s *service) StorageFileWatch(ctx context.Context, buyer boson.Address, cid []byte, overlay []byte) (err error) {
@@ -148,10 +149,10 @@ func (s *service) StorageFileWatch(ctx context.Context, buyer boson.Address, cid
 		return
 	}
 
-	return s.client.SubmitExtrinsicAndWatch(ctx, c, s)
+	return s.client.SubmitExtrinsicAndWatch(ctx, c, s.CheckExtrinsic)
 }
 
-func (s *service) PlaceOrderWatch(ctx context.Context, cid []byte, fileSize, fileCopy uint64, expire uint32) (err error) {
+func (s *service) PlaceOrderWatch(ctx context.Context, cid []byte, fileSize, fileCopy uint64, expire uint32) (users []types.AccountID, err error) {
 	hash, err := types.NewAccountID(cid)
 	if err != nil {
 		return
@@ -162,7 +163,53 @@ func (s *service) PlaceOrderWatch(ctx context.Context, cid []byte, fileSize, fil
 		return
 	}
 
-	return s.client.SubmitExtrinsicAndWatch(ctx, c, s)
+	err = s.client.SubmitExtrinsicAndWatch(ctx, c, func(block types.Hash, txn types.Hash) (has bool, err error) {
+		index, err := s.client.GetExtrinsicIndex(block, txn)
+		if index > -1 {
+			has = true
+		}
+		if err != nil {
+			return
+		}
+		recordsRaw, err := s.client.GetEventRecordsRaw(block)
+		if err != nil {
+			return
+		}
+		var ev EventRecords
+		err = recordsRaw.DecodeEventRecords(s.meta, &ev)
+		if err != nil {
+			return
+		}
+
+		for _, v := range ev.System_ExtrinsicFailed {
+			if v.Phase.AsApplyExtrinsic == uint32(index) {
+				if v.DispatchError.IsModule {
+					err = NewError(v.DispatchError.ModuleError.Index)
+					return
+				}
+				if v.DispatchError.IsToken {
+					err = base.TokenError
+				}
+				if v.DispatchError.IsArithmetic {
+					err = base.ArithmeticError
+					return
+				}
+				if v.DispatchError.IsTransactional {
+					err = base.TransactionalError
+					return
+				}
+				break
+			}
+		}
+
+		for _, v := range ev.Storage_OrderMatchSuccess {
+			if v.Phase.AsApplyExtrinsic == uint32(index) {
+				users = append(users, v.Merchant)
+			}
+		}
+		return
+	})
+	return
 }
 
 func (s *service) MerchantRegisterWatch(ctx context.Context, diskTotal uint64) (err error) {
@@ -171,7 +218,7 @@ func (s *service) MerchantRegisterWatch(ctx context.Context, diskTotal uint64) (
 		return
 	}
 
-	return s.client.SubmitExtrinsicAndWatch(ctx, c, s)
+	return s.client.SubmitExtrinsicAndWatch(ctx, c, s.CheckExtrinsic)
 }
 
 func (s *service) MerchantUnregisterWatch(ctx context.Context) (err error) {
@@ -180,7 +227,7 @@ func (s *service) MerchantUnregisterWatch(ctx context.Context) (err error) {
 		return
 	}
 
-	return s.client.SubmitExtrinsicAndWatch(ctx, c, s)
+	return s.client.SubmitExtrinsicAndWatch(ctx, c, s.CheckExtrinsic)
 }
 
 func (s *service) RegisterCidAndNode(rootCid []byte, address []byte) (hash types.Hash, err error) {

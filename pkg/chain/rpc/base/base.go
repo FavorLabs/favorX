@@ -19,6 +19,8 @@ type CheckExtrinsicInterface interface {
 	CheckExtrinsic(block types.Hash, txn types.Hash) (has bool, err error)
 }
 
+type CheckExtrinsic func(block types.Hash, txn types.Hash) (has bool, err error)
+
 type Client interface {
 	// Call makes the call to RPC method with the provided args,
 	// args must be encoded in the format RPC understands
@@ -186,7 +188,7 @@ func (s *SubstrateAPI) GetEventRecordsRaw(blockHash types.Hash) (res types.Event
 	return
 }
 
-func (s *SubstrateAPI) SubmitExtrinsicAndWatch(ctx context.Context, c types.Call, fn CheckExtrinsicInterface) (err error) {
+func (s *SubstrateAPI) SubmitExtrinsicAndWatch(ctx context.Context, c types.Call, fn CheckExtrinsic) (err error) {
 	o, err := s.GetSignatureOptions()
 	if err != nil {
 		return
@@ -221,7 +223,7 @@ func (s *SubstrateAPI) SubmitExtrinsicAndWatch(ctx context.Context, c types.Call
 		select {
 		case status := <-sub.Chan():
 			if status.IsInBlock || status.IsFinalized {
-				_, err = fn.CheckExtrinsic(status.AsInBlock, txn)
+				_, err = fn(status.AsInBlock, txn)
 				return
 			}
 		case <-ctx.Done():

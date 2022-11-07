@@ -91,7 +91,7 @@ func (s *service) SetNicknameWatch(ctx context.Context, name string) error {
 		return err
 	}
 
-	return s.client.SubmitExtrinsicAndWatch(ctx, c, s)
+	return s.client.SubmitExtrinsicAndWatch(ctx, c, s.CheckExtrinsic)
 }
 
 func (s *service) GetNickName(accountId []byte) (name string, err error) {
@@ -161,7 +161,7 @@ func (s *service) SetResolveWatch(ctx context.Context, uri string, cid []byte) (
 	if err != nil {
 		return
 	}
-	return s.client.SubmitExtrinsicAndWatch(ctx, c, s)
+	return s.client.SubmitExtrinsicAndWatch(ctx, c, s.CheckExtrinsic)
 }
 
 func (s *service) GetResolve(uri string) (cid []byte, err error) {
