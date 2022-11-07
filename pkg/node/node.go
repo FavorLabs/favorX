@@ -18,6 +18,7 @@ import (
 	"github.com/FavorLabs/favorX/pkg/api"
 	"github.com/FavorLabs/favorX/pkg/auth"
 	"github.com/FavorLabs/favorX/pkg/boson"
+	"github.com/FavorLabs/favorX/pkg/chain"
 	"github.com/FavorLabs/favorX/pkg/chunkinfo"
 	"github.com/FavorLabs/favorX/pkg/crypto"
 	"github.com/FavorLabs/favorX/pkg/crypto/cert"
@@ -44,6 +45,7 @@ import (
 	"github.com/FavorLabs/favorX/pkg/topology/lightnode"
 	"github.com/FavorLabs/favorX/pkg/tracing"
 	"github.com/FavorLabs/favorX/pkg/traversal"
+	"github.com/centrifuge/go-substrate-rpc-client/v4/signature"
 	"github.com/gogf/gf/v2/util/gconv"
 	crypto2 "github.com/libp2p/go-libp2p-core/crypto"
 	ma "github.com/multiformats/go-multiaddr"
@@ -228,9 +230,16 @@ func NewNode(nodeMode address.Model, addr string, bosonAddress boson.Address, pu
 		return nil, fmt.Errorf("p2p service: %w", err)
 	}
 
-	oracleChain, settlement, apiInterface, commonChain, err := InitChain(
+	// TODO add KeyringPairAlice
+	client, err := chain.NewClient("ws://127.0.0.1:9944", signature.TestKeyringPairAlice)
+	if err != nil {
+		return nil, err
+	}
+
+	oracleChain, settlement, apiInterface, _, err := InitChain(
 		p2pCtx,
 		logger,
+		client,
 		o.ChainEndpoint,
 		o.OracleContractAddress,
 		stateStore,
@@ -411,7 +420,7 @@ func NewNode(nodeMode address.Model, addr string, bosonAddress boson.Address, pu
 	if o.APIAddr != "" {
 		// API server
 		apiService = api.New(ns, multiResolver, bosonAddress, chunkInfo, fileInfo, traversal.New(ns), pinningService,
-			authenticator, logger, kad, tracer, apiInterface, commonChain, oracleChain, relay, group, route,
+			authenticator, logger, kad, tracer, apiInterface, client, oracleChain, relay, group, route,
 			api.Options{
 				CORSAllowedOrigins: o.CORSAllowedOrigins,
 				GatewayMode:        o.GatewayMode,
@@ -494,7 +503,7 @@ func NewNode(nodeMode address.Model, addr string, bosonAddress boson.Address, pu
 		// HTTPModules: []string{"debug", "api"},
 		WSAddr:    o.WSAddr,
 		WSOrigins: o.CORSAllowedOrigins,
-		WSModules: []string{"group", "p2p", "chunkInfo", "traffic", "retrieval", "oracle"},
+		WSModules: []string{"group", "p2p", "chunkInfo", "traffic", "retrieval"},
 	})
 	if err != nil {
 		return nil, err
@@ -505,7 +514,6 @@ func NewNode(nodeMode address.Model, addr string, bosonAddress boson.Address, pu
 		chunkInfo.API(),    // chunkInfo
 		apiInterface.API(), // traffic
 		retrieve.API(),     // retrieval
-		oracleChain.API(),  // oracle
 	})
 	if err = stack.Start(); err != nil {
 		return nil, err

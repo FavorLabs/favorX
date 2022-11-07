@@ -14,7 +14,7 @@ import (
 	"github.com/FavorLabs/favorX/pkg/routetab"
 	"github.com/FavorLabs/favorX/pkg/rpc"
 	"github.com/FavorLabs/favorX/pkg/sctx"
-	"github.com/FavorLabs/favorX/pkg/settlement/chain"
+	"github.com/FavorLabs/favorX/pkg/settlement/chain/oracle"
 	"github.com/FavorLabs/favorX/pkg/subscribe"
 	"resenje.org/singleflight"
 )
@@ -40,7 +40,7 @@ type ChunkInfo struct {
 	logger         logging.Logger
 	metrics        metrics
 	singleflight   singleflight.Group
-	oracleChain    chain.Resolver
+	oracleChain    oracle.Resolver
 	subPub         subscribe.SubPub
 	fileInfo       fileinfo.Interface
 	discover       sync.Map
@@ -52,7 +52,7 @@ type ChunkInfo struct {
 }
 
 func New(addr boson.Address, streamer p2p.Streamer, logger logging.Logger,
-	chunkStore *localstore.DB, route routetab.RouteTab, oracleChain chain.Resolver, fileInfo fileinfo.Interface,
+	chunkStore *localstore.DB, route routetab.RouteTab, oracleChain oracle.Resolver, fileInfo fileinfo.Interface,
 	subPub subscribe.SubPub) *ChunkInfo {
 	chunkInfo := &ChunkInfo{
 		addr:           addr,
@@ -67,7 +67,7 @@ func New(addr boson.Address, streamer p2p.Streamer, logger logging.Logger,
 		chunkStore:     chunkStore,
 	}
 	chunkInfo.triggerTimeOut()
-	//chunkInfo.cleanDiscoverTrigger()
+	// chunkInfo.cleanDiscoverTrigger()
 	return chunkInfo
 }
 

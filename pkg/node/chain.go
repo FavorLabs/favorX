@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	subChain "github.com/FavorLabs/favorX/pkg/chain"
 	"github.com/FavorLabs/favorX/pkg/crypto"
 	"github.com/FavorLabs/favorX/pkg/logging"
 	"github.com/FavorLabs/favorX/pkg/p2p/libp2p"
@@ -28,6 +29,7 @@ import (
 func InitChain(
 	ctx context.Context,
 	logger logging.Logger,
+	subClient *subChain.Client,
 	endpoint string,
 	oracleContractAddress string,
 	stateStore storage.StateStorer,
@@ -36,7 +38,7 @@ func InitChain(
 	trafficContractAddr string,
 	p2pService *libp2p.Service,
 	subPub subscribe.SubPub,
-) (chain.Resolver, settlement.Interface, traffic.ApiInterface, chain.Common, error) {
+) (oracle.Resolver, settlement.Interface, traffic.ApiInterface, chain.Common, error) {
 	backend, err := ethclient.Dial(endpoint)
 	if err != nil {
 		return nil, nil, nil, nil, fmt.Errorf("dial eth client: %w", err)
@@ -54,7 +56,7 @@ func InitChain(
 	if oracleContractAddress == "" {
 		return nil, nil, nil, nil, fmt.Errorf("oracle contract address is empty")
 	}
-	oracleServer, err := oracle.NewServer(logger, backend, oracleContractAddress, signer, cc, subPub)
+	oracleServer, err := oracle.NewServer(logger, subClient, cc, subPub)
 	if err != nil {
 		return nil, nil, nil, nil, fmt.Errorf("new oracle service: %w", err)
 	}

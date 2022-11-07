@@ -1,10 +1,8 @@
 package base
 
 import (
-	"bytes"
 	"context"
 	"errors"
-	"time"
 
 	"github.com/FavorLabs/favorX/pkg/logging"
 	"github.com/centrifuge/go-substrate-rpc-client/v4/config"
@@ -14,10 +12,11 @@ import (
 	"github.com/centrifuge/go-substrate-rpc-client/v4/signature"
 	"github.com/centrifuge/go-substrate-rpc-client/v4/types"
 	"github.com/centrifuge/go-substrate-rpc-client/v4/types/codec"
+	"github.com/decred/dcrd/crypto/blake256"
 )
 
 type CheckExtrinsicInterface interface {
-	CheckExtrinsic(block types.Hash, ext types.Extrinsic) (err error)
+	CheckExtrinsic(block types.Hash, txn types.Hash) (has bool, err error)
 }
 
 type Client interface {
@@ -148,19 +147,21 @@ func (s *SubstrateAPI) GetSignatureOptions() (option types.SignatureOptions, res
 	return
 }
 
-func (s *SubstrateAPI) GetExtrinsicIndex(blockHash types.Hash, extBytes []byte) (out int, err error) {
+func (s *SubstrateAPI) GetExtrinsicIndex(blockHash types.Hash, txn types.Hash) (index int, err error) {
+	index = -1
 	block, err := s.RPC.Chain.GetBlock(blockHash)
 	if err != nil {
 		logging.Warningf("gsrpc err: %w", err)
 		return
 	}
 	for k, v := range block.Block.Extrinsics {
-		b, _ := v.MarshalJSON()
-		if bytes.Equal(b, extBytes) {
+		extBytes, _ := codec.Encode(v)
+		if blake256.Sum256(extBytes) == txn {
 			return k, nil
 		}
 	}
-	return 0, errors.New("extrinsic not found")
+	err = errors.New("extrinsic not found")
+	return
 }
 
 func (s *SubstrateAPI) GetEventRecordsRaw(blockHash types.Hash) (res types.EventRecordsRaw, err error) {
@@ -185,7 +186,7 @@ func (s *SubstrateAPI) GetEventRecordsRaw(blockHash types.Hash) (res types.Event
 	return
 }
 
-func (s *SubstrateAPI) SubmitExtrinsicAndWatch(c types.Call, fn CheckExtrinsicInterface) (err error) {
+func (s *SubstrateAPI) SubmitExtrinsicAndWatch(ctx context.Context, c types.Call, fn CheckExtrinsicInterface) (err error) {
 	o, err := s.GetSignatureOptions()
 	if err != nil {
 		return
@@ -204,23 +205,53 @@ func (s *SubstrateAPI) SubmitExtrinsicAndWatch(c types.Call, fn CheckExtrinsicIn
 		sub, err = s.RPC.Author.SubmitAndWatchExtrinsic(ext)
 		if err != nil {
 			o.Nonce = types.NewUCompactFromUInt(uint64(o.Nonce.Int64() + 1))
-			logging.Debug("extrinsic submit failed: %v", err)
+			logging.Debug("extrinsic submit watch failed: %v", err)
 			continue
 		}
 		break
 	}
 	defer sub.Unsubscribe()
-	timeout := time.After(ExtrinsicTimeout)
 
+	extBytes, err := codec.Encode(ext)
+	if err != nil {
+		return
+	}
+	txn := blake256.Sum256(extBytes)
 	for {
 		select {
 		case status := <-sub.Chan():
 			if status.IsInBlock || status.IsFinalized {
-				return fn.CheckExtrinsic(status.AsInBlock, ext)
+				_, err = fn.CheckExtrinsic(status.AsInBlock, txn)
+				return
 			}
-		case <-timeout:
-			err = ExtrinsicTimeoutError
+		case <-ctx.Done():
+			err = ctx.Err()
 			return
 		}
 	}
+}
+
+func (s *SubstrateAPI) SubmitExtrinsic(c types.Call) (txn types.Hash, err error) {
+	o, err := s.GetSignatureOptions()
+	if err != nil {
+		return
+	}
+	// Create the extrinsic
+	ext := types.NewExtrinsic(c)
+
+	for {
+		err = ext.Sign(s.Signer, o)
+		if err != nil {
+			return
+		}
+
+		txn, err = s.RPC.Author.SubmitExtrinsic(ext)
+		if err != nil {
+			o.Nonce = types.NewUCompactFromUInt(uint64(o.Nonce.Int64() + 1))
+			logging.Debug("extrinsic submit failed: %v", err)
+			continue
+		}
+		break
+	}
+	return
 }

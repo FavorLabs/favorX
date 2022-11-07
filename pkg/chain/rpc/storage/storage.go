@@ -1,21 +1,26 @@
 package storage
 
 import (
+	"context"
 	"errors"
 
 	"github.com/FavorLabs/favorX/pkg/boson"
 	"github.com/FavorLabs/favorX/pkg/chain/rpc/base"
 	"github.com/FavorLabs/favorX/pkg/logging"
 	"github.com/centrifuge/go-substrate-rpc-client/v4/types"
-	"github.com/centrifuge/go-substrate-rpc-client/v4/types/codec"
 )
 
 type Interface interface {
-	GetNodesFromCid(cid []byte) ([]boson.Address, error)
-	StorageFileWatch(buyer boson.Address, cid []byte) (err error)
-	PlaceOrderWatch(cid []byte, fileSize, fileCopy uint64, expire uint32) (err error)
-	MerchantRegisterWatch(diskTotal uint64) (err error)
-	MerchantUnregisterWatch() (err error)
+	base.CheckExtrinsicInterface
+	GetNodesFromCid(cid []byte) ([]types.AccountID, error)
+	RegisterCidAndNode(rootCid []byte, address []byte) (hash types.Hash, err error)
+	RegisterCidAndNodeWatch(ctx context.Context, cid []byte, overlay []byte) (err error)
+	RemoveCidAndNode(rootCid []byte, address []byte) (hash types.Hash, err error)
+	RemoveCidAndNodeWatch(ctx context.Context, cid []byte, overlay []byte) (err error)
+	StorageFileWatch(ctx context.Context, buyer boson.Address, cid []byte, overlay []byte) (err error)
+	PlaceOrderWatch(ctx context.Context, cid []byte, fileSize, fileCopy uint64, expire uint32) (err error)
+	MerchantRegisterWatch(ctx context.Context, diskTotal uint64) (err error)
+	MerchantUnregisterWatch(ctx context.Context) (err error)
 }
 
 // storage exposes methods for querying storage
@@ -34,12 +39,11 @@ func New(c *base.SubstrateAPI) Interface {
 	}
 }
 
-func (s *service) CheckExtrinsic(block types.Hash, ext types.Extrinsic) (err error) {
-	b, err := ext.MarshalJSON()
-	if err != nil {
-		return
+func (s *service) CheckExtrinsic(block types.Hash, txn types.Hash) (has bool, err error) {
+	index, err := s.client.GetExtrinsicIndex(block, txn)
+	if index > -1 {
+		has = true
 	}
-	index, err := s.client.GetExtrinsicIndex(block, b)
 	if err != nil {
 		return
 	}
@@ -56,44 +60,77 @@ func (s *service) CheckExtrinsic(block types.Hash, ext types.Extrinsic) (err err
 	for _, v := range ev.System_ExtrinsicFailed {
 		if v.Phase.AsApplyExtrinsic == uint32(index) {
 			if v.DispatchError.IsModule {
-				return NewError(v.DispatchError.ModuleError.Index)
+				err = NewError(v.DispatchError.ModuleError.Index)
+				return
 			}
 			if v.DispatchError.IsToken {
-				return base.TokenError
+				err = base.TokenError
 			}
 			if v.DispatchError.IsArithmetic {
-				return base.ArithmeticError
+				err = base.ArithmeticError
+				return
 			}
 			if v.DispatchError.IsTransactional {
-				return base.TransactionalError
+				err = base.TransactionalError
+				return
 			}
 		}
 	}
 	return
 }
 
-func (s *service) GetNodesFromCid(cid []byte) (overlays []boson.Address, err error) {
-	key, err := types.CreateStorageKey(s.meta, "Storage", "Oracles", codec.MustHexDecodeString(boson.NewAddress(cid).String()))
+func (s *service) GetNodesFromCid(cid []byte) (overlays []types.AccountID, err error) {
+	key, err := types.CreateStorageKey(s.meta, "Storage", "Oracles", cid)
 	if err != nil {
 		return
 	}
-	var res []types.AccountID
-	ok, err := s.client.RPC.State.GetStorageLatest(key, &res)
+	ok, err := s.client.RPC.State.GetStorageLatest(key, &overlays)
 	if err != nil {
 		logging.Warningf("gsrpc err: %w", err)
 		return
 	}
 	if !ok {
-		err = errors.New("Storage.Oracles is empty")
+		err = errors.New("is empty")
 		return
-	}
-	for _, v := range res {
-		overlays = append(overlays, boson.NewAddress(v.ToBytes()))
 	}
 	return
 }
 
-func (s *service) StorageFileWatch(buyer boson.Address, cid []byte) (err error) {
+func (s *service) RegisterCidAndNodeWatch(ctx context.Context, rootCid []byte, address []byte) (err error) {
+	accountID, err := types.NewAccountID(rootCid)
+	if err != nil {
+		return
+	}
+	overlay, err := types.NewAccountID(address)
+	if err != nil {
+		return
+	}
+	c, err := types.NewCall(s.meta, "Storage.oracle_register", accountID, overlay)
+	if err != nil {
+		return
+	}
+
+	return s.client.SubmitExtrinsicAndWatch(ctx, c, s)
+}
+
+func (s *service) RemoveCidAndNodeWatch(ctx context.Context, rootCid []byte, address []byte) (err error) {
+	accountID, err := types.NewAccountID(rootCid)
+	if err != nil {
+		return
+	}
+	overlay, err := types.NewAccountID(address)
+	if err != nil {
+		return
+	}
+	c, err := types.NewCall(s.meta, "Storage.oracle_remove", accountID, overlay)
+	if err != nil {
+		return
+	}
+
+	return s.client.SubmitExtrinsicAndWatch(ctx, c, s)
+}
+
+func (s *service) StorageFileWatch(ctx context.Context, buyer boson.Address, cid []byte, overlay []byte) (err error) {
 	accountID, err := types.NewAccountID(buyer.Bytes())
 	if err != nil {
 		return
@@ -102,15 +139,19 @@ func (s *service) StorageFileWatch(buyer boson.Address, cid []byte) (err error) 
 	if err != nil {
 		return
 	}
-	c, err := types.NewCall(s.meta, "Storage.storage_file", accountID, hash)
+	ov, err := types.NewAccountID(overlay)
+	if err != nil {
+		return
+	}
+	c, err := types.NewCall(s.meta, "Storage.storage_file", accountID, hash, ov)
 	if err != nil {
 		return
 	}
 
-	return s.client.SubmitExtrinsicAndWatch(c, s)
+	return s.client.SubmitExtrinsicAndWatch(ctx, c, s)
 }
 
-func (s *service) PlaceOrderWatch(cid []byte, fileSize, fileCopy uint64, expire uint32) (err error) {
+func (s *service) PlaceOrderWatch(ctx context.Context, cid []byte, fileSize, fileCopy uint64, expire uint32) (err error) {
 	hash, err := types.NewAccountID(cid)
 	if err != nil {
 		return
@@ -121,23 +162,57 @@ func (s *service) PlaceOrderWatch(cid []byte, fileSize, fileCopy uint64, expire 
 		return
 	}
 
-	return s.client.SubmitExtrinsicAndWatch(c, s)
+	return s.client.SubmitExtrinsicAndWatch(ctx, c, s)
 }
 
-func (s *service) MerchantRegisterWatch(diskTotal uint64) (err error) {
+func (s *service) MerchantRegisterWatch(ctx context.Context, diskTotal uint64) (err error) {
 	c, err := types.NewCall(s.meta, "Storage.merchant_register", types.NewU64(diskTotal))
 	if err != nil {
 		return
 	}
 
-	return s.client.SubmitExtrinsicAndWatch(c, s)
+	return s.client.SubmitExtrinsicAndWatch(ctx, c, s)
 }
 
-func (s *service) MerchantUnregisterWatch() (err error) {
+func (s *service) MerchantUnregisterWatch(ctx context.Context) (err error) {
 	c, err := types.NewCall(s.meta, "Storage.merchant_unregister")
 	if err != nil {
 		return
 	}
 
-	return s.client.SubmitExtrinsicAndWatch(c, s)
+	return s.client.SubmitExtrinsicAndWatch(ctx, c, s)
+}
+
+func (s *service) RegisterCidAndNode(rootCid []byte, address []byte) (hash types.Hash, err error) {
+	accountID, err := types.NewAccountID(rootCid)
+	if err != nil {
+		return
+	}
+	overlay, err := types.NewAccountID(address)
+	if err != nil {
+		return
+	}
+	c, err := types.NewCall(s.meta, "Storage.oracle_register", accountID, overlay)
+	if err != nil {
+		return
+	}
+
+	return s.client.SubmitExtrinsic(c)
+}
+
+func (s *service) RemoveCidAndNode(rootCid []byte, address []byte) (hash types.Hash, err error) {
+	accountID, err := types.NewAccountID(rootCid)
+	if err != nil {
+		return
+	}
+	overlay, err := types.NewAccountID(address)
+	if err != nil {
+		return
+	}
+	c, err := types.NewCall(s.meta, "Storage.oracle_remove", accountID, overlay)
+	if err != nil {
+		return
+	}
+
+	return s.client.SubmitExtrinsic(c)
 }
