@@ -24,6 +24,7 @@ import (
 	"github.com/FavorLabs/favorX/pkg/logging"
 	"github.com/FavorLabs/favorX/pkg/node"
 	"github.com/FavorLabs/favorX/pkg/resolver/multiresolver"
+	"github.com/FavorLabs/favorX/pkg/storagefiles"
 	"github.com/kardianos/service"
 	crypto2 "github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/spf13/cobra"
@@ -145,6 +146,18 @@ func (c *command) initStartCmd() (err error) {
 				EnableApiTLS:           c.config.GetBool(optionNameEnableApiTls),
 				TlsCrtFile:             c.config.GetString(optionNameTlsCRT),
 				TlsKeyFile:             c.config.GetString(optionNameTlsKey),
+				StorageFilesEnable:     c.config.GetBool(optionNameStorageEnable),
+				StorageFilesConfig: storagefiles.Config{
+					Overlay:            signerCfg.address,
+					GroupName:          c.config.GetString(optionNameStorageGroupName),
+					SkipOracleRegister: c.config.GetBool(optionNameStorageSkipOracleRegister),
+					Capacity:           c.config.GetUint64(optionNameStorageCapacity),
+					CacheDir:           c.config.GetString(optionNameStorageCacheDir),
+					DelFileTime:        c.config.GetInt64(optionNameStorageDelFileTime),
+					BlockSize:          c.config.GetInt(optionNameStorageBlockSize),
+					RetryNumber:        c.config.GetInt(optionNameStorageRetryNumber),
+					Redundant:          c.config.GetUint64(optionNameStorageRedundantDisk),
+				},
 			})
 			if err != nil {
 				return err

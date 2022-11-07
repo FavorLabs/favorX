@@ -39,6 +39,7 @@ import (
 	"github.com/FavorLabs/favorX/pkg/routetab"
 	"github.com/FavorLabs/favorX/pkg/rpc"
 	"github.com/FavorLabs/favorX/pkg/shed"
+	"github.com/FavorLabs/favorX/pkg/storagefiles"
 	"github.com/FavorLabs/favorX/pkg/subscribe"
 	"github.com/FavorLabs/favorX/pkg/topology/bootnode"
 	"github.com/FavorLabs/favorX/pkg/topology/kademlia"
@@ -54,19 +55,20 @@ import (
 )
 
 type Favor struct {
-	p2pService       io.Closer
-	p2pCancel        context.CancelFunc
-	apiCloser        io.Closer
-	apiServer        *http.Server
-	debugAPIServer   *http.Server
-	resolverCloser   io.Closer
-	errorLogWriter   *io.PipeWriter
-	tracerCloser     io.Closer
-	groupCloser      io.Closer
-	stateStoreCloser io.Closer
-	localstoreCloser io.Closer
-	topologyCloser   io.Closer
-	ethClientCloser  func()
+	p2pService         io.Closer
+	p2pCancel          context.CancelFunc
+	apiCloser          io.Closer
+	apiServer          *http.Server
+	debugAPIServer     *http.Server
+	resolverCloser     io.Closer
+	errorLogWriter     *io.PipeWriter
+	tracerCloser       io.Closer
+	groupCloser        io.Closer
+	stateStoreCloser   io.Closer
+	localstoreCloser   io.Closer
+	topologyCloser     io.Closer
+	ethClientCloser    func()
+	storagefilesCloser io.Closer
 }
 
 type Options struct {
@@ -108,6 +110,8 @@ type Options struct {
 	EnableApiTLS           bool
 	TlsCrtFile             string
 	TlsKeyFile             string
+	StorageFilesEnable     bool
+	StorageFilesConfig     storagefiles.Config
 }
 
 func NewNode(nodeMode address.Model, addr string, bosonAddress boson.Address, publicKey ecdsa.PublicKey, signer crypto.Signer, networkID uint64, logger logging.Logger, libp2pPrivateKey crypto2.PrivKey, o Options) (b *Favor, err error) {
@@ -343,6 +347,10 @@ func NewNode(nodeMode address.Model, addr string, bosonAddress boson.Address, pu
 
 	p2ps.ApplyRoute(bosonAddress, route, nodeMode)
 
+	if o.StorageFilesConfig.CacheDir == "" {
+		o.StorageFilesConfig.CacheDir = filepath.Join(o.DataDir, "storagefilescache")
+	}
+
 	var path string
 
 	if o.DBPath != "" {
@@ -350,6 +358,8 @@ func NewNode(nodeMode address.Model, addr string, bosonAddress boson.Address, pu
 	} else if o.DataDir != "" {
 		path = filepath.Join(o.DataDir, "localstore")
 	}
+	o.StorageFilesConfig.DataDir = path
+
 	lo := &localstore.Options{
 		Capacity: o.CacheCapacity,
 		Driver:   o.DBDriver,
@@ -444,12 +454,14 @@ func NewNode(nodeMode address.Model, addr string, bosonAddress boson.Address, pu
 
 		go func() {
 			if o.EnableApiTLS {
+				o.StorageFilesConfig.ApiGateway = fmt.Sprintf("https://%s", apiListener.Addr())
 				logger.Infof("api address: https://%s", apiListener.Addr())
 				err = apiServer.ServeTLS(apiListener, o.TlsCrtFile, o.TlsKeyFile)
 				if err != nil {
 					logger.Errorf("api server enable https: %v", err)
 				}
 			}
+			o.StorageFilesConfig.ApiGateway = fmt.Sprintf("http://%s", apiListener.Addr())
 			logger.Infof("api address: http://%s", apiListener.Addr())
 			err = apiServer.Serve(apiListener)
 			if err != nil && err != http.ErrServerClosed {
@@ -523,11 +535,26 @@ func NewNode(nodeMode address.Model, addr string, bosonAddress boson.Address, pu
 		return nil, err
 	}
 
+	if o.StorageFilesEnable {
+		services, err := storagefiles.NewServices(o.StorageFilesConfig, logger, group, chunkInfo, fileInfo, oracleChain)
+		if err != nil {
+			return nil, err
+		}
+		b.storagefilesCloser = services
+		services.Start()
+	}
+
 	return b, nil
 }
 
 func (b *Favor) Shutdown(ctx context.Context) error {
 	errs := new(multiError)
+
+	if b.storagefilesCloser != nil {
+		if err := b.storagefilesCloser.Close(); err != nil {
+			errs.add(fmt.Errorf("api: %w", err))
+		}
+	}
 
 	if b.apiCloser != nil {
 		if err := b.apiCloser.Close(); err != nil {

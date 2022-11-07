@@ -6,10 +6,12 @@ require (
 	github.com/FavorLabs/manifest v1.2.0
 	github.com/btcsuite/btcd v0.22.1
 	github.com/casbin/casbin/v2 v2.35.0
+	github.com/cavaliergopher/grab/v3 v3.0.1
 	github.com/centrifuge/go-substrate-rpc-client/v4 v4.0.8
 	github.com/coreos/go-semver v0.3.0
 	github.com/davecgh/go-spew v1.1.1
 	github.com/deckarep/golang-set v1.8.0
+	github.com/decred/dcrd/crypto/blake256 v1.0.0
 	github.com/ethereum/go-ethereum v1.10.20
 	github.com/ethersphere/langos v1.0.0
 	github.com/ethersphere/sw3-bindings/v3 v3.0.3
@@ -76,7 +78,6 @@ require (
 	github.com/cosmos/go-bip39 v1.0.0 // indirect
 	github.com/davidlazar/go-crypto v0.0.0-20200604182044-b73af7476f6c // indirect
 	github.com/decred/base58 v1.0.4 // indirect
-	github.com/decred/dcrd/crypto/blake256 v1.0.0 // indirect
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.0.1 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/docker/go-units v0.4.0 // indirect

@@ -7,6 +7,7 @@ import (
 	"github.com/FavorLabs/favorX/pkg/multicast/model"
 	"github.com/FavorLabs/favorX/pkg/multicast/pb"
 	"github.com/FavorLabs/favorX/pkg/rpc"
+	"github.com/FavorLabs/favorX/pkg/subscribe"
 )
 
 type GroupInterface interface {
@@ -22,6 +23,12 @@ type GroupInterface interface {
 	GetSendStream(ctx context.Context, gid, dest boson.Address) (out SendStreamCh, err error)
 	SendReceive(ctx context.Context, data []byte, gid, dest boson.Address) (result []byte, err error)
 	Send(ctx context.Context, data []byte, gid, dest boson.Address) (err error)
+}
+
+type GroupStorageFiles interface {
+	RemoveGroup(gid boson.Address, gType model.GType) error
+	SubscribeGroupMessageWithChan(notifier *subscribe.NotifierWithMsgChan, gid boson.Address) (err error)
+	ReplyGroupMessage(sessionID string, data []byte) (err error)
 }
 
 // Message multicast message
