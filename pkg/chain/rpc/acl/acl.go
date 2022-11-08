@@ -56,7 +56,7 @@ func (s *service) CheckExtrinsic(block types.Hash, txn types.Hash) (has bool, er
 	for _, v := range ev.System_ExtrinsicFailed {
 		if v.Phase.AsApplyExtrinsic == uint32(index) {
 			if v.DispatchError.IsModule {
-				err = NewError(v.DispatchError.ModuleError.Index)
+				err = NewError(v.DispatchError.ModuleError)
 				return
 			}
 			if v.DispatchError.IsToken {

@@ -6,6 +6,7 @@ import (
 	"path"
 
 	"github.com/FavorLabs/favorX/pkg/boson"
+	"github.com/FavorLabs/favorX/pkg/chain"
 	"github.com/FavorLabs/favorX/pkg/chunkinfo"
 	"github.com/FavorLabs/favorX/pkg/fileinfo"
 	"github.com/FavorLabs/favorX/pkg/logging"
@@ -17,7 +18,7 @@ type Services struct {
 	panel *Panel
 }
 
-func NewServices(cfg Config, logger logging.Logger, gClient multicast.GroupStorageFiles,
+func NewServices(cfg Config, logger logging.Logger, gClient multicast.GroupStorageFiles, subClient *chain.Client,
 	chunkInfo chunkinfo.Interface, fileInfo fileinfo.Interface, oracle oracle.Resolver) (*Services, error) {
 
 	addr, err := boson.ParseHexAddress(cfg.GroupName)
@@ -34,7 +35,7 @@ func NewServices(cfg Config, logger logging.Logger, gClient multicast.GroupStora
 		return nil, errors.New("param data-dir must be an absolute path, otherwise disk size calculation will fail")
 	}
 
-	p, err := NewPanel(context.Background(), cfg, logger, gClient, chunkInfo, fileInfo, oracle)
+	p, err := NewPanel(context.Background(), cfg, logger, gClient, subClient, chunkInfo, fileInfo, oracle)
 	if err != nil {
 		return nil, err
 	}

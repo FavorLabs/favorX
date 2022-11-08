@@ -18,7 +18,7 @@ const url = "ws://127.0.0.1:9944"
 var ctx = context.Background()
 
 func TestService_StorageFile(t *testing.T) {
-	t.SkipNow()
+	// t.SkipNow()
 	cli, err := chain.NewClient(url, signature.TestKeyringPairAlice)
 	assert.NoError(t, err)
 	cid := boson.MustParseHexAddress("471d6a05e523183eb9dd57bee7aba29b9f5798e834f60ac69022b41f0ff69948")
@@ -38,19 +38,19 @@ func TestService_StorageFile(t *testing.T) {
 	wg.Add(2)
 
 	go func() {
-		err = cli.Storage.PlaceOrderWatch(ctx, cid.Bytes(), 100, 1, 14400)
+		_, err = cli.Storage.PlaceOrderWatch(ctx, cid.Bytes(), 100, 1, 14400)
 		assert.NoError(t, err)
 		wg.Done()
 	}()
 
 	go func() {
-		err = cli.Storage.PlaceOrderWatch(ctx, ci2.Bytes(), 200, 1, 14400)
+		_, err = cli.Storage.PlaceOrderWatch(ctx, ci2.Bytes(), 200, 1, 14400)
 		assert.NoError(t, err)
 		wg.Done()
 	}()
 	wg.Wait()
 
-	buyer := boson.NewAddress(signature.TestKeyringPairAlice.PublicKey)
+	buyer := signature.TestKeyringPairAlice.PublicKey
 
 	err = cli.Storage.StorageFileWatch(ctx, buyer, cid.Bytes(), cid.Bytes())
 	assert.NoError(t, err)

@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 
-	"github.com/FavorLabs/favorX/pkg/boson"
 	"github.com/FavorLabs/favorX/pkg/chain/rpc/base"
 	"github.com/FavorLabs/favorX/pkg/logging"
 	"github.com/centrifuge/go-substrate-rpc-client/v4/types"
@@ -17,7 +16,7 @@ type Interface interface {
 	RegisterCidAndNodeWatch(ctx context.Context, cid []byte, overlay []byte) (err error)
 	RemoveCidAndNode(rootCid []byte, address []byte) (hash types.Hash, err error)
 	RemoveCidAndNodeWatch(ctx context.Context, cid []byte, overlay []byte) (err error)
-	StorageFileWatch(ctx context.Context, buyer boson.Address, cid []byte, overlay []byte) (err error)
+	StorageFileWatch(ctx context.Context, buyer []byte, cid []byte, overlay []byte) (err error)
 	PlaceOrderWatch(ctx context.Context, cid []byte, fileSize, fileCopy uint64, expire uint32) (users []types.AccountID, err error)
 	MerchantRegisterWatch(ctx context.Context, diskTotal uint64) (err error)
 	MerchantUnregisterWatch(ctx context.Context) (err error)
@@ -60,7 +59,7 @@ func (s *service) CheckExtrinsic(block types.Hash, txn types.Hash) (has bool, er
 	for _, v := range ev.System_ExtrinsicFailed {
 		if v.Phase.AsApplyExtrinsic == uint32(index) {
 			if v.DispatchError.IsModule {
-				err = NewError(v.DispatchError.ModuleError.Index)
+				err = NewError(v.DispatchError.ModuleError)
 				return
 			}
 			if v.DispatchError.IsToken {
@@ -131,8 +130,8 @@ func (s *service) RemoveCidAndNodeWatch(ctx context.Context, rootCid []byte, add
 	return s.client.SubmitExtrinsicAndWatch(ctx, c, s.CheckExtrinsic)
 }
 
-func (s *service) StorageFileWatch(ctx context.Context, buyer boson.Address, cid []byte, overlay []byte) (err error) {
-	accountID, err := types.NewAccountID(buyer.Bytes())
+func (s *service) StorageFileWatch(ctx context.Context, buyer []byte, cid []byte, overlay []byte) (err error) {
+	accountID, err := types.NewAccountID(buyer)
 	if err != nil {
 		return
 	}
@@ -184,7 +183,7 @@ func (s *service) PlaceOrderWatch(ctx context.Context, cid []byte, fileSize, fil
 		for _, v := range ev.System_ExtrinsicFailed {
 			if v.Phase.AsApplyExtrinsic == uint32(index) {
 				if v.DispatchError.IsModule {
-					err = NewError(v.DispatchError.ModuleError.Index)
+					err = NewError(v.DispatchError.ModuleError)
 					return
 				}
 				if v.DispatchError.IsToken {

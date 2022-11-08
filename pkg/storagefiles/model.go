@@ -7,8 +7,7 @@ import (
 type UploadRequest struct {
 	Source string `json:"source"`
 	Hash   string `json:"hash"`
-	Force  bool   `json:"force"`
-	Sync   bool   `json:"sync,omitempty"`
+	Buyer  string `json:"buyer"`
 }
 
 type UploadResponse struct {

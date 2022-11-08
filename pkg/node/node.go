@@ -536,7 +536,7 @@ func NewNode(nodeMode address.Model, addr string, bosonAddress boson.Address, pu
 	}
 
 	if o.StorageFilesEnable {
-		services, err := storagefiles.NewServices(o.StorageFilesConfig, logger, group, chunkInfo, fileInfo, oracleChain)
+		services, err := storagefiles.NewServices(o.StorageFilesConfig, logger, group, client, chunkInfo, fileInfo, oracleChain)
 		if err != nil {
 			return nil, err
 		}

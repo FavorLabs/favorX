@@ -14,40 +14,44 @@ import (
 
 	"github.com/FavorLabs/favorX/pkg/address"
 	"github.com/FavorLabs/favorX/pkg/boson"
+	"github.com/FavorLabs/favorX/pkg/chain"
 	"github.com/FavorLabs/favorX/pkg/fileinfo"
 	"github.com/FavorLabs/favorX/pkg/logging"
 	"github.com/FavorLabs/favorX/pkg/settlement/chain/oracle"
+	"github.com/centrifuge/go-substrate-rpc-client/v4/types"
 )
 
 type Manager struct {
-	done     chan struct{}
-	nextID   uint64
-	logger   logging.Logger
-	workers  *list.List
-	lock     sync.RWMutex
-	disk     *DiskManager
-	db       *Database
-	wg       sync.WaitGroup
-	options  Config
-	fileInfo fileinfo.Interface
-	oracle   oracle.Resolver
+	done      chan struct{}
+	nextID    uint64
+	logger    logging.Logger
+	workers   *list.List
+	lock      sync.RWMutex
+	disk      *DiskManager
+	db        *Database
+	wg        sync.WaitGroup
+	options   Config
+	fileInfo  fileinfo.Interface
+	oracle    oracle.Resolver
+	subClient *chain.Client
 }
 
-func NewManager(done chan struct{}, cfg Config, dm *DiskManager, logger logging.Logger, fileInfo fileinfo.Interface, oracle oracle.Resolver) (*Manager, error) {
+func NewManager(done chan struct{}, cfg Config, dm *DiskManager, logger logging.Logger, fileInfo fileinfo.Interface, oracle oracle.Resolver, subClient *chain.Client) (*Manager, error) {
 	database, err := NewDB(cfg.CacheDir)
 	if err != nil {
 		logger.Errorf("leveldb init %v", err)
 		return nil, err
 	}
 	s := &Manager{
-		options:  cfg,
-		done:     done,
-		workers:  new(list.List),
-		disk:     dm,
-		logger:   logger,
-		db:       database,
-		fileInfo: fileInfo,
-		oracle:   oracle,
+		options:   cfg,
+		done:      done,
+		workers:   new(list.List),
+		disk:      dm,
+		logger:    logger,
+		db:        database,
+		fileInfo:  fileInfo,
+		oracle:    oracle,
+		subClient: subClient,
 	}
 	return s, nil
 }
@@ -109,12 +113,12 @@ func (m *Manager) TaskingHashes() (hashes []string) {
 	return
 }
 
-func (m *Manager) HashWorker(fileHash string) *Worker {
+func (m *Manager) HashWorker(fileHash, buyer string) *Worker {
 	m.lock.RLock()
 	defer m.lock.RUnlock()
 	for w := m.workers.Front(); w != nil; w = w.Next() {
 		wk := w.Value.(*Worker)
-		if wk.task.Info.Hash == fileHash {
+		if wk.task.Info.Hash == fileHash && wk.task.Info.Buyer == buyer {
 			return wk
 		}
 	}
@@ -310,9 +314,24 @@ func (w *Worker) pinOracle() {
 }
 
 func (w *Worker) oracleRegister() (err error) {
+	cid := boson.MustParseHexAddress(w.task.Info.Hash)
+	var skip bool
+	if w.task.Info.Buyer != "" {
+		// has order
+		err = w.storageFile(cid)
+	} else {
+		skip, err = w.oracleRegApi(cid)
+	}
+	if !skip && err == nil {
+		return w.manager.fileInfo.RegisterFile(cid, true)
+	}
+	return err
+}
+
+func (w *Worker) oracleRegApi(cid boson.Address) (skip bool, err error) {
 	if w.manager.options.SkipOracleRegister {
 		w.manager.logger.Infof("worker %d oracle register skipped", w.id)
-		return nil
+		return true, nil
 	}
 	defer func() {
 		if err == nil {
@@ -322,22 +341,32 @@ func (w *Worker) oracleRegister() (err error) {
 		}
 	}()
 	w.manager.logger.Infof("worker %d oracle register start", w.id)
-	cid := boson.MustParseHexAddress(w.task.Info.Hash)
+
 	have := w.manager.oracle.GetNodesFromCid(cid.Bytes())
 	for _, v := range have {
 		if v.Equal(w.manager.options.Overlay) {
-			return nil
+			return true, nil
 		}
 	}
 	err = w.manager.oracle.RegisterCidAndNode(w.ctx, cid, w.manager.options.Overlay, nil, nil)
+	return
+}
+
+func (w *Worker) storageFile(cid boson.Address) (err error) {
+	defer func() {
+		if err == nil {
+			w.manager.logger.Infof("worker %d oracle on chain success", w.id)
+		} else {
+			w.manager.logger.Warningf("worker %d oracle on chain %d err %s", w.id, w.task.Running.RetryPinOracle+1, err)
+		}
+	}()
+	w.manager.logger.Infof("worker %d oracle on chain start", w.id)
+
+	buyerID, err := types.NewAccountIDFromHexString(w.task.Info.Buyer)
 	if err != nil {
 		return err
 	}
-	err = w.manager.fileInfo.RegisterFile(cid, true)
-	if err != nil {
-		return err
-	}
-	return nil
+	return w.manager.subClient.Storage.StorageFileWatch(w.ctx, buyerID.ToBytes(), cid.Bytes(), w.manager.options.Overlay.Bytes())
 }
 
 func (w *Worker) online() {

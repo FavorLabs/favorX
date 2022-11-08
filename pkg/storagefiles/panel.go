@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/FavorLabs/favorX/pkg/boson"
+	"github.com/FavorLabs/favorX/pkg/chain"
 	"github.com/FavorLabs/favorX/pkg/chunkinfo"
 	"github.com/FavorLabs/favorX/pkg/fileinfo"
 	"github.com/FavorLabs/favorX/pkg/localstore/filestore"
@@ -32,14 +33,14 @@ type Panel struct {
 	fileInfo        fileinfo.Interface
 }
 
-func NewPanel(ctx context.Context, cfg Config, logger logging.Logger, gClient multicast.GroupStorageFiles,
+func NewPanel(ctx context.Context, cfg Config, logger logging.Logger, gClient multicast.GroupStorageFiles, subClient *chain.Client,
 	chunkInfo chunkinfo.Interface, fileInfo fileinfo.Interface, oracle oracle.Resolver) (*Panel, error) {
 	dm, err := NewDiskManager(cfg)
 	if err != nil {
 		return nil, err
 	}
 	quit := make(chan struct{}, 1)
-	m, err := NewManager(quit, cfg, dm, logger, fileInfo, oracle)
+	m, err := NewManager(quit, cfg, dm, logger, fileInfo, oracle, subClient)
 	if err != nil {
 		return nil, err
 	}
@@ -214,7 +215,7 @@ func (p *Panel) subGroupMessage(ch chan error) {
 				p.logger.Errorf("group message json unmarshal: %v", e)
 				break
 			}
-			wk := p.manager.HashWorker(reqInfo.Hash)
+			wk := p.manager.HashWorker(reqInfo.Hash, reqInfo.Buyer)
 			if wk != nil {
 				p.logger.Infof("worker %d received repeat fileHash %s request from sessionID %s", wk.id, reqInfo.Hash, msg.SessionID)
 				cid := boson.MustParseHexAddress(reqInfo.Hash)

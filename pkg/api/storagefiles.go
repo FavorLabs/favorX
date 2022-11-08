@@ -11,7 +11,6 @@ import (
 
 type RequestPlaceOrder struct {
 	Cid      boson.Address `json:"cid"`
-	FileSize uint64        `json:"fileSize"`
 	FileCopy uint64        `json:"fileCopy"`
 	Expire   uint32        `json:"expire"`
 }
@@ -33,7 +32,13 @@ func (s *server) placeOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	users, err := s.commonChain.Storage.PlaceOrderWatch(r.Context(), req.Cid.Bytes(), req.FileSize, req.FileCopy, req.Expire)
+	info, err := s.fileInfo.GetFileView(req.Cid)
+	if err != nil {
+		jsonhttp.InternalServerError(w, err)
+		return
+	}
+
+	users, err := s.commonChain.Storage.PlaceOrderWatch(r.Context(), req.Cid.Bytes(), uint64(info.Size), req.FileCopy, req.Expire)
 	if err != nil {
 		jsonhttp.InternalServerError(w, err)
 		return
