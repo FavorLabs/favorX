@@ -49,3 +49,39 @@ func (s *server) placeOrder(w http.ResponseWriter, r *http.Request) {
 	}
 	jsonhttp.OK(w, res)
 }
+
+func (s *server) merchantRegister(w http.ResponseWriter, r *http.Request) {
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		if jsonhttp.HandleBodyReadError(err, w) {
+			return
+		}
+		s.logger.Error("merchantRegister: read req error")
+		jsonhttp.InternalServerError(w, "cannot read data")
+		return
+	}
+	var req struct {
+		DiskTotal uint64 `json:"diskTotal"`
+	}
+	if err = json.Unmarshal(body, &req); err != nil {
+		s.logger.Error("api: merchantRegister: unmarshal request body")
+		jsonhttp.BadRequest(w, "Unmarshal json body")
+		return
+	}
+
+	err = s.commonChain.Storage.MerchantRegisterWatch(r.Context(), req.DiskTotal)
+	if err != nil {
+		jsonhttp.InternalServerError(w, err)
+		return
+	}
+	jsonhttp.OK(w, nil)
+}
+
+func (s *server) merchantUnRegister(w http.ResponseWriter, r *http.Request) {
+	err := s.commonChain.Storage.MerchantUnregisterWatch(r.Context())
+	if err != nil {
+		jsonhttp.InternalServerError(w, err)
+		return
+	}
+	jsonhttp.OK(w, nil)
+}
