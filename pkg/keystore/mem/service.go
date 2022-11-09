@@ -3,9 +3,10 @@ package mem
 import (
 	"crypto/ecdsa"
 	"fmt"
+	"sync"
+
 	"github.com/FavorLabs/favorX/pkg/crypto"
 	"github.com/FavorLabs/favorX/pkg/keystore"
-	"sync"
 )
 
 var _ keystore.Service = (*Service)(nil)
@@ -68,7 +69,7 @@ func (s *Service) ImportKey(name, password string, keyJson []byte) error {
 }
 
 func (s *Service) ImportPrivateKey(name, password string, pk *ecdsa.PrivateKey) (err error) {
-	//TODO implement me
+	// TODO implement me
 	panic("implement me")
 }
 

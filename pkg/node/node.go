@@ -114,7 +114,8 @@ type Options struct {
 	StorageFilesConfig     storagefiles.Config
 }
 
-func NewNode(nodeMode address.Model, addr string, bosonAddress boson.Address, publicKey ecdsa.PublicKey, signer crypto.Signer, networkID uint64, logger logging.Logger, libp2pPrivateKey crypto2.PrivKey, o Options) (b *Favor, err error) {
+func NewNode(nodeMode address.Model, addr string, bosonAddress boson.Address, publicKey ecdsa.PublicKey, signer crypto.Signer, keyPair signature.KeyringPair,
+	networkID uint64, logger logging.Logger, libp2pPrivateKey crypto2.PrivKey, o Options) (b *Favor, err error) {
 	tracer, tracerCloser, err := tracing.NewTracer(&tracing.Options{
 		Enabled:     o.TracingEnabled,
 		Endpoint:    o.TracingEndpoint,
@@ -235,7 +236,7 @@ func NewNode(nodeMode address.Model, addr string, bosonAddress boson.Address, pu
 	}
 
 	// TODO add KeyringPairAlice
-	client, err := chain.NewClient("ws://127.0.0.1:9944", signature.TestKeyringPairAlice)
+	client, err := chain.NewClient("ws://127.0.0.1:9944", keyPair)
 	if err != nil {
 		return nil, err
 	}

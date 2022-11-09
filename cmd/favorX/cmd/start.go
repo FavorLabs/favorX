@@ -21,10 +21,12 @@ import (
 	filekeystore "github.com/FavorLabs/favorX/pkg/keystore/file"
 	memkeystore "github.com/FavorLabs/favorX/pkg/keystore/mem"
 	"github.com/FavorLabs/favorX/pkg/keystore/p2pkey"
+	"github.com/FavorLabs/favorX/pkg/keystore/subkey"
 	"github.com/FavorLabs/favorX/pkg/logging"
 	"github.com/FavorLabs/favorX/pkg/node"
 	"github.com/FavorLabs/favorX/pkg/resolver/multiresolver"
 	"github.com/FavorLabs/favorX/pkg/storagefiles"
+	"github.com/centrifuge/go-substrate-rpc-client/v4/signature"
 	"github.com/kardianos/service"
 	crypto2 "github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/spf13/cobra"
@@ -107,58 +109,59 @@ func (c *command) initStartCmd() (err error) {
 				logger.Info("Start node mode light.")
 			}
 
-			b, err := node.NewNode(mode, c.config.GetString(optionNameP2PAddr), signerCfg.address, *signerCfg.publicKey, signerCfg.signer, c.config.GetUint64(optionNameNetworkID), logger, signerCfg.libp2pPrivateKey, node.Options{
-				DataDir:                c.config.GetString(optionNameDataDir),
-				CacheCapacity:          c.config.GetUint64(optionNameCacheCapacity),
-				DBDriver:               c.config.GetString(optionDatabaseDriver),
-				DBPath:                 c.config.GetString(optionDatabasePath),
-				HTTPAddr:               c.config.GetString(optionNameHTTPAddr),
-				WSAddr:                 c.config.GetString(optionNameWebsocketAddr),
-				APIAddr:                c.config.GetString(optionNameAPIAddr),
-				DebugAPIAddr:           debugAPIAddr,
-				ApiBufferSizeMul:       c.config.GetInt(optionNameApiFileBufferMultiple),
-				NATAddr:                c.config.GetString(optionNameNATAddr),
-				EnableWS:               c.config.GetBool(optionNameP2PWSEnable),
-				EnableQUIC:             c.config.GetBool(optionNameP2PQUICEnable),
-				WelcomeMessage:         c.config.GetString(optionWelcomeMessage),
-				Bootnodes:              c.config.GetStringSlice(optionNameBootnodes),
-				ChainEndpoint:          c.config.GetString(optionNameChainEndpoint),
-				OracleContractAddress:  c.config.GetString(optionNameOracleContractAddr),
-				CORSAllowedOrigins:     c.config.GetStringSlice(optionCORSAllowedOrigins),
-				Standalone:             c.config.GetBool(optionNameStandalone),
-				IsDev:                  c.config.GetBool(optionNameDevMode),
-				TracingEnabled:         c.config.GetBool(optionNameTracingEnabled),
-				TracingEndpoint:        c.config.GetString(optionNameTracingEndpoint),
-				TracingServiceName:     c.config.GetString(optionNameTracingServiceName),
-				Logger:                 logger,
-				ResolverConnectionCfgs: resolverCfgs,
-				GatewayMode:            c.config.GetBool(optionNameGatewayMode),
-				TrafficEnable:          c.config.GetBool(optionNameTrafficEnable),
-				TrafficContractAddr:    c.config.GetString(optionNameTrafficContractAddr),
-				KadBinMaxPeers:         c.config.GetInt(optionNameBinMaxPeers),
-				LightNodeMaxPeers:      c.config.GetInt(optionNameLightMaxPeers),
-				AllowPrivateCIDRs:      c.config.GetBool(optionNameAllowPrivateCIDRs),
-				Restricted:             c.config.GetBool(optionNameRestrictedAPI),
-				TokenEncryptionKey:     c.config.GetString(optionNameTokenEncryptionKey),
-				AdminPasswordHash:      c.config.GetString(optionNameAdminPasswordHash),
-				RouteAlpha:             c.config.GetInt32(optionNameRouteAlpha),
-				Groups:                 c.config.Get(optionNameGroups),
-				EnableApiTLS:           c.config.GetBool(optionNameEnableApiTls),
-				TlsCrtFile:             c.config.GetString(optionNameTlsCRT),
-				TlsKeyFile:             c.config.GetString(optionNameTlsKey),
-				StorageFilesEnable:     c.config.GetBool(optionNameStorageEnable),
-				StorageFilesConfig: storagefiles.Config{
-					Overlay:            signerCfg.address,
-					GroupName:          c.config.GetString(optionNameStorageGroupName),
-					SkipOracleRegister: c.config.GetBool(optionNameStorageSkipOracleRegister),
-					Capacity:           c.config.GetUint64(optionNameStorageCapacity),
-					CacheDir:           c.config.GetString(optionNameStorageCacheDir),
-					DelFileTime:        c.config.GetInt64(optionNameStorageDelFileTime),
-					BlockSize:          c.config.GetInt(optionNameStorageBlockSize),
-					RetryNumber:        c.config.GetInt(optionNameStorageRetryNumber),
-					Redundant:          c.config.GetUint64(optionNameStorageRedundantDisk),
-				},
-			})
+			b, err := node.NewNode(mode, c.config.GetString(optionNameP2PAddr), signerCfg.address, *signerCfg.publicKey, signerCfg.signer, signerCfg.subKey,
+				c.config.GetUint64(optionNameNetworkID), logger, signerCfg.libp2pPrivateKey, node.Options{
+					DataDir:                c.config.GetString(optionNameDataDir),
+					CacheCapacity:          c.config.GetUint64(optionNameCacheCapacity),
+					DBDriver:               c.config.GetString(optionDatabaseDriver),
+					DBPath:                 c.config.GetString(optionDatabasePath),
+					HTTPAddr:               c.config.GetString(optionNameHTTPAddr),
+					WSAddr:                 c.config.GetString(optionNameWebsocketAddr),
+					APIAddr:                c.config.GetString(optionNameAPIAddr),
+					DebugAPIAddr:           debugAPIAddr,
+					ApiBufferSizeMul:       c.config.GetInt(optionNameApiFileBufferMultiple),
+					NATAddr:                c.config.GetString(optionNameNATAddr),
+					EnableWS:               c.config.GetBool(optionNameP2PWSEnable),
+					EnableQUIC:             c.config.GetBool(optionNameP2PQUICEnable),
+					WelcomeMessage:         c.config.GetString(optionWelcomeMessage),
+					Bootnodes:              c.config.GetStringSlice(optionNameBootnodes),
+					ChainEndpoint:          c.config.GetString(optionNameChainEndpoint),
+					OracleContractAddress:  c.config.GetString(optionNameOracleContractAddr),
+					CORSAllowedOrigins:     c.config.GetStringSlice(optionCORSAllowedOrigins),
+					Standalone:             c.config.GetBool(optionNameStandalone),
+					IsDev:                  c.config.GetBool(optionNameDevMode),
+					TracingEnabled:         c.config.GetBool(optionNameTracingEnabled),
+					TracingEndpoint:        c.config.GetString(optionNameTracingEndpoint),
+					TracingServiceName:     c.config.GetString(optionNameTracingServiceName),
+					Logger:                 logger,
+					ResolverConnectionCfgs: resolverCfgs,
+					GatewayMode:            c.config.GetBool(optionNameGatewayMode),
+					TrafficEnable:          c.config.GetBool(optionNameTrafficEnable),
+					TrafficContractAddr:    c.config.GetString(optionNameTrafficContractAddr),
+					KadBinMaxPeers:         c.config.GetInt(optionNameBinMaxPeers),
+					LightNodeMaxPeers:      c.config.GetInt(optionNameLightMaxPeers),
+					AllowPrivateCIDRs:      c.config.GetBool(optionNameAllowPrivateCIDRs),
+					Restricted:             c.config.GetBool(optionNameRestrictedAPI),
+					TokenEncryptionKey:     c.config.GetString(optionNameTokenEncryptionKey),
+					AdminPasswordHash:      c.config.GetString(optionNameAdminPasswordHash),
+					RouteAlpha:             c.config.GetInt32(optionNameRouteAlpha),
+					Groups:                 c.config.Get(optionNameGroups),
+					EnableApiTLS:           c.config.GetBool(optionNameEnableApiTls),
+					TlsCrtFile:             c.config.GetString(optionNameTlsCRT),
+					TlsKeyFile:             c.config.GetString(optionNameTlsKey),
+					StorageFilesEnable:     c.config.GetBool(optionNameStorageEnable),
+					StorageFilesConfig: storagefiles.Config{
+						Overlay:            signerCfg.address,
+						GroupName:          c.config.GetString(optionNameStorageGroupName),
+						SkipOracleRegister: c.config.GetBool(optionNameStorageSkipOracleRegister),
+						Capacity:           c.config.GetUint64(optionNameStorageCapacity),
+						CacheDir:           c.config.GetString(optionNameStorageCacheDir),
+						DelFileTime:        c.config.GetInt64(optionNameStorageDelFileTime),
+						BlockSize:          c.config.GetInt(optionNameStorageBlockSize),
+						RetryNumber:        c.config.GetInt(optionNameStorageRetryNumber),
+						Redundant:          c.config.GetUint64(optionNameStorageRedundantDisk),
+					},
+				})
 			if err != nil {
 				return err
 			}
@@ -252,6 +255,7 @@ type signerConfig struct {
 	address          boson.Address
 	publicKey        *ecdsa.PublicKey
 	libp2pPrivateKey crypto2.PrivKey
+	subKey           signature.KeyringPair
 }
 
 func (c *command) configureSigner(cmd *cobra.Command, logger logging.Logger) (config *signerConfig, err error) {
@@ -329,10 +333,27 @@ func (c *command) configureSigner(cmd *cobra.Command, logger logging.Logger) (co
 		logger.Debugf("using existing libp2p key")
 	}
 
+	miniSecretKey, createdSubKey, err := subkey.New(path).Key("subkey", password)
+	if err != nil {
+		return nil, fmt.Errorf("subkey: %w", err)
+	}
+	if createdSubKey {
+		logger.Debugf("new subkey created")
+	} else {
+		logger.Debugf("using existing subkey")
+	}
+	logger.Debugf("subkey accountId 0x%x", miniSecretKey.Public().Encode())
+
+	seed := fmt.Sprintf("0x%x", miniSecretKey.Encode())
+	keyPair, err := signature.KeyringPairFromSecret(seed, 42)
+	if err != nil {
+		return nil, fmt.Errorf("subkey keyPair: %w", err)
+	}
 	return &signerConfig{
 		signer:           signer,
 		address:          addr,
 		publicKey:        publicKey,
 		libp2pPrivateKey: libp2pPrivateKey,
+		subKey:           keyPair,
 	}, nil
 }

@@ -105,7 +105,7 @@ func NewSubstrateAPI(url string, signer signature.KeyringPair) (*SubstrateAPI, e
 	return s, nil
 }
 
-func (s *SubstrateAPI) GetSignatureOptions() (option types.SignatureOptions, res error) {
+func (s *SubstrateAPI) GetSignatureOptions() (option types.SignatureOptions, err error) {
 	genesisHash, err := s.RPC.Chain.GetBlockHash(0)
 	if err != nil {
 		return
@@ -133,7 +133,7 @@ func (s *SubstrateAPI) GetSignatureOptions() (option types.SignatureOptions, res
 		return
 	}
 	if !ok {
-		err = errors.New("account not found")
+		err = errors.New("insufficient account balance")
 		return
 	}
 	nonce := uint32(accountInfo.Nonce)

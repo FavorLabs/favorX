@@ -1,24 +1,22 @@
-package file
+package subkey
 
 import (
 	"bytes"
 	"crypto/aes"
 	"crypto/cipher"
-	"crypto/ecdsa"
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
 
+	"github.com/ChainSafe/go-schnorrkel"
 	"github.com/FavorLabs/favorX/pkg/crypto"
 	"github.com/FavorLabs/favorX/pkg/keystore"
 	"github.com/google/uuid"
 	"golang.org/x/crypto/scrypt"
 	"golang.org/x/crypto/sha3"
 )
-
-var _ keystore.Service = (*Service)(nil)
 
 const (
 	keyHeaderKDF = "scrypt"
@@ -59,37 +57,37 @@ type kdfParams struct {
 	Salt  string `json:"salt"`
 }
 
-func encryptKey(k *ecdsa.PrivateKey, password string) ([]byte, error) {
-	data := crypto.EncodeSecp256k1PrivateKey(k)
-	kc, err := encryptData(data, []byte(password))
-	if err != nil {
-		return nil, err
-	}
-	addr, err := crypto.NewEthereumAddress(k.PublicKey)
+func encryptKey(k *schnorrkel.MiniSecretKey, mnemonic, password string) ([]byte, error) {
+	// var data []byte
+	// for _, v := range k.Encode() {
+	// 	data = append(data, v)
+	// }
+	kc, err := encryptData([]byte(mnemonic), []byte(password))
 	if err != nil {
 		return nil, err
 	}
 	return json.Marshal(encryptedKey{
-		Address: hex.EncodeToString(addr),
+		Address: fmt.Sprintf("0x%x", k.Public().Encode()),
 		Crypto:  *kc,
 		Version: keyVersion,
 		Id:      uuid.NewString(),
 	})
 }
 
-func decryptKey(data []byte, password string) (*ecdsa.PrivateKey, error) {
+func decryptKey(data []byte, password string) (*schnorrkel.MiniSecretKey, string, error) {
 	var k encryptedKey
 	if err := json.Unmarshal(data, &k); err != nil {
-		return nil, err
+		return nil, "", err
 	}
 	if k.Version != keyVersion {
-		return nil, fmt.Errorf("unsupported key version: %v", k.Version)
+		return nil, "", fmt.Errorf("unsupported key version: %v", k.Version)
 	}
 	d, err := decryptData(k.Crypto, password)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
-	return crypto.DecodeSecp256k1PrivateKey(d)
+	pk, err := schnorrkel.MiniSecretKeyFromMnemonic(string(d), password)
+	return pk, string(d), err
 }
 
 func encryptData(data, password []byte) (*keyCripto, error) {
