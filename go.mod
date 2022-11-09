@@ -1,16 +1,19 @@
 module github.com/FavorLabs/favorX
 
-go 1.18
+go 1.17
 
 require (
+	github.com/ChainSafe/go-schnorrkel v1.0.0
 	github.com/FavorLabs/manifest v1.2.0
 	github.com/btcsuite/btcd v0.22.1
 	github.com/casbin/casbin/v2 v2.35.0
+	github.com/cavaliergopher/grab/v3 v3.0.1
 	github.com/centrifuge/go-substrate-rpc-client/v4 v4.0.8
 	github.com/coreos/go-semver v0.3.0
 	github.com/davecgh/go-spew v1.1.1
 	github.com/deckarep/golang-set v1.8.0
-	github.com/ethereum/go-ethereum v1.10.17
+	github.com/decred/dcrd/crypto/blake256 v1.0.0
+	github.com/ethereum/go-ethereum v1.10.20
 	github.com/ethersphere/langos v1.0.0
 	github.com/ethersphere/sw3-bindings/v3 v3.0.3
 	github.com/gogf/gf/v2 v2.0.3
@@ -41,16 +44,17 @@ require (
 	github.com/spf13/cobra v1.4.0
 	github.com/spf13/viper v1.12.0
 	github.com/stretchr/testify v1.8.0
-	github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7
+	github.com/syndtr/goleveldb v1.0.1-0.20220614013038-64ee5596c38a
+	github.com/tyler-smith/go-bip39 v1.1.0
 	github.com/uber/jaeger-client-go v2.30.0+incompatible
 	github.com/vedhavyas/go-subkey v1.0.3
 	github.com/wealdtech/go-ens/v3 v3.5.1
 	gitlab.com/nolash/go-mockbytes v0.0.7
 	go.uber.org/atomic v1.9.0
-	golang.org/x/crypto v0.0.0-20220525230936-793ad666bf5e
+	golang.org/x/crypto v0.0.0-20220622213112-05595931fe9d
 	golang.org/x/net v0.0.0-20220630215102-69896b714898
-	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
-	golang.org/x/sys v0.0.0-20220610221304-9f5ed59c137d
+	golang.org/x/sync v0.0.0-20220513210516-0976fa681c29
+	golang.org/x/sys v0.0.0-20220704084225-05e143d24a9e
 	golang.org/x/term v0.0.0-20220526004731-065cf7ba2467
 	golang.org/x/text v0.3.8-0.20211105212822-18b340fc7af2
 	gopkg.in/natefinch/npipe.v2 v2.0.0-20160621034901-c1b8fa8bdcce
@@ -61,7 +65,6 @@ require (
 
 require (
 	github.com/BurntSushi/toml v0.4.1 // indirect
-	github.com/ChainSafe/go-schnorrkel v1.0.0 // indirect
 	github.com/HdrHistogram/hdrhistogram-go v1.1.2 // indirect
 	github.com/Knetic/govaluate v3.0.1-0.20171022003610-9aa49832a739+incompatible // indirect
 	github.com/StackExchange/wmi v0.0.0-20210224194228-fe8f1750fd46 // indirect
@@ -75,8 +78,7 @@ require (
 	github.com/coreos/go-systemd/v22 v22.3.2 // indirect
 	github.com/cosmos/go-bip39 v1.0.0 // indirect
 	github.com/davidlazar/go-crypto v0.0.0-20200604182044-b73af7476f6c // indirect
-	github.com/decred/base58 v1.0.3 // indirect
-	github.com/decred/dcrd/crypto/blake256 v1.0.0 // indirect
+	github.com/decred/base58 v1.0.4 // indirect
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.0.1 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/docker/go-units v0.4.0 // indirect
@@ -128,7 +130,7 @@ require (
 	github.com/miekg/dns v1.1.50 // indirect
 	github.com/mikioh/tcpinfo v0.0.0-20190314235526-30a79bb1804b // indirect
 	github.com/mikioh/tcpopt v0.0.0-20190314235656-172688c1accc // indirect
-	github.com/mimoo/StrobeGo v0.0.0-20210601165009-122bf33a46e0 // indirect
+	github.com/mimoo/StrobeGo v0.0.0-20220103164710-9a04d6ca976b // indirect
 	github.com/minio/sha256-simd v1.0.0 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/mr-tron/base58 v1.2.0 // indirect

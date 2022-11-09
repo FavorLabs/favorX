@@ -28,7 +28,7 @@ import (
 	"github.com/FavorLabs/favorX/pkg/sctx"
 	"github.com/FavorLabs/favorX/pkg/storage"
 	"github.com/FavorLabs/favorX/pkg/tracing"
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/centrifuge/go-substrate-rpc-client/v4/types"
 	"github.com/ethersphere/langos"
 	"github.com/gorilla/mux"
 )
@@ -63,7 +63,7 @@ type UploadResponse struct {
 }
 
 type RegisterResponse struct {
-	Hash common.Hash `json:"hash"`
+	Hash types.Hash `json:"hash"`
 }
 
 // fileUploadHandler uploads the file and its metadata supplied in the file body and
@@ -245,7 +245,7 @@ func (s *server) fileDownloadHandler(w http.ResponseWriter, r *http.Request) {
 	nameOrHex := mux.Vars(r)["address"]
 	pathVar := mux.Vars(r)["path"]
 
-	address, err := s.resolveNameOrAddress(nameOrHex)
+	addr, err := s.resolveNameOrAddress(nameOrHex)
 	if err != nil {
 		logger.Debugf("download: parse address %s: %v", nameOrHex, err)
 		logger.Error("download: parse address")
@@ -253,8 +253,8 @@ func (s *server) fileDownloadHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	r = r.WithContext(sctx.SetRootHash(r.Context(), address))
-	if !s.chunkInfo.Discover(r.Context(), nil, address, isChain) {
+	r = r.WithContext(sctx.SetRootHash(r.Context(), addr))
+	if !s.chunkInfo.Discover(r.Context(), nil, addr, isChain) {
 		logger.Debugf("download: chunkInfo init %s: false", nameOrHex)
 		jsonhttp.NotFound(w, "chunkInfo init false")
 		return
@@ -264,12 +264,12 @@ func (s *server) fileDownloadHandler(w http.ResponseWriter, r *http.Request) {
 
 	// read manifest entry
 	m, err := manifest.NewDefaultManifestReference(
-		address,
+		addr,
 		ls,
 	)
 	if err != nil {
-		logger.Debugf("download: not manifest %s: %v", address, err)
-		logger.Errorf("download: not manifest %s", address)
+		logger.Debugf("download: not manifest %s: %v", addr, err)
+		logger.Errorf("download: not manifest %s", addr)
 		jsonhttp.NotFound(w, err)
 		return
 	}
@@ -282,12 +282,12 @@ func (s *server) fileDownloadHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	err = m.IterateDirectories(ctx, []byte(""), 0, fn)
 	if err != nil {
-		logger.Errorf("download: iterate directories %s: %v", address, err)
+		logger.Errorf("download: iterate directories %s: %v", addr, err)
 		jsonhttp.NotFound(w, fmt.Errorf("iterate: %s", err))
 		return
 	}
 	if pathVar == "" {
-		logger.Debugf("download: handle empty path %s", address)
+		logger.Debugf("download: handle empty path %s", addr)
 
 		if indexDocumentSuffixKey, ok := manifestMetadataLoad(ctx, m, manifest.RootPath, manifest.WebsiteIndexDocumentSuffixKey); ok {
 			pathVar = path.Join(pathVar, indexDocumentSuffixKey)
@@ -297,7 +297,7 @@ func (s *server) fileDownloadHandler(w http.ResponseWriter, r *http.Request) {
 				// index document exists
 				logger.Debugf("download: serving path: %s", pathVar)
 
-				s.serveManifestEntry(w, r, address, indexDocumentManifestEntry, true)
+				s.serveManifestEntry(w, r, addr, indexDocumentManifestEntry, true)
 				return
 			}
 		}
@@ -306,7 +306,7 @@ func (s *server) fileDownloadHandler(w http.ResponseWriter, r *http.Request) {
 	me, err := m.Lookup(ctx, pathVar)
 
 	if err != nil {
-		logger.Debugf("download: invalid path %s/%s: %v", address, pathVar, err)
+		logger.Debugf("download: invalid path %s/%s: %v", addr, pathVar, err)
 		logger.Error("download: invalid path")
 
 		if !errors.Is(err, manifest.ErrNotFound) {
@@ -324,7 +324,7 @@ func (s *server) fileDownloadHandler(w http.ResponseWriter, r *http.Request) {
 					// index document exists
 					logger.Debugf("download: serving path: %s", pathWithIndex)
 
-					s.serveManifestEntry(w, r, address, indexDocumentManifestEntry, true)
+					s.serveManifestEntry(w, r, addr, indexDocumentManifestEntry, true)
 					return
 				}
 			}
@@ -338,7 +338,7 @@ func (s *server) fileDownloadHandler(w http.ResponseWriter, r *http.Request) {
 					// error document exists
 					logger.Debugf("download: serving path: %s", errorDocumentPath)
 
-					s.serveManifestEntry(w, r, address, errorDocumentManifestEntry, true)
+					s.serveManifestEntry(w, r, addr, errorDocumentManifestEntry, true)
 					return
 				}
 			}
@@ -356,7 +356,7 @@ func (s *server) fileDownloadHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	r = r.WithContext(sctx.SetRootHash(r.Context(), me.Reference()))
 	// serve requested path
-	s.serveManifestEntry(w, r, address, me, true)
+	s.serveManifestEntry(w, r, addr, me, true)
 }
 
 func (s *server) serveManifestEntry(
@@ -638,8 +638,8 @@ func (s *server) fileRegister(w http.ResponseWriter, r *http.Request) {
 	apiName := "fileRegister"
 	logger := tracing.NewLoggerWithTraceID(r.Context(), s.logger)
 	nameOrHex := mux.Vars(r)["address"]
-	address, err := s.resolveNameOrAddress(nameOrHex)
-	defer s.tranProcess.Delete(apiName + address.String())
+	addr, err := s.resolveNameOrAddress(nameOrHex)
+	defer s.tranProcess.Delete(apiName + addr.String())
 	var gasPrice, minGasPrice *big.Int
 	price := r.URL.Query().Get("gasPrice")
 	if price == "" {
@@ -672,49 +672,46 @@ func (s *server) fileRegister(w http.ResponseWriter, r *http.Request) {
 		jsonhttp.NotFound(w, nil)
 		return
 	}
-	if _, ok := s.tranProcess.Load(apiName + address.String()); ok {
+	if _, ok := s.tranProcess.Load(apiName + addr.String()); ok {
 		logger.Errorf("parse address %s under processing", nameOrHex)
 		jsonhttp.InternalServerError(w, fmt.Sprintf("parse address %s under processing", nameOrHex))
 		return
 	}
-	s.tranProcess.Store(apiName+address.String(), "-")
-	overlays := s.oracleChain.GetNodesFromCid(address.Bytes())
+	s.tranProcess.Store(apiName+addr.String(), "-")
+	overlays := s.oracleChain.GetNodesFromCid(addr.Bytes())
 	for _, v := range overlays {
 		if s.overlay.Equal(v) {
-			jsonhttp.Forbidden(w, fmt.Sprintf("address:%v Already Register", address.String()))
+			jsonhttp.Forbidden(w, fmt.Sprintf("address:%v Already Register", addr.String()))
 			return
 		}
 	}
 
-	hash, err := s.oracleChain.RegisterCidAndNode(r.Context(), address, s.overlay, gasPrice, minGasPrice)
+	err = s.oracleChain.RegisterCidAndNode(r.Context(), addr, s.overlay, gasPrice, minGasPrice)
 	if err != nil {
 		logger.Errorf("fileRegister failed: %v ", err)
 		jsonhttp.InternalServerError(w, fmt.Sprintf("fileRegister failed: %v ", err))
 		return
 	}
-	trans := TransactionResponse{
-		Hash:     hash,
-		Address:  address,
-		Register: true,
+
+	err = s.fileInfo.RegisterFile(addr, true)
+	if err != nil {
+		logger.Errorf("fileRegister update info:%v", err)
 	}
-	s.transactionChan <- trans
-	jsonhttp.OK(w,
-		RegisterResponse{
-			Hash: hash,
-		})
+
+	jsonhttp.OK(w, nil)
 }
 
 func (s *server) fileRegisterRemove(w http.ResponseWriter, r *http.Request) {
 	apiName := "fileRegisterRemove"
 	logger := tracing.NewLoggerWithTraceID(r.Context(), s.logger)
 	nameOrHex := mux.Vars(r)["address"]
-	address, err := s.resolveNameOrAddress(nameOrHex)
+	addr, err := s.resolveNameOrAddress(nameOrHex)
 	if err != nil {
 		logger.Errorf("fileRegisterRemove: parse address")
 		jsonhttp.NotFound(w, nil)
 		return
 	}
-	defer s.tranProcess.Delete(apiName + address.String())
+	defer s.tranProcess.Delete(apiName + addr.String())
 	var gasPrice, minGasPrice *big.Int
 	price := r.URL.Query().Get("gasPrice")
 	if price == "" {
@@ -741,14 +738,14 @@ func (s *server) fileRegisterRemove(w http.ResponseWriter, r *http.Request) {
 		}
 		minGasPrice = big.NewInt(gas)
 	}
-	if _, ok := s.tranProcess.Load(apiName + address.String()); ok {
+	if _, ok := s.tranProcess.Load(apiName + addr.String()); ok {
 		logger.Errorf("parse address %s under processing", nameOrHex)
 		jsonhttp.InternalServerError(w, fmt.Sprintf("parse address %s under processing", nameOrHex))
 		return
 	}
-	s.tranProcess.Store(apiName+address.String(), "-")
+	s.tranProcess.Store(apiName+addr.String(), "-")
 
-	overlays := s.oracleChain.GetNodesFromCid(address.Bytes())
+	overlays := s.oracleChain.GetNodesFromCid(addr.Bytes())
 	isDel := false
 	for _, v := range overlays {
 		if s.overlay.Equal(v) {
@@ -757,32 +754,23 @@ func (s *server) fileRegisterRemove(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if !isDel {
-		jsonhttp.Forbidden(w, fmt.Sprintf("address:%v Already Remove", address.String()))
+		jsonhttp.Forbidden(w, fmt.Sprintf("address:%v Already Remove", addr.String()))
+		return
 	}
 
-	hash, err := s.oracleChain.RemoveCidAndNode(r.Context(), address, s.overlay, gasPrice, minGasPrice)
+	err = s.oracleChain.RemoveCidAndNode(r.Context(), addr, s.overlay, gasPrice, minGasPrice)
 	if err != nil {
 		s.logger.Error("fileRegisterRemove failed: %v ", err)
 		jsonhttp.InternalServerError(w, fmt.Sprintf("fileRegisterRemove failed: %v ", err))
 		return
 	}
 
-	err = s.fileInfo.RegisterFile(address, false)
+	err = s.fileInfo.RegisterFile(addr, false)
 	if err != nil {
 		logger.Errorf("fileRegister update info:%v", err)
 	}
 
-	trans := TransactionResponse{
-		Hash:     hash,
-		Address:  address,
-		Register: false,
-	}
-	s.transactionChan <- trans
-
-	jsonhttp.OK(w,
-		RegisterResponse{
-			Hash: hash,
-		})
+	jsonhttp.OK(w, nil)
 }
 
 type ManifestAction struct {

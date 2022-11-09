@@ -5,7 +5,6 @@ import (
 	"math/big"
 
 	"github.com/FavorLabs/favorX/pkg/boson"
-	"github.com/FavorLabs/favorX/pkg/rpc"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 )
@@ -38,27 +37,6 @@ type TxInfo struct {
 	Type   TransactionType `json:"type"`
 	Value  string          `json:"value"`
 	TxHash string          `json:"txHash"`
-}
-type Resolver interface {
-	// GetCid Resolve cid from  uri
-	GetCid(uri string) []byte
-
-	// GetNodesFromCid  Get source nodes of specified cid
-	GetNodesFromCid([]byte) []boson.Address
-
-	// GetSourceNodes  Short hand function, get storage nodes from uri
-	GetSourceNodes(uri string) []boson.Address
-
-	// OnStoreMatched Notification when new data req matched
-	OnStoreMatched(cid boson.Address, dataLen uint64, salt uint64, address boson.Address)
-
-	// DataStoreFinished when data retrieved and saved, use this function to report onchain
-	DataStoreFinished(cid boson.Address, dataLen uint64, salt uint64, proof []byte, resCh chan ChainResult)
-	RegisterCidAndNode(ctx context.Context, rootCid boson.Address, address boson.Address, gasPrice, minGasPrice *big.Int) (hash common.Hash, err error)
-	RemoveCidAndNode(ctx context.Context, rootCid boson.Address, address boson.Address, gasPrice, minGasPrice *big.Int) (common.Hash, error)
-	GetRegisterState(ctx context.Context, rootCid boson.Address, address boson.Address) (bool, error)
-	WaitForReceipt(ctx context.Context, rootCid boson.Address, txHash common.Hash) (receipt *types.Receipt, err error)
-	API() rpc.API
 }
 
 type Traffic interface {
