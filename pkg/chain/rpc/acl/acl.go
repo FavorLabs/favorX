@@ -105,7 +105,7 @@ func (s *service) GetNickName(accountId []byte) (name string, err error) {
 		return
 	}
 	if !ok {
-		err = errors.New("Acl.AccountNickname is empty")
+		err = base.KeyEmptyError
 		return
 	}
 	return
@@ -129,7 +129,7 @@ func (s *service) GetAccountID(nickname string) (accountID types.AccountID, err 
 		return
 	}
 	if !ok {
-		err = errors.New("is empty")
+		err = base.KeyEmptyError
 		return
 	}
 	return
@@ -180,7 +180,7 @@ func (s *service) GetResolve(uri string) (cid []byte, err error) {
 		return
 	}
 	if !ok {
-		err = errors.New("Acl.Resolves is empty")
+		err = base.KeyEmptyError
 		return
 	}
 	return res.ToBytes(), nil

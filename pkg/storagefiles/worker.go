@@ -318,30 +318,6 @@ func (w *Worker) oracleRegister() (err error) {
 	return err
 }
 
-func (w *Worker) oracleRegApi(cid boson.Address) (skip bool, err error) {
-	if w.manager.options.SkipOracleRegister {
-		w.manager.logger.Infof("worker %d oracle register skipped", w.id)
-		return true, nil
-	}
-	defer func() {
-		if err == nil {
-			w.manager.logger.Infof("worker %d oracle register success", w.id)
-		} else {
-			w.manager.logger.Warningf("worker %d oracle register %d err %s", w.id, w.task.Running.RetryPinOracle+1, err)
-		}
-	}()
-	w.manager.logger.Infof("worker %d oracle register start", w.id)
-
-	have := w.manager.oracle.GetNodesFromCid(cid.Bytes())
-	for _, v := range have {
-		if v.Equal(w.manager.options.Overlay) {
-			return true, nil
-		}
-	}
-	err = w.manager.oracle.RegisterCidAndNode(w.ctx, cid, w.manager.options.Overlay, nil, nil)
-	return
-}
-
 func (w *Worker) storageFile(cid boson.Address) (err error) {
 	defer func() {
 		if err == nil {

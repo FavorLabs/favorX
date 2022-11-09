@@ -543,12 +543,17 @@ func NewNode(nodeMode address.Model, addr string, bosonAddress boson.Address, pu
 	}
 
 	if o.StorageFilesEnable {
-		services, err := storagefiles.NewServices(o.StorageFilesConfig, logger, group, client, chunkInfo, fileInfo, oracleChain)
+		services, err := storagefiles.NewServices(o.StorageFilesConfig, logger, subPub, client, chunkInfo, fileInfo, oracleChain)
 		if err != nil {
 			return nil, err
 		}
 		b.storagefilesCloser = services
 		services.Start()
+	} else {
+		err = storagefiles.CheckAndUnRegisterMerchant(bosonAddress, client)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return b, nil

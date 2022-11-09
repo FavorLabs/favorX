@@ -151,15 +151,13 @@ func (c *command) initStartCmd() (err error) {
 					TlsKeyFile:             c.config.GetString(optionNameTlsKey),
 					StorageFilesEnable:     c.config.GetBool(optionNameStorageEnable),
 					StorageFilesConfig: storagefiles.Config{
-						Overlay:            signerCfg.address,
-						GroupName:          c.config.GetString(optionNameStorageGroupName),
-						SkipOracleRegister: c.config.GetBool(optionNameStorageSkipOracleRegister),
-						Capacity:           c.config.GetUint64(optionNameStorageCapacity),
-						CacheDir:           c.config.GetString(optionNameStorageCacheDir),
-						DelFileTime:        c.config.GetInt64(optionNameStorageDelFileTime),
-						BlockSize:          c.config.GetInt(optionNameStorageBlockSize),
-						RetryNumber:        c.config.GetInt(optionNameStorageRetryNumber),
-						Redundant:          c.config.GetUint64(optionNameStorageRedundantDisk),
+						Overlay:     signerCfg.address,
+						Capacity:    c.config.GetUint64(optionNameStorageCapacity),
+						CacheDir:    c.config.GetString(optionNameStorageCacheDir),
+						DelFileTime: c.config.GetInt64(optionNameStorageDelFileTime),
+						BlockSize:   c.config.GetInt(optionNameStorageBlockSize),
+						RetryNumber: c.config.GetInt(optionNameStorageRetryNumber),
+						Redundant:   c.config.GetUint64(optionNameStorageRedundantDisk),
 					},
 				})
 			if err != nil {

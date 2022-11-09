@@ -9,8 +9,6 @@ import (
 	"github.com/FavorLabs/favorX/pkg/fileinfo"
 	"github.com/FavorLabs/favorX/pkg/localstore/filestore"
 	"github.com/FavorLabs/favorX/pkg/logging"
-	"github.com/FavorLabs/favorX/pkg/multicast"
-	"github.com/FavorLabs/favorX/pkg/multicast/model"
 	"github.com/FavorLabs/favorX/pkg/settlement/chain/oracle"
 	"github.com/FavorLabs/favorX/pkg/subscribe"
 	"github.com/prometheus/client_golang/prometheus"
@@ -22,7 +20,7 @@ type Panel struct {
 	ctx             context.Context
 	logger          logging.Logger
 	options         Config
-	gClient         multicast.GroupStorageFiles
+	subPub          subscribe.SubPub
 	notify          *subscribe.NotifierWithMsgChan
 	manager         *Manager
 	metricsRegistry *prometheus.Registry
@@ -30,12 +28,9 @@ type Panel struct {
 	fileInfo        fileinfo.Interface
 }
 
-func NewPanel(ctx context.Context, cfg Config, logger logging.Logger, gClient multicast.GroupStorageFiles, subClient *chain.Client,
+func NewPanel(ctx context.Context, cfg Config, dm *DiskManager, logger logging.Logger, subPub subscribe.SubPub, subClient *chain.Client,
 	chunkInfo chunkinfo.Interface, fileInfo fileinfo.Interface, oracle oracle.Resolver) (*Panel, error) {
-	dm, err := NewDiskManager(cfg)
-	if err != nil {
-		return nil, err
-	}
+
 	quit := make(chan struct{}, 1)
 	m, err := NewManager(quit, cfg, dm, logger, fileInfo, oracle, subClient)
 	if err != nil {
@@ -45,7 +40,7 @@ func NewPanel(ctx context.Context, cfg Config, logger logging.Logger, gClient mu
 		options:   cfg,
 		ctx:       ctx,
 		logger:    logger,
-		gClient:   gClient,
+		subPub:    subPub,
 		notify:    subscribe.NewNotifierWithMsgChan(),
 		manager:   m,
 		done:      make(chan struct{}, 1),
@@ -63,11 +58,7 @@ func (p *Panel) init() (err error) {
 		}
 	}()
 
-	return p.gClient.SubscribeGroupMessageWithChan(p.notify, p.options.Gid)
-}
-
-func (p *Panel) quit() {
-	_ = p.gClient.RemoveGroup(p.options.Gid, model.GTypeJoin)
+	return p.subPub.Subscribe(p.notify, "storagefiles", "order", "notify")
 }
 
 func (p *Panel) Start() {
@@ -117,7 +108,6 @@ func (p *Panel) Start() {
 }
 
 func (p *Panel) Close() {
-	p.quit()
 	close(p.done)    // close cron,watch node
 	p.manager.Wait() // wait all worker finish
 }
