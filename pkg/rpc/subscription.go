@@ -102,7 +102,7 @@ type Notifier struct {
 }
 
 // CreateSubscription returns a new subscription that is coupled to the
-// RPC connection. By default subscriptions are inactive and notifications
+// RPC connection. By default, subscriptions are inactive and notifications
 // are dropped until the subscription is marked as active. This is done
 // by the RPC server after the subscription ID is send to the client.
 func (n *Notifier) CreateSubscription() *Subscription {

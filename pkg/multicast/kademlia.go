@@ -1038,6 +1038,19 @@ func (s *Service) SubscribeGroupMessage(n *rpc.Notifier, sub *rpc.Subscription, 
 	return errors.New("the joined group notfound")
 }
 
+func (s *Service) SubscribeGroupMessageWithChan(notifier *subscribe.NotifierWithMsgChan, gid boson.Address) (err error) {
+	value, ok := s.groups.Load(gid.String())
+	if ok {
+		g := value.(*Group)
+		if g.option.GType == model.GTypeJoin {
+			g.groupMsgSub = true
+			_ = s.subPub.Subscribe(notifier, "group", "groupMessage", gid.String())
+			return nil
+		}
+	}
+	return errors.New("the joined group notfound")
+}
+
 func (s *Service) notifyMessage(g *Group, msg GroupMessage, st *WsStream) (e error) {
 	if g.groupMsgSub == false {
 		return nil
@@ -1095,7 +1108,7 @@ func (s *Service) notifyMessage(g *Group, msg GroupMessage, st *WsStream) (e err
 	return nil
 }
 
-func (s *Service) replyGroupMessage(sessionID string, data []byte) (err error) {
+func (s *Service) ReplyGroupMessage(sessionID string, data []byte) (err error) {
 	v, ok := s.sessionStream.Load(rpc.ID(sessionID))
 	if !ok {
 		s.logger.Tracef("group: sessionID %s reply err invalid or has expired", sessionID)

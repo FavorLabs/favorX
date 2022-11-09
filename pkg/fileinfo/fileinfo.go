@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
+
 	"github.com/FavorLabs/favorX/pkg/address"
 	"github.com/FavorLabs/favorX/pkg/boson"
 	"github.com/FavorLabs/favorX/pkg/localstore"
@@ -26,6 +27,7 @@ type ChunkInfoSource struct {
 }
 
 type Interface interface {
+	GetFileView(rootCid boson.Address) (filestore.FileView, error)
 	GetFileList(page filestore.Page, filter []filestore.Filter, sort filestore.Sort) ([]FileView, int)
 	GetFileSize(rootCid boson.Address) (int64, error)
 	ManifestView(ctx context.Context, nameOrHex string, pathVar string, depth int) (*ManifestNode, error)
@@ -66,6 +68,14 @@ func (f *FileInfo) GetFileSize(rootCid boson.Address) (int64, error) {
 	span := int64(binary.LittleEndian.Uint64(chunkData[:boson.SpanSize]))
 	size := chunkLen(span)
 	return size, nil
+}
+
+func (f *FileInfo) GetFileView(rootCid boson.Address) (filestore.FileView, error) {
+	v, ok := f.localStore.GetFile(rootCid)
+	if !ok {
+		return filestore.FileView{}, fmt.Errorf("fileStore get %s:fileinfo not found", rootCid.String())
+	}
+	return v, nil
 }
 
 func (f *FileInfo) GetFileList(page filestore.Page, filter []filestore.Filter, sort filestore.Sort) ([]FileView, int) {

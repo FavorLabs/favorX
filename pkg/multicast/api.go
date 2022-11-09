@@ -2,6 +2,7 @@ package multicast
 
 import (
 	"context"
+
 	"github.com/FavorLabs/favorX/pkg/boson"
 	"github.com/FavorLabs/favorX/pkg/rpc"
 )
@@ -77,5 +78,5 @@ func (a *apiService) Peers(ctx context.Context, name string) (*rpc.Subscription,
 
 // Reply to the group message to give the session ID
 func (a *apiService) Reply(sessionID string, data []byte) error {
-	return a.s.replyGroupMessage(sessionID, data)
+	return a.s.ReplyGroupMessage(sessionID, data)
 }

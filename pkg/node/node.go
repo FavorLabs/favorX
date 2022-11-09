@@ -18,6 +18,7 @@ import (
 	"github.com/FavorLabs/favorX/pkg/api"
 	"github.com/FavorLabs/favorX/pkg/auth"
 	"github.com/FavorLabs/favorX/pkg/boson"
+	"github.com/FavorLabs/favorX/pkg/chain"
 	"github.com/FavorLabs/favorX/pkg/chunkinfo"
 	"github.com/FavorLabs/favorX/pkg/crypto"
 	"github.com/FavorLabs/favorX/pkg/crypto/cert"
@@ -38,12 +39,14 @@ import (
 	"github.com/FavorLabs/favorX/pkg/routetab"
 	"github.com/FavorLabs/favorX/pkg/rpc"
 	"github.com/FavorLabs/favorX/pkg/shed"
+	"github.com/FavorLabs/favorX/pkg/storagefiles"
 	"github.com/FavorLabs/favorX/pkg/subscribe"
 	"github.com/FavorLabs/favorX/pkg/topology/bootnode"
 	"github.com/FavorLabs/favorX/pkg/topology/kademlia"
 	"github.com/FavorLabs/favorX/pkg/topology/lightnode"
 	"github.com/FavorLabs/favorX/pkg/tracing"
 	"github.com/FavorLabs/favorX/pkg/traversal"
+	"github.com/centrifuge/go-substrate-rpc-client/v4/signature"
 	"github.com/gogf/gf/v2/util/gconv"
 	crypto2 "github.com/libp2p/go-libp2p-core/crypto"
 	ma "github.com/multiformats/go-multiaddr"
@@ -52,19 +55,20 @@ import (
 )
 
 type Favor struct {
-	p2pService       io.Closer
-	p2pCancel        context.CancelFunc
-	apiCloser        io.Closer
-	apiServer        *http.Server
-	debugAPIServer   *http.Server
-	resolverCloser   io.Closer
-	errorLogWriter   *io.PipeWriter
-	tracerCloser     io.Closer
-	groupCloser      io.Closer
-	stateStoreCloser io.Closer
-	localstoreCloser io.Closer
-	topologyCloser   io.Closer
-	ethClientCloser  func()
+	p2pService         io.Closer
+	p2pCancel          context.CancelFunc
+	apiCloser          io.Closer
+	apiServer          *http.Server
+	debugAPIServer     *http.Server
+	resolverCloser     io.Closer
+	errorLogWriter     *io.PipeWriter
+	tracerCloser       io.Closer
+	groupCloser        io.Closer
+	stateStoreCloser   io.Closer
+	localstoreCloser   io.Closer
+	topologyCloser     io.Closer
+	ethClientCloser    func()
+	storagefilesCloser io.Closer
 }
 
 type Options struct {
@@ -106,9 +110,12 @@ type Options struct {
 	EnableApiTLS           bool
 	TlsCrtFile             string
 	TlsKeyFile             string
+	StorageFilesEnable     bool
+	StorageFilesConfig     storagefiles.Config
 }
 
-func NewNode(nodeMode address.Model, addr string, bosonAddress boson.Address, publicKey ecdsa.PublicKey, signer crypto.Signer, networkID uint64, logger logging.Logger, libp2pPrivateKey crypto2.PrivKey, o Options) (b *Favor, err error) {
+func NewNode(nodeMode address.Model, addr string, bosonAddress boson.Address, publicKey ecdsa.PublicKey, signer crypto.Signer, keyPair signature.KeyringPair,
+	networkID uint64, logger logging.Logger, libp2pPrivateKey crypto2.PrivKey, o Options) (b *Favor, err error) {
 	tracer, tracerCloser, err := tracing.NewTracer(&tracing.Options{
 		Enabled:     o.TracingEnabled,
 		Endpoint:    o.TracingEndpoint,
@@ -228,9 +235,16 @@ func NewNode(nodeMode address.Model, addr string, bosonAddress boson.Address, pu
 		return nil, fmt.Errorf("p2p service: %w", err)
 	}
 
-	oracleChain, settlement, apiInterface, commonChain, err := InitChain(
+	// TODO add KeyringPairAlice
+	client, err := chain.NewClient("ws://127.0.0.1:9944", keyPair)
+	if err != nil {
+		return nil, err
+	}
+
+	oracleChain, settlement, apiInterface, _, err := InitChain(
 		p2pCtx,
 		logger,
+		client,
 		o.ChainEndpoint,
 		o.OracleContractAddress,
 		stateStore,
@@ -334,6 +348,10 @@ func NewNode(nodeMode address.Model, addr string, bosonAddress boson.Address, pu
 
 	p2ps.ApplyRoute(bosonAddress, route, nodeMode)
 
+	if o.StorageFilesConfig.CacheDir == "" {
+		o.StorageFilesConfig.CacheDir = filepath.Join(o.DataDir, "storagefilescache")
+	}
+
 	var path string
 
 	if o.DBPath != "" {
@@ -341,6 +359,8 @@ func NewNode(nodeMode address.Model, addr string, bosonAddress boson.Address, pu
 	} else if o.DataDir != "" {
 		path = filepath.Join(o.DataDir, "localstore")
 	}
+	o.StorageFilesConfig.DataDir = path
+
 	lo := &localstore.Options{
 		Capacity: o.CacheCapacity,
 		Driver:   o.DBDriver,
@@ -411,7 +431,7 @@ func NewNode(nodeMode address.Model, addr string, bosonAddress boson.Address, pu
 	if o.APIAddr != "" {
 		// API server
 		apiService = api.New(ns, multiResolver, bosonAddress, chunkInfo, fileInfo, traversal.New(ns), pinningService,
-			authenticator, logger, kad, tracer, apiInterface, commonChain, oracleChain, relay, group, route,
+			authenticator, logger, kad, tracer, apiInterface, client, oracleChain, relay, group, route,
 			api.Options{
 				CORSAllowedOrigins: o.CORSAllowedOrigins,
 				GatewayMode:        o.GatewayMode,
@@ -435,12 +455,14 @@ func NewNode(nodeMode address.Model, addr string, bosonAddress boson.Address, pu
 
 		go func() {
 			if o.EnableApiTLS {
+				o.StorageFilesConfig.ApiGateway = fmt.Sprintf("https://%s", apiListener.Addr())
 				logger.Infof("api address: https://%s", apiListener.Addr())
 				err = apiServer.ServeTLS(apiListener, o.TlsCrtFile, o.TlsKeyFile)
 				if err != nil {
 					logger.Errorf("api server enable https: %v", err)
 				}
 			}
+			o.StorageFilesConfig.ApiGateway = fmt.Sprintf("http://%s", apiListener.Addr())
 			logger.Infof("api address: http://%s", apiListener.Addr())
 			err = apiServer.Serve(apiListener)
 			if err != nil && err != http.ErrServerClosed {
@@ -494,7 +516,7 @@ func NewNode(nodeMode address.Model, addr string, bosonAddress boson.Address, pu
 		// HTTPModules: []string{"debug", "api"},
 		WSAddr:    o.WSAddr,
 		WSOrigins: o.CORSAllowedOrigins,
-		WSModules: []string{"group", "p2p", "chunkInfo", "traffic", "retrieval", "oracle"},
+		WSModules: []string{"group", "p2p", "chunkInfo", "traffic", "retrieval"},
 	})
 	if err != nil {
 		return nil, err
@@ -505,7 +527,6 @@ func NewNode(nodeMode address.Model, addr string, bosonAddress boson.Address, pu
 		chunkInfo.API(),    // chunkInfo
 		apiInterface.API(), // traffic
 		retrieve.API(),     // retrieval
-		oracleChain.API(),  // oracle
 	})
 	if err = stack.Start(); err != nil {
 		return nil, err
@@ -515,11 +536,26 @@ func NewNode(nodeMode address.Model, addr string, bosonAddress boson.Address, pu
 		return nil, err
 	}
 
+	if o.StorageFilesEnable {
+		services, err := storagefiles.NewServices(o.StorageFilesConfig, logger, group, client, chunkInfo, fileInfo, oracleChain)
+		if err != nil {
+			return nil, err
+		}
+		b.storagefilesCloser = services
+		services.Start()
+	}
+
 	return b, nil
 }
 
 func (b *Favor) Shutdown(ctx context.Context) error {
 	errs := new(multiError)
+
+	if b.storagefilesCloser != nil {
+		if err := b.storagefilesCloser.Close(); err != nil {
+			errs.add(fmt.Errorf("api: %w", err))
+		}
+	}
 
 	if b.apiCloser != nil {
 		if err := b.apiCloser.Close(); err != nil {

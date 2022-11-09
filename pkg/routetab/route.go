@@ -604,7 +604,7 @@ func (s *Service) isConnected(_ context.Context, target boson.Address) bool {
 }
 
 func (s *Service) connect(ctx context.Context, peer boson.Address) (err error) {
-	addr, err := s.kad.GetAuroraAddress(peer)
+	addr, err := s.kad.GetFullAddress(peer)
 	if err != nil {
 		addr, err = s.FindUnderlay(ctx, peer)
 		if err != nil {

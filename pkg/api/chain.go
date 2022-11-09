@@ -6,7 +6,6 @@ import (
 	"net/http"
 
 	"github.com/FavorLabs/favorX/pkg/jsonhttp"
-	"github.com/FavorLabs/favorX/pkg/settlement/chain"
 )
 
 type AllRequest struct {
@@ -41,26 +40,26 @@ func (s *server) chainHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	req := &chain.AllRequest{
-		Method: allRequest.Method,
-		Params: allRequest.Params,
-	}
-	resp, err := s.commonChain.All(r.Context(), req)
-	if err != nil {
-		s.logger.Debugf("api: all chain handler: : %v", err)
-		s.logger.Errorf("api: all chain handler: ")
-		jsonhttp.BadRequest(w, err.Error())
-		return
-	}
-
+	// req := &chain.AllRequest{
+	// 	Method: allRequest.Method,
+	// 	Params: allRequest.Params,
+	// }
+	// resp, err := s.commonChain.All(r.Context(), req)
+	// if err != nil {
+	// 	s.logger.Debugf("api: all chain handler: : %v", err)
+	// 	s.logger.Errorf("api: all chain handler: ")
+	// 	jsonhttp.BadRequest(w, err.Error())
+	// 	return
+	// }
+	//
 	jsonhttp.OK(w, AllResponse{
 		Id:      allRequest.Id,
 		JsonRpc: allRequest.JsonRpc,
-		Result:  resp.Result,
+		// Result:  resp.Result,
 	})
 }
 
 func (s *server) chainTransactionHandler(w http.ResponseWriter, r *http.Request) {
-	tx := s.commonChain.GetTransaction()
-	jsonhttp.OK(w, tx)
+	// tx := s.commonChain.GetTransaction()
+	jsonhttp.OK(w, nil)
 }

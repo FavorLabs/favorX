@@ -1352,11 +1352,11 @@ func TestStart(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			auroraAddr, err := address.NewAddress(signer, multiaddr, peer, 0)
+			fullAddr, err := address.NewAddress(signer, multiaddr, peer, 0)
 			if err != nil {
 				t.Fatal(err)
 			}
-			if err := ab.Put(peer, *auroraAddr); err != nil {
+			if err := ab.Put(peer, *fullAddr); err != nil {
 				t.Fatal(err)
 			}
 		}
@@ -1929,17 +1929,17 @@ func p2pMock(ab addressbook.Interface, signer crypto.Signer, counter, failedCoun
 			}
 
 			overlay := test.RandomAddress()
-			auroraAddr, err := address.NewAddress(signer, addr, overlay, 0)
+			fullAddr, err := address.NewAddress(signer, addr, overlay, 0)
 			if err != nil {
 				return nil, err
 			}
 
-			if err := ab.Put(overlay, *auroraAddr); err != nil {
+			if err := ab.Put(overlay, *fullAddr); err != nil {
 				return nil, err
 			}
 
 			return &p2p.Peer{
-				Address: auroraAddr.Overlay,
+				Address: fullAddr.Overlay,
 				Mode:    address.NewModel().SetMode(address.FullNode),
 			}, nil
 		}),
@@ -1967,11 +1967,11 @@ func connectOne(t *testing.T, signer crypto.Signer, k *kademlia.Kad, ab addressb
 		t.Fatal(err)
 	}
 
-	auroraAddr, err := address.NewAddress(signer, multiaddr, peer, 0)
+	fullAddr, err := address.NewAddress(signer, multiaddr, peer, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := ab.Put(peer, *auroraAddr); err != nil {
+	if err := ab.Put(peer, *fullAddr); err != nil {
 		t.Fatal(err)
 	}
 	err = k.Connected(context.Background(), p2p.Peer{Address: peer, Mode: address.NewModel().SetMode(address.FullNode)}, false)
@@ -1987,11 +1987,11 @@ func addOne(t *testing.T, signer crypto.Signer, k *kademlia.Kad, ab addressbook.
 	if err != nil {
 		t.Fatal(err)
 	}
-	auroraAddr, err := address.NewAddress(signer, multiaddr, peer, 0)
+	fullAddr, err := address.NewAddress(signer, multiaddr, peer, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := ab.Put(peer, *auroraAddr); err != nil {
+	if err := ab.Put(peer, *fullAddr); err != nil {
 		t.Fatal(err)
 	}
 	k.AddPeers(peer)

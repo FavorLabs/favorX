@@ -40,7 +40,7 @@ func hashWithEthereumPrefix(data []byte) ([]byte, error) {
 	return LegacyKeccak256(addEthereumPrefix(data))
 }
 
-// Recover verifies signature with the data base provided.
+// Recover verifies signature with the database provided.
 // It is using `btcec.RecoverCompact` function.
 func Recover(signature, data []byte) (*ecdsa.PublicKey, error) {
 	if len(signature) != 65 {

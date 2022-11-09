@@ -12,7 +12,7 @@ var ErrInvalidPassword = errors.New("invalid password")
 // Service for managing keystore private keys.
 type Service interface {
 	// Key returns the private key for a specified name that was encrypted with
-	// the provided password. If the private key does not exists it creates
+	// the provided password. If the private key does not exist it creates
 	// a new one with a name and the password, and returns with created set
 	// to true.
 	Key(name, password string) (k *ecdsa.PrivateKey, created bool, err error)

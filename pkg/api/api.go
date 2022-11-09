@@ -15,6 +15,7 @@ import (
 
 	"github.com/FavorLabs/favorX/pkg/auth"
 	"github.com/FavorLabs/favorX/pkg/boson"
+	"github.com/FavorLabs/favorX/pkg/chain"
 	"github.com/FavorLabs/favorX/pkg/chunkinfo"
 	"github.com/FavorLabs/favorX/pkg/file/pipeline"
 	"github.com/FavorLabs/favorX/pkg/file/pipeline/builder"
@@ -27,13 +28,13 @@ import (
 	"github.com/FavorLabs/favorX/pkg/pinning"
 	"github.com/FavorLabs/favorX/pkg/resolver"
 	"github.com/FavorLabs/favorX/pkg/routetab"
-	"github.com/FavorLabs/favorX/pkg/settlement/chain"
+	"github.com/FavorLabs/favorX/pkg/settlement/chain/oracle"
 	"github.com/FavorLabs/favorX/pkg/settlement/traffic"
 	"github.com/FavorLabs/favorX/pkg/storage"
 	"github.com/FavorLabs/favorX/pkg/topology"
 	"github.com/FavorLabs/favorX/pkg/tracing"
 	"github.com/FavorLabs/favorX/pkg/traversal"
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/centrifuge/go-substrate-rpc-client/v4/types"
 )
 
 const (
@@ -104,8 +105,8 @@ type server struct {
 	logger      logging.Logger
 	tracer      *tracing.Tracer
 	traffic     traffic.ApiInterface
-	commonChain chain.Common
-	oracleChain chain.Resolver
+	commonChain *chain.Client
+	oracleChain oracle.Resolver
 	Options
 	http.Handler
 	metrics metrics
@@ -130,7 +131,7 @@ type Options struct {
 	RPCWSAddr          string
 }
 type TransactionResponse struct {
-	Hash     common.Hash
+	Hash     types.Hash
 	Address  boson.Address
 	Register bool
 }
@@ -138,7 +139,7 @@ type TransactionResponse struct {
 // New will create a and initialize a new API service.
 func New(storer storage.Storer, resolver resolver.Interface, addr boson.Address, chunkInfo chunkinfo.Interface, fileInfo fileinfo.Interface,
 	traversalService traversal.Traverser, pinning pinning.Interface, auth authenticator, logger logging.Logger, kad topology.Driver,
-	tracer *tracing.Tracer, traffic traffic.ApiInterface, commonChain chain.Common, oracleChain chain.Resolver, netRelay netrelay.NetRelay,
+	tracer *tracing.Tracer, traffic traffic.ApiInterface, commonChain *chain.Client, oracleChain oracle.Resolver, netRelay netrelay.NetRelay,
 	multicast multicast.GroupInterface, route routetab.RouteTab, o Options) Service {
 	s := &server{
 		auth:            auth,
@@ -166,7 +167,6 @@ func New(storer storage.Storer, resolver resolver.Interface, addr boson.Address,
 
 	BufferSizeMul = o.BufferSizeMul
 	s.setupRouting()
-	s.transactionReceiptUpdate()
 
 	return s
 }
@@ -364,35 +364,6 @@ func (s *server) newTracingHandler(spanName string) func(h http.Handler) http.Ha
 			h.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
-}
-
-func (s *server) transactionReceiptUpdate() {
-
-	go func() {
-		tranReceipt := func(rootCid boson.Address, txHash common.Hash) (uint64, error) {
-			receipt, err := s.oracleChain.WaitForReceipt(context.Background(), rootCid, txHash)
-			if err != nil {
-				return 0, err
-			}
-			if receipt.Status == 0 {
-				s.logger.Errorf("api:tranReceipt - %s Exchange failed ", txHash.String())
-			}
-			return receipt.Status, nil
-		}
-
-		for trans := range s.transactionChan {
-			status, err := tranReceipt(trans.Address, trans.Hash)
-			if err != nil {
-				continue
-			}
-			if status == 1 {
-				err = s.fileInfo.RegisterFile(trans.Address, true)
-				if err != nil {
-					s.logger.Errorf("fileRegister update info:%v", err)
-				}
-			}
-		}
-	}()
 }
 
 func lookaheadBufferSize(size int64) int {

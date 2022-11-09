@@ -20,7 +20,7 @@ const (
 	AddressSize = 20
 )
 
-// NewOverlayAddress constructs a Address from ECDSA public key.
+// NewOverlayAddress constructs an Address from ECDSA public key.
 func NewOverlayAddress(p ecdsa.PublicKey, networkID uint64) (boson.Address, error) {
 	if p.X == nil || p.Y == nil {
 		return boson.ZeroAddress, errors.New("invalid public key")
@@ -38,7 +38,7 @@ func NewOverlayAddress(p ecdsa.PublicKey, networkID uint64) (boson.Address, erro
 func NewOverlayFromEthereumAddress(ethAddr []byte, networkID uint64) boson.Address {
 	netIDBytes := make([]byte, 8)
 	binary.LittleEndian.PutUint64(netIDBytes, networkID)
-	//h := sha3.Sum256(append(ethAddr, netIDBytes...))
+	// h := sha3.Sum256(append(ethAddr, netIDBytes...))
 	h := append(ethAddr, netIDBytes...)
 	return boson.NewAddress(h[:])
 }

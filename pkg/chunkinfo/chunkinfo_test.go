@@ -424,11 +424,8 @@ func mockChunkInfo(traversal traversal.Traverser, r *streamtest.Recorder, overla
 	s := mock.NewStorer()
 	route := rmock.NewMockRouteTable()
 	oracle := omock.NewServer()
-	server := New(overlay, r, logger, traversal, ret, s, &route, oracle, nil, subscribe.NewSubPub())
-	err := server.InitChunkInfo()
-	if err != nil {
-		return nil
-	}
+	server := New(overlay, r, logger, ret, &route, oracle, nil, subscribe.NewSubPub())
+
 	return server
 }
 
