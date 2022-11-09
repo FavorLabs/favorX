@@ -680,12 +680,12 @@ func (s *Service) onFindUnderlay(ctx context.Context, p p2p.Peer, stream p2p.Str
 	}
 	target := boson.NewAddress(req.Dest)
 	s.logger.Tracef("find underlay dest %s receive: from %s", target.String(), p.Address.String())
-	address, err := s.addressbook.Get(target)
+	addr, err := s.addressbook.Get(target)
 	if err == nil {
 		err = w.WriteMsgWithContext(ctx, &pb.UnderlayResp{
 			Dest:      req.Dest,
-			Underlay:  address.Underlay.Bytes(),
-			Signature: address.Signature,
+			Underlay:  addr.Underlay.Bytes(),
+			Signature: addr.Signature,
 		})
 		if err != nil {
 			return err

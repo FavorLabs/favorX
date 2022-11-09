@@ -272,11 +272,6 @@ func (s *server) newLoopbackRouter(router *mux.Router) {
 		web.FinalHandler(jsonhttp.MethodHandler{
 			"POST": http.HandlerFunc(s.placeOrder),
 		})))
-	handle("/merchantRegister", web.ChainHandlers(
-		web.FinalHandler(jsonhttp.MethodHandler{
-			"POST":   http.HandlerFunc(s.merchantRegister),
-			"DELETE": http.HandlerFunc(s.merchantUnRegister),
-		})))
 
 	handle("/chain", web.ChainHandlers(
 		web.FinalHandler(jsonhttp.MethodHandler{

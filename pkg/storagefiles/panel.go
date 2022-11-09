@@ -2,10 +2,8 @@ package storagefiles
 
 import (
 	"context"
-	"encoding/json"
 	"time"
 
-	"github.com/FavorLabs/favorX/pkg/boson"
 	"github.com/FavorLabs/favorX/pkg/chain"
 	"github.com/FavorLabs/favorX/pkg/chunkinfo"
 	"github.com/FavorLabs/favorX/pkg/fileinfo"
@@ -28,7 +26,6 @@ type Panel struct {
 	notify          *subscribe.NotifierWithMsgChan
 	manager         *Manager
 	metricsRegistry *prometheus.Registry
-	groupMsgReply   chan GroupMessageReply
 	chunkInfo       chunkinfo.Interface
 	fileInfo        fileinfo.Interface
 }
@@ -45,17 +42,16 @@ func NewPanel(ctx context.Context, cfg Config, logger logging.Logger, gClient mu
 		return nil, err
 	}
 	p := &Panel{
-		options:       cfg,
-		ctx:           ctx,
-		logger:        logger,
-		gClient:       gClient,
-		notify:        subscribe.NewNotifierWithMsgChan(),
-		manager:       m,
-		done:          make(chan struct{}, 1),
-		quitCh:        quit,
-		groupMsgReply: make(chan GroupMessageReply, 10000),
-		chunkInfo:     chunkInfo,
-		fileInfo:      fileInfo,
+		options:   cfg,
+		ctx:       ctx,
+		logger:    logger,
+		gClient:   gClient,
+		notify:    subscribe.NewNotifierWithMsgChan(),
+		manager:   m,
+		done:      make(chan struct{}, 1),
+		quitCh:    quit,
+		chunkInfo: chunkInfo,
+		fileInfo:  fileInfo,
 	}
 	return p, nil
 }
@@ -104,11 +100,11 @@ func (p *Panel) Start() {
 				if first {
 					first = false
 					_ = p.manager.db.IterateTask(func(sessionID string, value *Task) (stop bool, err error) {
-						go p.manager.AddWorker(p.ctx, value, p.groupMsgReply).Run()
+						go p.manager.AddWorker(p.ctx, value).Run()
 						return false, nil
 					})
 				}
-				go p.subGroupMessage(subErr)
+				go p.subOrderMessage(subErr)
 			case <-p.done:
 				return
 			case <-p.quitCh:
@@ -197,47 +193,31 @@ func (p *Panel) doDelFiles() error {
 	return nil
 }
 
-func (p *Panel) subGroupMessage(ch chan error) {
-	p.logger.Infof("start watch group message")
-	defer p.logger.Infof("stop watch group message")
+func (p *Panel) subOrderMessage(ch chan error) {
+	p.logger.Infof("start watch order message")
+	defer p.logger.Infof("stop watch order message")
 	for {
 		select {
-		case rpl := <-p.groupMsgReply:
-			rpl.ErrCh <- p.gClient.ReplyGroupMessage(rpl.SessionID, rpl.Data)
 		case req := <-p.notify.MsgChan:
-			msg, ok := req.(multicast.GroupMessage)
+			reqInfo, ok := req.(UploadRequest)
 			if !ok {
 				break
 			}
-			reqInfo := UploadRequest{}
-			e := json.Unmarshal(msg.Data, &reqInfo)
-			if e != nil {
-				p.logger.Errorf("group message json unmarshal: %v", e)
-				break
-			}
-			wk := p.manager.HashWorker(reqInfo.Hash, reqInfo.Buyer)
+			wk := p.manager.HashWorker(reqInfo.Hash.String(), reqInfo.Source.String())
 			if wk != nil {
-				p.logger.Infof("worker %d received repeat fileHash %s request from sessionID %s", wk.id, reqInfo.Hash, msg.SessionID)
-				cid := boson.MustParseHexAddress(reqInfo.Hash)
-				res := p.fileInfo.GetChunkInfoServerOverlays(cid)
-				for _, b := range res {
-					if b.Overlay == p.options.Overlay.String() {
-						go wk.replyStartDownload(b.Bit, string(msg.SessionID))
-						break
-					}
-				}
+				p.logger.Infof("worker %d received repeat fileHash %s request from %s", wk.id, reqInfo.Hash, reqInfo.Source)
 				break
 			}
-			task := new(Task).SetSessionID(string(msg.SessionID)).SetRequest(reqInfo).SetOption(Option{
+			task := new(Task).SetRequest(reqInfo).SetOption(Option{
 				CacheBuffer: p.options.BlockSize,
 				Retry:       p.options.RetryNumber,
 			})
-			go p.manager.AddWorker(p.ctx, task, p.groupMsgReply).Run()
+			go p.manager.AddWorker(p.ctx, task).Run()
 		case e := <-p.notify.ErrChan:
 			if e != nil {
-				p.logger.Errorf("group message subscribe closed: %v", e)
+				p.logger.Errorf("order subscribe closed: %v", e)
 			} else {
-				p.logger.Infof("group message subscribe closed")
+				p.logger.Infof("order subscribe closed")
 			}
 			ch <- e
 			return

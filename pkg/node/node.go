@@ -427,11 +427,17 @@ func NewNode(nodeMode address.Model, addr string, bosonAddress boson.Address, pu
 		return nil, err
 	}
 
+	notify := storagefiles.NewNotifyService(p2ps, logger, subPub)
+	err = p2ps.AddProtocol(notify.Protocol())
+	if err != nil {
+		return nil, err
+	}
+
 	var apiService api.Service
 	if o.APIAddr != "" {
 		// API server
 		apiService = api.New(ns, multiResolver, bosonAddress, chunkInfo, fileInfo, traversal.New(ns), pinningService,
-			authenticator, logger, kad, tracer, apiInterface, client, oracleChain, relay, group, route,
+			authenticator, logger, kad, tracer, apiInterface, client, oracleChain, relay, group, route, notify,
 			api.Options{
 				CORSAllowedOrigins: o.CORSAllowedOrigins,
 				GatewayMode:        o.GatewayMode,

@@ -1,30 +1,10 @@
 package storagefiles
 
 import (
-	"github.com/FavorLabs/favorX/pkg/address"
+	"github.com/FavorLabs/favorX/pkg/boson"
 )
 
 type UploadRequest struct {
-	Source string `json:"source"`
-	Hash   string `json:"hash"`
-	Buyer  string `json:"buyer"`
-}
-
-type UploadResponse struct {
-	WorkerID uint64               `json:"workerID"`
-	Message  string               `json:"message"`
-	Vector   address.BitVectorApi `json:"vector"`
-}
-
-type GroupMessage struct {
-	GID       string `json:"gid"`
-	Data      string `json:"data"`
-	From      string `json:"from"`
-	SessionID string `json:"sessionID"`
-}
-
-type GroupMessageReply struct {
-	SessionID string `json:"sessionID"`
-	Data      []byte
-	ErrCh     chan error
+	Source boson.Address
+	Hash   boson.Address
 }
