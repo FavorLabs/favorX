@@ -868,6 +868,7 @@ func (s *Service) convUnderlayList(uType int32, target, last boson.Address, old 
 					Dest:      target.Bytes(),
 					Underlay:  addr.Underlay.Bytes(),
 					Signature: addr.Signature,
+					PublicKey: addr.PublicKey,
 				}}
 				return
 			}

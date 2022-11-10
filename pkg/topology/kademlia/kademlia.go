@@ -404,7 +404,7 @@ func (k *Kad) Connection(ctx context.Context, addr *address.Address) error {
 }
 
 // connectionAttemptsHandler handles the connection attempts
-// to peers sent by the producers to the peerConnChan.
+// to peer sent by the producers to the peerConnChan.
 func (k *Kad) connectionAttemptsHandler(ctx context.Context, wg *sync.WaitGroup, neighbourhoodChan, balanceChan <-chan *peerConnInfo) {
 	connect := func(peer *peerConnInfo) {
 		addr, err := k.GetFullAddress(peer.addr)

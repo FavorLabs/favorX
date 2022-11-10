@@ -2,6 +2,7 @@ package debugapi
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -27,6 +28,7 @@ func (s *Service) importKeyHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	password := j.Get("password").String()
+	passwordNow := j.Get("password_now").String()
 	keyJson := j.Get("keystore").String()
 	pkData := j.Get("private_key").String()
 	if pkData == "" && keyJson == "" {
@@ -34,13 +36,13 @@ func (s *Service) importKeyHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if keyJson != "" {
-		err := f.ImportKey("boson", password, []byte(keyJson))
+		err := f.ImportKey("boson", password, passwordNow, []byte(keyJson))
 		if err != nil {
 			jsonhttp.InternalServerError(w, err)
 			return
 		}
 	} else {
-		err = f.ImportPrivateKey("boson", password, pkData)
+		err = f.ImportPrivateKey("boson", password, passwordNow, pkData)
 		if err != nil {
 			jsonhttp.InternalServerError(w, err)
 			return
@@ -74,13 +76,16 @@ func (s *Service) exportKeyHandler(w http.ResponseWriter, r *http.Request) {
 		type out struct {
 			PrivateKey string `json:"private_key"`
 		}
-		var data = func() string {
-			if kp.GetMnemonic() == "" {
-				return fmt.Sprintf("0x%x", kp.GetSeed())
-			}
-			return kp.GetMnemonic()
+		var data string
+		if kp.GetMnemonic() != "" {
+			data = kp.GetMnemonic()
+		} else if kp.GetSeed() != nil {
+			data = fmt.Sprintf("0x%x", kp.GetSeed())
+		} else {
+			jsonhttp.InternalServerError(w, errors.New("please export keystore json"))
+			return
 		}
-		jsonhttp.OK(w, out{PrivateKey: data()})
+		jsonhttp.OK(w, out{PrivateKey: data})
 		return
 	}
 	b, err := f.ExportKey("boson", password)

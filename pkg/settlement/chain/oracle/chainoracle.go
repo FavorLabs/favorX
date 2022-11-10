@@ -39,8 +39,9 @@ func NewServer(logger logging.Logger, backend *chain.Client, commonService cha.C
 func (ora *ChainOracle) GetNodesFromCid(cid []byte) (res []boson.Address) {
 	list, err := ora.chain.Storage.GetNodesFromCid(cid)
 	if err == nil {
-		for _, v := range list {
-			res = append(res, boson.NewAddress(v.ToBytes()))
+		for k := range list {
+			addr := boson.NewAddress(list[k].ToBytes())
+			res = append(res, addr)
 		}
 	}
 	return

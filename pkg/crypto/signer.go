@@ -1,6 +1,8 @@
 package crypto
 
 import (
+	"crypto/sha512"
+	"errors"
 	"math/big"
 
 	"github.com/ChainSafe/go-schnorrkel"
@@ -24,6 +26,8 @@ type SignerConfig struct {
 type Signer interface {
 	GetMnemonic() string
 	GetSeed() []byte
+	GetExportPrivateKey() [64]byte
+	GetSecretKey64() []byte
 	crypto.Keypair
 	// EthereumAddress TODO remove old
 	// Deprecated
@@ -38,8 +42,9 @@ type Signer interface {
 
 type defaultSigner struct {
 	crypto.Keypair
-	mnemonic string
-	seed     []byte
+	mnemonic  string
+	seed      []byte
+	scryptKey [64]byte
 }
 
 func NewKeypairFromSeedHex(in string) (Signer, error) {
@@ -53,8 +58,62 @@ func NewKeypairFromSeedHex(in string) (Signer, error) {
 		return nil, err
 	}
 	return &defaultSigner{
-		Keypair: kp,
-		seed:    seed[:],
+		Keypair:   kp,
+		seed:      seed[:],
+		scryptKey: convertKey(seed),
+	}, nil
+}
+
+func convertKey(seed [32]byte) (scryptKey [64]byte) {
+	h := sha512.Sum512(seed[:])
+	var key, nonce [32]byte
+	copy(key[:], h[:32])
+	copy(nonce[:], h[32:])
+	key[0] &= 248
+	key[31] &= 63
+	key[31] |= 64
+	copy(scryptKey[:32], key[:])
+	copy(scryptKey[32:], nonce[:])
+	return
+}
+
+// https://github.com/w3f/schnorrkel/blob/718678e51006d84c7d8e4b6cde758906172e74f8/src/scalars.rs#L18
+func divideScalarByCofactor(s []byte) []byte {
+	l := len(s) - 1
+	low := byte(0)
+	for i := range s {
+		r := s[l-i] & 0x07 // remainder
+		s[l-i] >>= 3
+		s[l-i] += low
+		low = r << 5
+	}
+
+	return s
+}
+
+func NewKeypairFromExportPrivateKey(sk []byte) (Signer, error) {
+	var scryptKey [64]byte
+	copy(scryptKey[:], sk[:])
+
+	if len(sk) != 64 {
+		return nil, errors.New("invalid scrypt key")
+	}
+	var key, nonce [32]byte
+	copy(nonce[:], sk[32:])
+
+	tmp := sk[:32]
+
+	copy(key[:], divideScalarByCofactor(tmp[:]))
+
+	scrKey := schnorrkel.NewSecretKey(key, nonce)
+	keypair, err := sr25519.NewKeypair(scrKey)
+	if err != nil {
+		return nil, err
+	}
+
+	return &defaultSigner{
+		Keypair:   keypair,
+		scryptKey: scryptKey,
 	}, nil
 }
 
@@ -70,9 +129,10 @@ func NewKeypairFromMnemonic(mnemonic string) (Signer, error) {
 		return nil, err
 	}
 	return &defaultSigner{
-		Keypair:  kp,
-		mnemonic: mnemonic,
-		seed:     seed[:],
+		Keypair:   kp,
+		mnemonic:  mnemonic,
+		seed:      seed[:],
+		scryptKey: convertKey(seed),
 	}, nil
 }
 
@@ -87,9 +147,25 @@ func NewDefaultSigner(k ...*schnorrkel.MiniSecretKey) Signer {
 	seed := key.Encode()
 	kp, _ := sr25519.NewKeypairFromSeed(seed[:])
 	return &defaultSigner{
-		Keypair: kp,
-		seed:    seed[:],
+		Keypair:   kp,
+		seed:      seed[:],
+		scryptKey: convertKey(seed),
 	}
+}
+
+func (d *defaultSigner) GetSecretKey64() []byte {
+	var tmp [32]byte
+	copy(tmp[:], d.scryptKey[:32])
+	key := divideScalarByCofactor(tmp[:])
+
+	nonce := d.scryptKey[32:]
+
+	key = append(key, nonce...)
+	return key
+}
+
+func (d *defaultSigner) GetExportPrivateKey() [64]byte {
+	return d.scryptKey
 }
 
 func (d *defaultSigner) GetMnemonic() string {

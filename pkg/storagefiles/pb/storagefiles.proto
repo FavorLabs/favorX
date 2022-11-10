@@ -6,4 +6,5 @@ option go_package = "pb";
 
 message Request {
   bytes  Cid = 1;
+  bytes  Buyer = 2;
 }
