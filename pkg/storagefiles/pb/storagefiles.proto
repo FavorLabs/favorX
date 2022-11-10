@@ -1,0 +1,9 @@
+syntax = "proto3";
+
+package storagefiles;
+
+option go_package = "pb";
+
+message Request {
+  bytes  Cid = 1;
+}

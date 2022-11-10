@@ -7,12 +7,12 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"strings"
 
-	"github.com/ChainSafe/go-schnorrkel"
 	"github.com/FavorLabs/favorX/pkg/crypto"
-	"github.com/FavorLabs/favorX/pkg/keystore"
 	"github.com/google/uuid"
 	"golang.org/x/crypto/scrypt"
 	"golang.org/x/crypto/sha3"
@@ -57,37 +57,47 @@ type kdfParams struct {
 	Salt  string `json:"salt"`
 }
 
-func encryptKey(k *schnorrkel.MiniSecretKey, mnemonic, password string) ([]byte, error) {
-	// var data []byte
-	// for _, v := range k.Encode() {
-	// 	data = append(data, v)
-	// }
-	kc, err := encryptData([]byte(mnemonic), []byte(password))
+func encryptKey(k crypto.Signer, password string) ([]byte, error) {
+	var data []byte
+	if k.GetMnemonic() != "" {
+		data = []byte(k.GetMnemonic())
+	} else {
+		data = k.GetSeed()
+	}
+	kc, err := encryptData(data, []byte(password))
 	if err != nil {
 		return nil, err
 	}
 	return json.Marshal(encryptedKey{
-		Address: fmt.Sprintf("0x%x", k.Public().Encode()),
+		Address: fmt.Sprintf("%s", k.Public().Address()),
 		Crypto:  *kc,
 		Version: keyVersion,
 		Id:      uuid.NewString(),
 	})
 }
 
-func decryptKey(data []byte, password string) (*schnorrkel.MiniSecretKey, string, error) {
+func decryptKey(data []byte, password string) (crypto.Signer, error) {
 	var k encryptedKey
 	if err := json.Unmarshal(data, &k); err != nil {
-		return nil, "", err
+		return nil, err
 	}
 	if k.Version != keyVersion {
-		return nil, "", fmt.Errorf("unsupported key version: %v", k.Version)
+		return nil, fmt.Errorf("unsupported key version: %v", k.Version)
 	}
 	d, err := decryptData(k.Crypto, password)
 	if err != nil {
-		return nil, "", err
+		return nil, err
 	}
-	pk, err := schnorrkel.MiniSecretKeyFromMnemonic(string(d), password)
-	return pk, string(d), err
+	var keypair crypto.Signer
+	if strings.Contains(string(d), " ") {
+		keypair, err = crypto.NewKeypairFromMnemonic(string(d))
+	} else {
+		keypair, err = crypto.NewKeypairFromSeedHex(string(d))
+	}
+	if err != nil {
+		return nil, err
+	}
+	return keypair, err
 }
 
 func encryptData(data, password []byte) (*keyCripto, error) {
@@ -109,10 +119,12 @@ func encryptData(data, password []byte) (*keyCripto, error) {
 	if err != nil {
 		return nil, err
 	}
-	mac, err := crypto.LegacyKeccak256(append(derivedKey[16:32], cipherText...))
+	hasher := sha3.NewLegacyKeccak256()
+	_, err = hasher.Write(append(derivedKey[16:32], cipherText...))
 	if err != nil {
 		return nil, err
 	}
+	mac := hasher.Sum(nil)
 
 	return &keyCripto{
 		Cipher:     "aes-128-ctr",
@@ -152,12 +164,14 @@ func decryptData(v keyCripto, password string) ([]byte, error) {
 	calculatedMAC := sha3.Sum256(append(derivedKey[16:32], cipherText...))
 	if !bytes.Equal(calculatedMAC[:], mac) {
 		// if this fails we might be trying to load an ethereum V3 keyfile
-		calculatedMACEth, err := crypto.LegacyKeccak256(append(derivedKey[16:32], cipherText...))
+		hasher := sha3.NewLegacyKeccak256()
+		_, err = hasher.Write(append(derivedKey[16:32], cipherText...))
 		if err != nil {
 			return nil, err
 		}
+		calculatedMACEth := hasher.Sum(nil)
 		if !bytes.Equal(calculatedMACEth[:], mac) {
-			return nil, keystore.ErrInvalidPassword
+			return nil, errors.New("ErrInvalidPassword")
 		}
 	}
 

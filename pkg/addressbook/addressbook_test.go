@@ -30,17 +30,12 @@ func run(t *testing.T, f bookFunc) {
 		t.Fatal(err)
 	}
 
-	pk, err := crypto.GenerateSecp256k1Key()
+	addr, err := address.NewAddress(crypto.NewDefaultSigner(), multiaddr, addr1, 1)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	bzzAddr, err := address.NewAddress(crypto.NewDefaultSigner(pk), multiaddr, addr1, 1)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	err = store.Put(addr1, *bzzAddr)
+	err = store.Put(addr1, *addr)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -50,7 +45,7 @@ func run(t *testing.T, f bookFunc) {
 		t.Fatal(err)
 	}
 
-	if !bzzAddr.Equal(v) {
+	if !addr.Equal(v) {
 		t.Fatalf("expectted: %s, want %s", v, multiaddr)
 	}
 

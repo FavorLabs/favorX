@@ -31,6 +31,7 @@ import (
 	"github.com/FavorLabs/favorX/pkg/settlement/chain/oracle"
 	"github.com/FavorLabs/favorX/pkg/settlement/traffic"
 	"github.com/FavorLabs/favorX/pkg/storage"
+	"github.com/FavorLabs/favorX/pkg/storagefiles"
 	"github.com/FavorLabs/favorX/pkg/topology"
 	"github.com/FavorLabs/favorX/pkg/tracing"
 	"github.com/FavorLabs/favorX/pkg/traversal"
@@ -119,6 +120,7 @@ type server struct {
 	netRelay        netrelay.NetRelay
 	kad             topology.Driver
 	route           routetab.RouteTab
+	orderNotify     storagefiles.StreamServiceInterface
 }
 
 type Options struct {
@@ -140,7 +142,7 @@ type TransactionResponse struct {
 func New(storer storage.Storer, resolver resolver.Interface, addr boson.Address, chunkInfo chunkinfo.Interface, fileInfo fileinfo.Interface,
 	traversalService traversal.Traverser, pinning pinning.Interface, auth authenticator, logger logging.Logger, kad topology.Driver,
 	tracer *tracing.Tracer, traffic traffic.ApiInterface, commonChain *chain.Client, oracleChain oracle.Resolver, netRelay netrelay.NetRelay,
-	multicast multicast.GroupInterface, route routetab.RouteTab, o Options) Service {
+	multicast multicast.GroupInterface, route routetab.RouteTab, orderNotify storagefiles.StreamServiceInterface, o Options) Service {
 	s := &server{
 		auth:            auth,
 		storer:          storer,
@@ -163,6 +165,7 @@ func New(storer storage.Storer, resolver resolver.Interface, addr boson.Address,
 		netRelay:        netRelay,
 		kad:             kad,
 		route:           route,
+		orderNotify:     orderNotify,
 	}
 
 	BufferSizeMul = o.BufferSizeMul

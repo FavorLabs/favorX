@@ -8,6 +8,7 @@ message UnderlayResp {
   bytes Dest = 1;
   bytes Underlay = 2;
   bytes Signature = 3;
+  bytes PublicKey = 4;
 }
 
 message UnderlayReq {

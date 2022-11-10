@@ -50,13 +50,11 @@ type Mock struct {
 }
 
 func (m *Mock) GetPeersWithLatencyEWMA(list []boson.Address) (now []boson.Address) {
-	//TODO implement me
-	panic("implement me")
+	return
 }
 
 func (m *Mock) RefreshProtectPeer(peer []boson.Address) {
-	// TODO implement me
-	panic("implement me")
+
 }
 
 func NewMockKademlia(o ...Option) *Mock {
@@ -127,7 +125,7 @@ func (m *Mock) RecordPeerLatency(add boson.Address, t time.Duration) {
 
 }
 
-// EachPeer iterates from closest bin to farthest
+// EachPeer iterates from the closest bin to farthest
 func (m *Mock) EachPeer(f model.EachPeerFunc, _ topology.Filter) error {
 	m.mtx.Lock()
 	defer m.mtx.Unlock()

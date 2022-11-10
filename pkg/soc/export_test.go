@@ -3,7 +3,6 @@ package soc
 var (
 	ErrInvalidAddress = errInvalidAddress
 	Hash              = hash
-	RecoverAddress    = recoverAddress
 )
 
 // Signature returns the SOC signature.

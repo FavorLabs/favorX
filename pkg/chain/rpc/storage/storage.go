@@ -2,7 +2,6 @@ package storage
 
 import (
 	"context"
-	"errors"
 
 	"github.com/FavorLabs/favorX/pkg/chain/rpc/base"
 	"github.com/FavorLabs/favorX/pkg/logging"
@@ -20,6 +19,7 @@ type Interface interface {
 	PlaceOrderWatch(ctx context.Context, cid []byte, fileSize, fileCopy uint64, expire uint32) (users []types.AccountID, err error)
 	MerchantRegisterWatch(ctx context.Context, diskTotal uint64) (err error)
 	MerchantUnregisterWatch(ctx context.Context) (err error)
+	GetMerchantInfo(mch []byte) (*MerchantInfo, error)
 }
 
 // storage exposes methods for querying storage
@@ -90,7 +90,7 @@ func (s *service) GetNodesFromCid(cid []byte) (overlays []types.AccountID, err e
 		return
 	}
 	if !ok {
-		err = errors.New("is empty")
+		err = base.KeyEmptyError
 		return
 	}
 	return
@@ -261,4 +261,21 @@ func (s *service) RemoveCidAndNode(rootCid []byte, address []byte) (hash types.H
 	}
 
 	return s.client.SubmitExtrinsic(c)
+}
+
+func (s *service) GetMerchantInfo(mch []byte) (*MerchantInfo, error) {
+	key, err := types.CreateStorageKey(s.meta, "Storage", "MerchantServiceList", mch)
+	if err != nil {
+		return nil, err
+	}
+	var info MerchantInfo
+	ok, err := s.client.RPC.State.GetStorageLatest(key, &info)
+	if err != nil {
+		logging.Warningf("gsrpc err: %w", err)
+		return nil, err
+	}
+	if !ok {
+		return nil, base.KeyEmptyError
+	}
+	return &info, nil
 }

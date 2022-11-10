@@ -2,17 +2,13 @@ package storagefiles
 
 import (
 	"context"
-	"encoding/json"
 	"time"
 
-	"github.com/FavorLabs/favorX/pkg/boson"
 	"github.com/FavorLabs/favorX/pkg/chain"
 	"github.com/FavorLabs/favorX/pkg/chunkinfo"
 	"github.com/FavorLabs/favorX/pkg/fileinfo"
 	"github.com/FavorLabs/favorX/pkg/localstore/filestore"
 	"github.com/FavorLabs/favorX/pkg/logging"
-	"github.com/FavorLabs/favorX/pkg/multicast"
-	"github.com/FavorLabs/favorX/pkg/multicast/model"
 	"github.com/FavorLabs/favorX/pkg/settlement/chain/oracle"
 	"github.com/FavorLabs/favorX/pkg/subscribe"
 	"github.com/prometheus/client_golang/prometheus"
@@ -24,38 +20,33 @@ type Panel struct {
 	ctx             context.Context
 	logger          logging.Logger
 	options         Config
-	gClient         multicast.GroupStorageFiles
+	subPub          subscribe.SubPub
 	notify          *subscribe.NotifierWithMsgChan
 	manager         *Manager
 	metricsRegistry *prometheus.Registry
-	groupMsgReply   chan GroupMessageReply
 	chunkInfo       chunkinfo.Interface
 	fileInfo        fileinfo.Interface
 }
 
-func NewPanel(ctx context.Context, cfg Config, logger logging.Logger, gClient multicast.GroupStorageFiles, subClient *chain.Client,
+func NewPanel(ctx context.Context, cfg Config, dm *DiskManager, logger logging.Logger, subPub subscribe.SubPub, subClient *chain.Client,
 	chunkInfo chunkinfo.Interface, fileInfo fileinfo.Interface, oracle oracle.Resolver) (*Panel, error) {
-	dm, err := NewDiskManager(cfg)
-	if err != nil {
-		return nil, err
-	}
+
 	quit := make(chan struct{}, 1)
 	m, err := NewManager(quit, cfg, dm, logger, fileInfo, oracle, subClient)
 	if err != nil {
 		return nil, err
 	}
 	p := &Panel{
-		options:       cfg,
-		ctx:           ctx,
-		logger:        logger,
-		gClient:       gClient,
-		notify:        subscribe.NewNotifierWithMsgChan(),
-		manager:       m,
-		done:          make(chan struct{}, 1),
-		quitCh:        quit,
-		groupMsgReply: make(chan GroupMessageReply, 10000),
-		chunkInfo:     chunkInfo,
-		fileInfo:      fileInfo,
+		options:   cfg,
+		ctx:       ctx,
+		logger:    logger,
+		subPub:    subPub,
+		notify:    subscribe.NewNotifierWithMsgChan(),
+		manager:   m,
+		done:      make(chan struct{}, 1),
+		quitCh:    quit,
+		chunkInfo: chunkInfo,
+		fileInfo:  fileInfo,
 	}
 	return p, nil
 }
@@ -67,11 +58,7 @@ func (p *Panel) init() (err error) {
 		}
 	}()
 
-	return p.gClient.SubscribeGroupMessageWithChan(p.notify, p.options.Gid)
-}
-
-func (p *Panel) quit() {
-	_ = p.gClient.RemoveGroup(p.options.Gid, model.GTypeJoin)
+	return p.subPub.Subscribe(p.notify, "storagefiles", "order", "notify")
 }
 
 func (p *Panel) Start() {
@@ -104,11 +91,11 @@ func (p *Panel) Start() {
 				if first {
 					first = false
 					_ = p.manager.db.IterateTask(func(sessionID string, value *Task) (stop bool, err error) {
-						go p.manager.AddWorker(p.ctx, value, p.groupMsgReply).Run()
+						go p.manager.AddWorker(p.ctx, value).Run()
 						return false, nil
 					})
 				}
-				go p.subGroupMessage(subErr)
+				go p.subOrderMessage(subErr)
 			case <-p.done:
 				return
 			case <-p.quitCh:
@@ -121,7 +108,6 @@ func (p *Panel) Start() {
 }
 
 func (p *Panel) Close() {
-	p.quit()
 	close(p.done)    // close cron,watch node
 	p.manager.Wait() // wait all worker finish
 }
@@ -197,47 +183,31 @@ func (p *Panel) doDelFiles() error {
 	return nil
 }
 
-func (p *Panel) subGroupMessage(ch chan error) {
-	p.logger.Infof("start watch group message")
-	defer p.logger.Infof("stop watch group message")
+func (p *Panel) subOrderMessage(ch chan error) {
+	p.logger.Infof("start watch order message")
+	defer p.logger.Infof("stop watch order message")
 	for {
 		select {
-		case rpl := <-p.groupMsgReply:
-			rpl.ErrCh <- p.gClient.ReplyGroupMessage(rpl.SessionID, rpl.Data)
 		case req := <-p.notify.MsgChan:
-			msg, ok := req.(multicast.GroupMessage)
+			reqInfo, ok := req.(UploadRequest)
 			if !ok {
 				break
 			}
-			reqInfo := UploadRequest{}
-			e := json.Unmarshal(msg.Data, &reqInfo)
-			if e != nil {
-				p.logger.Errorf("group message json unmarshal: %v", e)
-				break
-			}
-			wk := p.manager.HashWorker(reqInfo.Hash, reqInfo.Buyer)
+			wk := p.manager.HashWorker(reqInfo.Hash.String(), reqInfo.Source.String())
 			if wk != nil {
-				p.logger.Infof("worker %d received repeat fileHash %s request from sessionID %s", wk.id, reqInfo.Hash, msg.SessionID)
-				cid := boson.MustParseHexAddress(reqInfo.Hash)
-				res := p.fileInfo.GetChunkInfoServerOverlays(cid)
-				for _, b := range res {
-					if b.Overlay == p.options.Overlay.String() {
-						go wk.replyStartDownload(b.Bit, string(msg.SessionID))
-						break
-					}
-				}
+				p.logger.Infof("worker %d received repeat fileHash %s request from %s", wk.id, reqInfo.Hash, reqInfo.Source)
 				break
 			}
-			task := new(Task).SetSessionID(string(msg.SessionID)).SetRequest(reqInfo).SetOption(Option{
+			task := new(Task).SetRequest(reqInfo).SetOption(Option{
 				CacheBuffer: p.options.BlockSize,
 				Retry:       p.options.RetryNumber,
 			})
-			go p.manager.AddWorker(p.ctx, task, p.groupMsgReply).Run()
+			go p.manager.AddWorker(p.ctx, task).Run()
 		case e := <-p.notify.ErrChan:
 			if e != nil {
-				p.logger.Errorf("group message subscribe closed: %v", e)
+				p.logger.Errorf("order subscribe closed: %v", e)
 			} else {
-				p.logger.Infof("group message subscribe closed")
+				p.logger.Infof("order subscribe closed")
 			}
 			ch <- e
 			return

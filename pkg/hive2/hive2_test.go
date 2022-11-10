@@ -148,8 +148,7 @@ func newTestNode(t *testing.T, peer boson.Address, po int, underlay string, allo
 }
 
 func randomAddress(t *testing.T, base boson.Address, po int, underlay string) (addr *address.Address, signer crypto.Signer) {
-	pk, _ := crypto.GenerateSecp256k1Key()
-	signer = crypto.NewDefaultSigner(pk)
+	signer = crypto.NewDefaultSigner()
 
 	p := test.RandomAddressAt(base, po)
 	// base, _ := crypto.NewOverlayAddress(pk.PublicKey, networkId)
@@ -184,8 +183,7 @@ func (s *Node) connect(t *testing.T, peer boson.Address, underlay string) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	pk, _ := crypto.GenerateSecp256k1Key()
-	signer := crypto.NewDefaultSigner(pk)
+	signer := crypto.NewDefaultSigner()
 
 	addr, err := address.NewAddress(signer, multiaddr, peer, networkId)
 	if err != nil {

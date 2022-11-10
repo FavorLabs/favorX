@@ -1,8 +1,6 @@
 package debugapi_test
 
 import (
-	"crypto/ecdsa"
-	"encoding/hex"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -31,7 +29,7 @@ import (
 
 type testServerOptions struct {
 	Overlay            boson.Address
-	PublicKey          ecdsa.PublicKey
+	PublicKey          crypto.PublicKey
 	CORSAllowedOrigins []string
 	P2P                *p2pmock.Service
 	Pingpong           pingpong.Interface
@@ -91,12 +89,12 @@ func mustMultiaddr(t *testing.T, s string) multiaddr.Multiaddr {
 // constructed with only basic routes, and after it is configured with
 // dependencies.
 func TestServer_Configure(t *testing.T) {
-	privateKey, err := crypto.GenerateSecp256k1Key()
-	if err != nil {
-		t.Fatal(err)
-	}
+	privateKey := crypto.NewDefaultSigner()
 
-	overlay := boson.MustParseHexAddress("ca1e9f3938cc1425c6061b96ad9eb93e134dfe8734ad490164ef20af9d1cf59c")
+	overlay, err := crypto.NewOverlayAddress(privateKey.Public().Encode(), 1)
+	if err != nil {
+		t.Error(err)
+	}
 	addresses := []multiaddr.Multiaddr{
 		mustMultiaddr(t, "/ip4/127.0.0.1/tcp/7071/p2p/16Uiu2HAmTBuJT9LvNmBiQiNoTsxE5mtNy6YG3paw79m94CRa9sRb"),
 		mustMultiaddr(t, "/ip4/192.168.0.101/tcp/7071/p2p/16Uiu2HAmTBuJT9LvNmBiQiNoTsxE5mtNy6YG3paw79m94CRa9sRb"),
@@ -104,7 +102,7 @@ func TestServer_Configure(t *testing.T) {
 	}
 
 	o := testServerOptions{
-		PublicKey: privateKey.PublicKey,
+		PublicKey: privateKey.Public(),
 		Overlay:   overlay,
 		P2P: mock.New(mock.WithAddressesFunc(func() ([]multiaddr.Multiaddr, error) {
 			return addresses, nil
@@ -143,7 +141,7 @@ func TestServer_Configure(t *testing.T) {
 			NATRoute:  []string{},
 			PublicIP:  *debugapi.GetPublicIp(logger),
 			NetworkID: 0,
-			PublicKey: hex.EncodeToString(crypto.EncodeSecp256k1PublicKey(&o.PublicKey)),
+			PublicKey: o.PublicKey.Hex(),
 		}),
 	)
 
@@ -165,7 +163,7 @@ func TestServer_Configure(t *testing.T) {
 			NATRoute:  []string{"1.1.1.1"},
 			PublicIP:  *debugapi.GetPublicIp(logger),
 			NetworkID: 0,
-			PublicKey: hex.EncodeToString(crypto.EncodeSecp256k1PublicKey(&o.PublicKey)),
+			PublicKey: o.PublicKey.Hex(),
 		}),
 	)
 }

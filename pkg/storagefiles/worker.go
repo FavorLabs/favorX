@@ -3,7 +3,6 @@ package storagefiles
 import (
 	"container/list"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -12,13 +11,11 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/FavorLabs/favorX/pkg/address"
 	"github.com/FavorLabs/favorX/pkg/boson"
 	"github.com/FavorLabs/favorX/pkg/chain"
 	"github.com/FavorLabs/favorX/pkg/fileinfo"
 	"github.com/FavorLabs/favorX/pkg/logging"
 	"github.com/FavorLabs/favorX/pkg/settlement/chain/oracle"
-	"github.com/centrifuge/go-substrate-rpc-client/v4/types"
 )
 
 type Manager struct {
@@ -76,7 +73,7 @@ func (m *Manager) workerID() uint64 {
 	return next
 }
 
-func (m *Manager) AddWorker(ctx context.Context, task *Task, replyChan chan GroupMessageReply) *Worker {
+func (m *Manager) AddWorker(ctx context.Context, task *Task) *Worker {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 	w := &Worker{
@@ -85,9 +82,9 @@ func (m *Manager) AddWorker(ctx context.Context, task *Task, replyChan chan Grou
 		manager:          m,
 		task:             task,
 		err:              make(chan interface{}, 1),
+		retryInitCh:      make(chan error, 1),
 		retryProgressCh:  make(chan error, 1),
 		retryPinOracleCh: make(chan struct{}, 1),
-		replyChan:        replyChan,
 	}
 	w.element = m.workers.PushBack(w)
 	return w
@@ -108,17 +105,17 @@ func (m *Manager) TaskingHashes() (hashes []string) {
 	defer m.lock.RUnlock()
 	for w := m.workers.Front(); w != nil; w = w.Next() {
 		wk := w.Value.(*Worker)
-		hashes = append(hashes, wk.task.Info.Hash)
+		hashes = append(hashes, wk.task.Info.Hash.String())
 	}
 	return
 }
 
-func (m *Manager) HashWorker(fileHash, buyer string) *Worker {
+func (m *Manager) HashWorker(fileHash, source string) *Worker {
 	m.lock.RLock()
 	defer m.lock.RUnlock()
 	for w := m.workers.Front(); w != nil; w = w.Next() {
 		wk := w.Value.(*Worker)
-		if wk.task.Info.Hash == fileHash && wk.task.Info.Buyer == buyer {
+		if wk.task.Info.Hash.String() == fileHash && wk.task.Info.Source.String() == source {
 			return wk
 		}
 	}
@@ -136,23 +133,23 @@ type Worker struct {
 	manager          *Manager
 	task             *Task
 	err              chan interface{}
+	retryInitCh      chan error
 	retryProgressCh  chan error
 	retryPinOracleCh chan struct{}
-	replyChan        chan GroupMessageReply
 }
 
 func (w *Worker) Run() {
-	w.manager.logger.Infof("worker %d start, sessionID=%q download file %s", w.id, w.task.Session, w.task.Info.Hash)
+	w.manager.logger.Infof("worker %d start, download file %s from %s", w.id, w.task.Info.Hash, w.task.Info.Source)
 	go func() {
-		err := w.manager.db.SaveTask(w.task.Session, w.task)
+		err := w.manager.db.SaveTask(w.task)
 		if err != nil {
-			w.manager.logger.Errorf("worker %d task %s storage %v", w.id, w.task.Session, err)
+			w.manager.logger.Errorf("worker %d task %s storage %v", w.id, w.task.Display(), err)
 		}
 		w.manager.wg.Add(1)
 		defer func() {
-			err := w.manager.db.DeleteTask(w.task.Session)
+			err = w.manager.db.DeleteTask(w.task)
 			if err != nil {
-				w.manager.logger.Errorf("task %s delete form db %v", w.task.Session, err)
+				w.manager.logger.Errorf("task %s delete form db %v", w.task.Display(), err)
 			}
 			w.manager.lock.Lock()
 			w.manager.workers.Remove(w.element)
@@ -163,6 +160,17 @@ func (w *Worker) Run() {
 			select {
 			case <-w.retryPinOracleCh:
 				_ = w.retryPinOracle()
+			case e := <-w.retryInitCh:
+				if errors.Is(e, io.ErrUnexpectedEOF) {
+					e = fmt.Errorf("maybe aurora p2p is disconnected, %v", e)
+				}
+				err1 := w.retryInit()
+				if err1 != nil {
+					w.err <- err1
+					break
+				}
+				w.printProgressInfo()
+				w.manager.logger.Debugf("worker %d retry, %d reason %v", w.id, w.task.Running.Retry, e)
 			case e := <-w.retryProgressCh:
 				if errors.Is(e, io.ErrUnexpectedEOF) {
 					e = fmt.Errorf("maybe aurora p2p is disconnected, %v", e)
@@ -180,15 +188,7 @@ func (w *Worker) Run() {
 			case e := <-w.err:
 				w.printProgressInfo()
 				if e != nil {
-					switch er := e.(type) {
-					case Error:
-						w.manager.logger.Warningf("worker %d quit, %v", w.id, e)
-						if er.IsPublic() {
-							w.replyGroup(e)
-						}
-					default:
-						w.manager.logger.Errorf("worker %d quit, %v", w.id, e)
-					}
+					w.manager.logger.Errorf("worker %d quit, %v", w.id, e)
 				} else {
 					w.manager.logger.Infof("worker %d quit, upload finish", w.id)
 				}
@@ -200,13 +200,13 @@ func (w *Worker) Run() {
 }
 
 func (w *Worker) init() {
-	size, err := GetSize(w.ctx, w.manager.options.ApiGateway, w.task.Info.Hash, w.task.Info.Source)
+	size, err := GetSize(w.ctx, w.manager.options.ApiGateway, w.task.Info.Hash.String(), w.task.Info.Source.String())
 	if err != nil {
-		w.err <- WrapError(1000, err)
+		w.retryInitCh <- err
 		return
 	}
 	if size == 0 {
-		w.err <- WrapError(1000, fmt.Errorf("failed to retrieve content length"))
+		w.retryInitCh <- fmt.Errorf("failed to retrieve content length")
 		return
 	}
 	w.task.Running.Size = size
@@ -214,7 +214,7 @@ func (w *Worker) init() {
 	// check disk
 	logicAvail, err := w.manager.disk.LogicAvail()
 	if err != nil {
-		w.err <- WrapError(1000, err)
+		w.err <- err
 		return
 	}
 	free := logicAvail - w.manager.RemainTotal()
@@ -232,6 +232,17 @@ func (w *Worker) init() {
 	w.progress()
 }
 
+func (w *Worker) retryInit() error {
+	if !w.task.canRetry() {
+		return fmt.Errorf("try to init download file many times")
+	}
+	w.task.tryAgain(true, func() {
+		<-time.After(time.Second * 1)
+		w.init()
+	})
+	return nil
+}
+
 func (w *Worker) retryProgress() error {
 	if !w.task.canRetry() {
 		return fmt.Errorf("try to download file many times")
@@ -244,12 +255,10 @@ func (w *Worker) retryProgress() error {
 }
 
 func (w *Worker) progress() {
-	firstDownload := true
-
 	for !w.task.Complete() {
 		logicAvail, err := w.manager.disk.LogicAvail()
 		if err != nil {
-			w.err <- WrapError(1000, err)
+			w.err <- err
 			return
 		}
 		if logicAvail < uint64(w.task.Remain()) {
@@ -257,19 +266,7 @@ func (w *Worker) progress() {
 			return
 		}
 
-		if firstDownload {
-			cid := boson.MustParseHexAddress(w.task.Info.Hash)
-			res := w.manager.fileInfo.GetChunkInfoServerOverlays(cid)
-			for _, b := range res {
-				if b.Overlay == w.manager.options.Overlay.String() {
-					w.replyStartDownload(b.Bit)
-					break
-				}
-			}
-			firstDownload = false
-		}
-
-		resp, err := DownloadFile(w.ctx, w.manager.options.ApiGateway, w.task.Info.Hash, w.task.Info.Source, w.task.Range())
+		resp, err := DownloadFile(w.ctx, w.manager.options.ApiGateway, w.task.Info.Hash.String(), w.task.Info.Source.String(), w.task.Range())
 		if err != nil {
 			w.retryProgressCh <- err
 			return
@@ -282,9 +279,9 @@ func (w *Worker) progress() {
 		}
 		w.task.updateSize(resp.BytesComplete())
 		w.task.updateTime(resp.Duration().Nanoseconds())
-		err = w.manager.db.SaveTask(w.task.Session, w.task)
+		err = w.manager.db.SaveTask(w.task)
 		if err != nil {
-			w.manager.logger.Warningf("task %s storege %v", w.task.Session, err)
+			w.manager.logger.Warningf("task %s storege %v", w.task.Display(), err)
 		}
 	}
 
@@ -299,7 +296,7 @@ func (w *Worker) retryPinOracle() error {
 }
 
 func (w *Worker) pinOracle() {
-	err := PinFile(w.ctx, w.manager.options.ApiGateway, w.task.Info.Hash)
+	err := PinFile(w.ctx, w.manager.options.ApiGateway, w.task.Info.Hash.String())
 	if err != nil {
 		w.manager.logger.Infof("worker %d pin err %s", w.id, err)
 		w.retryPinOracleCh <- struct{}{}
@@ -314,42 +311,11 @@ func (w *Worker) pinOracle() {
 }
 
 func (w *Worker) oracleRegister() (err error) {
-	cid := boson.MustParseHexAddress(w.task.Info.Hash)
-	var skip bool
-	if w.task.Info.Buyer != "" {
-		// has order
-		err = w.storageFile(cid)
-	} else {
-		skip, err = w.oracleRegApi(cid)
-	}
-	if !skip && err == nil {
-		return w.manager.fileInfo.RegisterFile(cid, true)
+	err = w.storageFile(w.task.Info.Hash)
+	if err == nil {
+		return w.manager.fileInfo.RegisterFile(w.task.Info.Hash, true)
 	}
 	return err
-}
-
-func (w *Worker) oracleRegApi(cid boson.Address) (skip bool, err error) {
-	if w.manager.options.SkipOracleRegister {
-		w.manager.logger.Infof("worker %d oracle register skipped", w.id)
-		return true, nil
-	}
-	defer func() {
-		if err == nil {
-			w.manager.logger.Infof("worker %d oracle register success", w.id)
-		} else {
-			w.manager.logger.Warningf("worker %d oracle register %d err %s", w.id, w.task.Running.RetryPinOracle+1, err)
-		}
-	}()
-	w.manager.logger.Infof("worker %d oracle register start", w.id)
-
-	have := w.manager.oracle.GetNodesFromCid(cid.Bytes())
-	for _, v := range have {
-		if v.Equal(w.manager.options.Overlay) {
-			return true, nil
-		}
-	}
-	err = w.manager.oracle.RegisterCidAndNode(w.ctx, cid, w.manager.options.Overlay, nil, nil)
-	return
 }
 
 func (w *Worker) storageFile(cid boson.Address) (err error) {
@@ -362,11 +328,7 @@ func (w *Worker) storageFile(cid boson.Address) (err error) {
 	}()
 	w.manager.logger.Infof("worker %d oracle on chain start", w.id)
 
-	buyerID, err := types.NewAccountIDFromHexString(w.task.Info.Buyer)
-	if err != nil {
-		return err
-	}
-	return w.manager.subClient.Storage.StorageFileWatch(w.ctx, buyerID.ToBytes(), cid.Bytes(), w.manager.options.Overlay.Bytes())
+	return w.manager.subClient.Storage.StorageFileWatch(w.ctx, w.task.Info.Source.Bytes(), cid.Bytes(), w.manager.options.Overlay.Bytes())
 }
 
 func (w *Worker) online() {
@@ -390,37 +352,4 @@ func (w *Worker) printProgressInfo() {
 		}(),
 		w.task.During(),
 	)
-}
-
-func (w *Worker) replyStartDownload(vector address.BitVectorApi, session ...string) {
-	var notify UploadResponse
-	notify.WorkerID = w.id
-	notify.Vector = vector
-	notify.Message = "file upload started"
-	w.replyGroup(notify, session...)
-}
-
-func (w *Worker) replyGroup(notify interface{}, session ...string) {
-	data, err := json.Marshal(notify)
-	if err != nil {
-		w.manager.logger.Errorf("worker %d reply group message: marshal notify %v", w.id, err)
-	}
-	w.manager.logger.Tracef("worker %d reply group message: %s", w.id, data)
-	ch := make(chan error, 1)
-	chData := GroupMessageReply{
-		SessionID: func() string {
-			if len(session) > 0 {
-				return session[0]
-			}
-			return w.task.Session
-		}(),
-		Data:  data,
-		ErrCh: ch,
-	}
-	w.replyChan <- chData
-	err = <-ch
-	if err != nil {
-		w.manager.logger.Errorf("worker %d sessionID %s reply group message: %v", w.id, chData.SessionID, err)
-	}
-	w.manager.logger.Tracef("worker %d sessionID %s reply group message: success", w.id, chData.SessionID)
 }
