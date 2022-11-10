@@ -11,7 +11,6 @@ import (
 	"github.com/FavorLabs/favorX/pkg/cac"
 	"github.com/FavorLabs/favorX/pkg/crypto"
 	"github.com/FavorLabs/favorX/pkg/soc"
-	"github.com/ethereum/go-ethereum/common"
 )
 
 func TestNew(t *testing.T) {
@@ -42,9 +41,9 @@ func TestNew(t *testing.T) {
 }
 
 func TestNewSigned(t *testing.T) {
-	owner := common.HexToAddress("8d3766440f0d7b949a5e32995d09619a7f86e632")
+	owner, _ := crypto.HexToBytes("0x307bfefaeabe8c8c1e78698808f2919eaf87aa0bbcab11fd434dd063398f7313")
 	// signature of hash(id + chunk address of foo)
-	sig, err := hex.DecodeString("5acd384febc133b7b245e5ddc62d82d2cded9182d2716126cd8844509af65a053deb418208027f548e3e88343af6f84a8772fb3cebc0a1833a0ea7ec0c1348311b")
+	sig, err := hex.DecodeString("5acd384febc133b7b245e5ddc62d82d2cded9182d2716126cd8844509af65a053deb418208027f548e3e88343af6f84a8772fb3cebc0a1833a0ea7ec0c134831")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -56,7 +55,7 @@ func TestNewSigned(t *testing.T) {
 	}
 
 	id := make([]byte, soc.IdSize)
-	s, err := soc.NewSigned(id, ch, owner.Bytes(), sig)
+	s, err := soc.NewSigned(id, ch, owner, sig)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -66,8 +65,8 @@ func TestNewSigned(t *testing.T) {
 		t.Fatalf("id mismatch. got %x want %x", s.ID(), id)
 	}
 
-	if !bytes.Equal(s.OwnerAddress(), owner.Bytes()) {
-		t.Fatalf("owner mismatch. got %x want %x", s.OwnerAddress(), owner.Bytes())
+	if !bytes.Equal(s.OwnerAddress(), owner) {
+		t.Fatalf("owner mismatch. got %x want %x", s.OwnerAddress(), owner)
 	}
 
 	if !bytes.Equal(s.Signature(), sig) {
@@ -89,8 +88,8 @@ func TestNewSigned(t *testing.T) {
 // TestChunk verifies that the chunk created from the SOC object
 // corresponds to the SOC spec.
 func TestChunk(t *testing.T) {
-	owner := common.HexToAddress("8d3766440f0d7b949a5e32995d09619a7f86e632")
-	sig, err := hex.DecodeString("5acd384febc133b7b245e5ddc62d82d2cded9182d2716126cd8844509af65a053deb418208027f548e3e88343af6f84a8772fb3cebc0a1833a0ea7ec0c1348311b")
+	owner, _ := crypto.HexToBytes("0x307bfefaeabe8c8c1e78698808f2919eaf87aa0bbcab11fd434dd063398f7313")
+	sig, err := hex.DecodeString("9c3ae8f3cc5ed0220e3f27d103787fcf61ced6488c1a90705542c3bb9c2e6f64cac570b65dc2cbecd24b3d1a01671772c1b3f4f34a22c92cb02a95051c00838c")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -103,12 +102,12 @@ func TestChunk(t *testing.T) {
 
 	id := make([]byte, soc.IdSize)
 	// creates a new signed SOC
-	s, err := soc.NewSigned(id, ch, owner.Bytes(), sig)
+	s, err := soc.NewSigned(id, ch, owner, sig)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	sum, err := soc.Hash(id, owner.Bytes())
+	sum, err := soc.Hash(id, owner)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -125,12 +124,20 @@ func TestChunk(t *testing.T) {
 	}
 
 	chunkData := sch.Data()
+	println(sch.Address().String())
+	println(crypto.BytesToHex(chunkData))
 	// verifies that id, signature, payload is in place in the SOC chunk
 	cursor := 0
 	if !bytes.Equal(chunkData[cursor:soc.IdSize], id) {
 		t.Fatalf("id mismatch. got %x want %x", chunkData[cursor:soc.IdSize], id)
 	}
 	cursor += soc.IdSize
+
+	ow := chunkData[cursor : cursor+soc.OwnerSize]
+	if !bytes.Equal(ow, owner) {
+		t.Fatalf("owner mismatch. got %x want %x", ow, owner)
+	}
+	cursor += soc.OwnerSize
 
 	signature := chunkData[cursor : cursor+soc.SignatureSize]
 	if !bytes.Equal(signature, sig) {
@@ -169,11 +176,7 @@ func TestChunkErrorWithoutOwner(t *testing.T) {
 
 // TestSign tests whether a soc is correctly signed.
 func TestSign(t *testing.T) {
-	privKey, err := crypto.GenerateSecp256k1Key()
-	if err != nil {
-		t.Fatal(err)
-	}
-	signer := crypto.NewDefaultSigner(privKey)
+	signer := crypto.NewDefaultSigner()
 
 	payload := []byte("foo")
 	ch, err := cac.New(payload)
@@ -194,15 +197,13 @@ func TestSign(t *testing.T) {
 	chunkData := sch.Data()
 	// get signature in the chunk
 	cursor := soc.IdSize
+
+	pub := chunkData[cursor : cursor+soc.OwnerSize]
+	cursor += soc.OwnerSize
+
 	signature := chunkData[cursor : cursor+soc.SignatureSize]
 
-	// get the public key of the signer
-	publicKey, err := signer.PublicKey()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	owner, err := crypto.NewEthereumAddress(*publicKey)
+	publicKey, err := crypto.NewPublicKey(pub)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -213,34 +214,41 @@ func TestSign(t *testing.T) {
 	}
 
 	// verifies if the owner matches
-	recoveredOwner, err := soc.RecoverAddress(signature, toSignBytes)
+	ok, err := publicKey.Verify(toSignBytes, signature)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if !bytes.Equal(recoveredOwner, owner) {
-		t.Fatalf("owner address mismatch. got %x want %x", recoveredOwner, owner)
+	if !ok {
+		t.Fatalf("signature error")
 	}
 }
 
 // TestFromChunk verifies that valid chunk data deserializes to
 // a fully populated soc object.
 func TestFromChunk(t *testing.T) {
-	socAddress := boson.MustParseHexAddress("9d453ebb73b2fedaaf44ceddcf7a0aa37f3e3d6453fea5841c31f0ea6d61dc85")
+	socAddress := boson.MustParseHexAddress("034d0670c51f3737f3d08256c20440e72001aea2628ad0bfdd2a774eb5364d39")
 
+	dataBytes, _ := crypto.HexToBytes("0x0000000000000000000000000000000000000000000000000000000000000000307bfefaeabe8c8c1e78698808f2919eaf87aa0bbcab11fd434dd063398f73139c3ae8f3cc5ed0220e3f27d103787fcf61ced6488c1a90705542c3bb9c2e6f64cac570b65dc2cbecd24b3d1a01671772c1b3f4f34a22c92cb02a95051c00838c0300000000000000666f6f")
 	// signed soc chunk of:
 	// id: 0
 	// wrapped chunk of: `foo`
-	// owner: 0x8d3766440f0d7b949a5e32995d09619a7f86e632
-	sch := boson.NewChunk(socAddress, []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 90, 205, 56, 79, 235, 193, 51, 183, 178, 69, 229, 221, 198, 45, 130, 210, 205, 237, 145, 130, 210, 113, 97, 38, 205, 136, 68, 80, 154, 246, 90, 5, 61, 235, 65, 130, 8, 2, 127, 84, 142, 62, 136, 52, 58, 246, 248, 74, 135, 114, 251, 60, 235, 192, 161, 131, 58, 14, 167, 236, 12, 19, 72, 49, 27, 3, 0, 0, 0, 0, 0, 0, 0, 102, 111, 111})
+	// owner: 0x307bfefaeabe8c8c1e78698808f2919eaf87aa0bbcab11fd434dd063398f7313
+	sch := boson.NewChunk(socAddress, dataBytes)
 
-	cursor := soc.IdSize + soc.SignatureSize
 	data := sch.Data()
 	id := data[:soc.IdSize]
-	sig := data[soc.IdSize:cursor]
+	cursor := soc.IdSize
+
+	owner := data[cursor : cursor+soc.OwnerSize]
+	cursor += soc.OwnerSize
+
+	sig := data[cursor : cursor+soc.SignatureSize]
+	cursor += soc.SignatureSize
+
 	chunkData := data[cursor:]
 
-	chunkAddress := boson.MustParseHexAddress("2387e8e7d8a48c2a9339c97c1dc3461a9a7aa07e994c5cb8b38fd7c1b3e6ea48")
+	chunkAddress := boson.MustParseHexAddress("8a74889a73c23fe2be037886c6b709e3175b95b8deea9c95eeda0dbc60740bd8")
 	ch := boson.NewChunk(chunkAddress, chunkData)
 
 	signedDigest, err := soc.Hash(id, ch.Address().Bytes())
@@ -248,21 +256,23 @@ func TestFromChunk(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	ownerAddress, err := soc.RecoverAddress(sig, signedDigest)
+	publicKey, err := crypto.NewPublicKey(owner)
 	if err != nil {
 		t.Fatal(err)
+	}
+
+	ok, err := publicKey.Verify(signedDigest, sig)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !ok {
+		t.Fatal("signer error")
 	}
 
 	// attempt to recover soc from signed chunk
 	recoveredSOC, err := soc.FromChunk(sch)
 	if err != nil {
 		t.Fatal(err)
-	}
-
-	// owner matching means the address was successfully recovered from
-	// payload and signature
-	if !bytes.Equal(recoveredSOC.OwnerAddress(), ownerAddress) {
-		t.Fatalf("owner address mismatch. got %x want %x", recoveredSOC.OwnerAddress(), ownerAddress)
 	}
 
 	if !bytes.Equal(recoveredSOC.ID(), id) {
@@ -280,10 +290,13 @@ func TestFromChunk(t *testing.T) {
 
 func TestCreateAddress(t *testing.T) {
 	id := make([]byte, soc.IdSize)
-	owner := common.HexToAddress("8d3766440f0d7b949a5e32995d09619a7f86e632")
-	socAddress := boson.MustParseHexAddress("9d453ebb73b2fedaaf44ceddcf7a0aa37f3e3d6453fea5841c31f0ea6d61dc85")
+	owner, err := crypto.HexToBytes("0x307bfefaeabe8c8c1e78698808f2919eaf87aa0bbcab11fd434dd063398f7313")
+	if err != nil {
+		t.Fatal(err)
+	}
+	socAddress := boson.MustParseHexAddress("034d0670c51f3737f3d08256c20440e72001aea2628ad0bfdd2a774eb5364d39")
 
-	addr, err := soc.CreateAddress(id, owner.Bytes())
+	addr, err := soc.CreateAddress(id, owner)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -293,25 +306,47 @@ func TestCreateAddress(t *testing.T) {
 }
 
 func TestRecoverAddress(t *testing.T) {
-	owner := common.HexToAddress("8d3766440f0d7b949a5e32995d09619a7f86e632")
+	owner, _ := crypto.HexToBytes("0x307bfefaeabe8c8c1e78698808f2919eaf87aa0bbcab11fd434dd063398f7313")
 	id := make([]byte, soc.IdSize)
-	chunkAddress := boson.MustParseHexAddress("2387e8e7d8a48c2a9339c97c1dc3461a9a7aa07e994c5cb8b38fd7c1b3e6ea48")
+	chunkAddress := boson.MustParseHexAddress("8a74889a73c23fe2be037886c6b709e3175b95b8deea9c95eeda0dbc60740bd8")
 	signedDigest, err := soc.Hash(id, chunkAddress.Bytes())
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	sig, err := hex.DecodeString("5acd384febc133b7b245e5ddc62d82d2cded9182d2716126cd8844509af65a053deb418208027f548e3e88343af6f84a8772fb3cebc0a1833a0ea7ec0c1348311b")
+	sig, err := hex.DecodeString("9c3ae8f3cc5ed0220e3f27d103787fcf61ced6488c1a90705542c3bb9c2e6f64cac570b65dc2cbecd24b3d1a01671772c1b3f4f34a22c92cb02a95051c00838c")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	// attempt to recover address from signature
-	addr, err := soc.RecoverAddress(sig, signedDigest)
+	publicKey, _ := crypto.NewPublicKey(owner)
+
+	ok, err := publicKey.Verify(signedDigest, sig)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !bytes.Equal(addr, owner.Bytes()) {
-		t.Fatalf("owner address mismatch. got %x want %x", addr, owner.Bytes())
+	if !ok {
+		t.Fatal("signer error")
 	}
+}
+
+func TestKeyPair(t *testing.T) {
+	kp, err := crypto.NewKeypairFromSeedHex("0xbc6e9c8bd7c38fbbde9e8f0d460b58fb330903f401878010d2f1f7bcca5558ec")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Log(kp.Private().Hex())
+	t.Log(kp.Public().Hex())
+
+	id := make([]byte, soc.IdSize)
+	chunkAddress := boson.MustParseHexAddress("8a74889a73c23fe2be037886c6b709e3175b95b8deea9c95eeda0dbc60740bd8")
+	signedDigest, err := soc.Hash(id, chunkAddress.Bytes())
+	if err != nil {
+		t.Fatal(err)
+	}
+	sign, err := kp.Private().Sign(signedDigest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Log(crypto.BytesToHex(sign))
 }

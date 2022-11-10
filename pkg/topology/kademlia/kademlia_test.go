@@ -1088,9 +1088,8 @@ func TestClosestPeer(t *testing.T) {
 	}
 	defer kad.Close()
 
-	pk, _ := crypto.GenerateSecp256k1Key()
 	for _, v := range connectedPeers {
-		addOne(t, crypto.NewDefaultSigner(pk), kad, ab, v.Address)
+		addOne(t, crypto.NewDefaultSigner(), kad, ab, v.Address)
 	}
 
 	waitPeers(t, kad, 3)
@@ -1528,8 +1527,7 @@ func TestLatency(t *testing.T) {
 	}
 	defer kad.Close()
 
-	pk, _ := crypto.GenerateSecp256k1Key()
-	signer := crypto.NewDefaultSigner(pk)
+	signer := crypto.NewDefaultSigner()
 	addOne(t, signer, kad, ab, p1)
 
 	waitPeers(t, kad, 1)
@@ -1854,8 +1852,7 @@ func newTestKademliaWithAddrDiscovery(
 		}
 	})
 	var (
-		pk, _  = crypto.GenerateSecp256k1Key()                       // random private key
-		signer = crypto.NewDefaultSigner(pk)                         // signer
+		signer = crypto.NewDefaultSigner()                           // signer
 		ab     = addressbook.New(mockstate.NewStateStore())          // address book
 		p2ps   = p2pMock(ab, signer, connCounter, failedConnCounter) // p2p mock
 		logger = logging.New(io.Discard, 0)                          // logger

@@ -37,7 +37,7 @@ import (
 type libp2pServiceOpts struct {
 	Logger      logging.Logger
 	Addressbook addressbook.Interface
-	PrivateKey  *ecdsa.PrivateKey
+	PrivateKey  crypto.Signer
 	MockPeerKey *ecdsa.PrivateKey
 	libp2pOpts  libp2p.Options
 	lightNodes  *lightnode.Container
@@ -498,12 +498,9 @@ func newP2pService(t *testing.T, networkID uint64, o libp2pServiceOpts) (s *libp
 
 	t.Helper()
 
-	nodeKey, err := crypto.GenerateSecp256k1Key()
-	if err != nil {
-		t.Fatal(err)
-	}
+	nodeKey := crypto.NewDefaultSigner()
 
-	overlay, err = crypto.NewOverlayAddress(nodeKey.PublicKey, networkID)
+	overlay, err := crypto.NewOverlayAddress(nodeKey.Public().Encode(), networkID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -520,12 +517,8 @@ func newP2pService(t *testing.T, networkID uint64, o libp2pServiceOpts) (s *libp
 	}
 
 	if o.PrivateKey == nil {
-		libp2pKey, err := crypto.GenerateSecp256k1Key()
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		o.PrivateKey = libp2pKey
+		libp2pKek := crypto.NewDefaultSigner()
+		o.PrivateKey = libp2pKek
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -538,7 +531,7 @@ func newP2pService(t *testing.T, networkID uint64, o libp2pServiceOpts) (s *libp
 	}
 	opts := o.libp2pOpts
 
-	s, err = libp2p.New(ctx, crypto.NewDefaultSigner(nodeKey), networkID, overlay, addr, o.Addressbook, statestore, o.lightNodes, o.bootNodes, o.Logger, nil, opts)
+	s, err = libp2p.New(ctx, nodeKey, networkID, overlay, addr, o.Addressbook, statestore, o.lightNodes, o.bootNodes, o.Logger, nil, opts)
 	if err != nil {
 		t.Fatal(err)
 	}

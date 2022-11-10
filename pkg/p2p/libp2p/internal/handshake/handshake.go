@@ -4,6 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sync/atomic"
+	"time"
+
 	"github.com/FavorLabs/favorX/pkg/address"
 	"github.com/FavorLabs/favorX/pkg/boson"
 	"github.com/FavorLabs/favorX/pkg/crypto"
@@ -14,15 +17,13 @@ import (
 	"github.com/FavorLabs/favorX/pkg/topology/lightnode"
 	libp2ppeer "github.com/libp2p/go-libp2p-core/peer"
 	ma "github.com/multiformats/go-multiaddr"
-	"sync/atomic"
-	"time"
 )
 
 const (
 	// ProtocolName is the text of the name of the handshake protocol.
 	ProtocolName = "handshake"
 	// ProtocolVersion is the current handshake protocol version.
-	ProtocolVersion = "4.0.0"
+	ProtocolVersion = "5.0.0"
 	// StreamName is the name of the stream used for handshake purposes.
 	StreamName = "handshake"
 	// MaxWelcomeMessageLength is maximum number of characters allowed in the welcome message.
@@ -37,7 +38,7 @@ var (
 	// ErrInvalidAck is returned if data in received in ack is not valid (invalid signature for example).
 	ErrInvalidAck = errors.New("invalid ack")
 
-	// ErrInvalidSyn is returned if observable address in ack is not a valid..
+	// ErrInvalidSyn is returned if observable address in ack is not a valid.
 	ErrInvalidSyn = errors.New("invalid syn")
 
 	// ErrWelcomeMessageLength is returned if the welcome message is longer than the maximum length
@@ -144,12 +145,12 @@ func (s *Service) Handshake(ctx context.Context, stream p2p.Stream, peerMultiadd
 		return nil, err
 	}
 
-	bzzAddress, err := address.NewAddress(s.signer, advertisableUnderlay, s.overlay, s.networkID)
+	addr, err := address.NewAddress(s.signer, advertisableUnderlay, s.overlay, s.networkID)
 	if err != nil {
 		return nil, err
 	}
 
-	advertisableUnderlayBytes, err := bzzAddress.Underlay.MarshalBinary()
+	advertisableUnderlayBytes, err := addr.Underlay.MarshalBinary()
 	if err != nil {
 		return nil, err
 	}
@@ -158,18 +159,19 @@ func (s *Service) Handshake(ctx context.Context, stream p2p.Stream, peerMultiadd
 		return nil, ErrNetworkIDIncompatible
 	}
 
-	remoteBzzAddress, err := s.parseCheckAck(resp.Ack)
+	remoteAddress, err := s.parseCheckAck(resp.Ack)
 	if err != nil {
 		return nil, err
 	}
 
 	// Synced read:
 	welcomeMessage := s.GetWelcomeMessage()
-	if err := w.WriteMsgWithContext(ctx, &pb.Ack{
-		Address: &pb.BzzAddress{
+	if err = w.WriteMsgWithContext(ctx, &pb.Ack{
+		Address: &pb.Address{
 			Underlay:  advertisableUnderlayBytes,
-			Overlay:   bzzAddress.Overlay.Bytes(),
-			Signature: bzzAddress.Signature,
+			PublicKey: addr.PublicKey,
+			Overlay:   addr.Overlay.Bytes(),
+			Signature: addr.Signature,
 		},
 		NetworkID:      s.networkID,
 		NodeMode:       s.nodeMode.Bv.Bytes(),
@@ -178,9 +180,9 @@ func (s *Service) Handshake(ctx context.Context, stream p2p.Stream, peerMultiadd
 		return nil, fmt.Errorf("write ack message: %w", err)
 	}
 
-	s.logger.Tracef("handshake finished for peer (outbound) %s", remoteBzzAddress.Overlay.String())
+	s.logger.Tracef("handshake finished for peer (outbound) %s", remoteAddress.Overlay.String())
 	if len(resp.Ack.WelcomeMessage) > 0 {
-		s.logger.Infof("greeting \"%s\" from peer: %s", resp.Ack.WelcomeMessage, remoteBzzAddress.Overlay.String())
+		s.logger.Infof("greeting \"%s\" from peer: %s", resp.Ack.WelcomeMessage, remoteAddress.Overlay.String())
 	}
 
 	md, err := address.NewModelFromBytes(resp.Ack.NodeMode)
@@ -188,7 +190,7 @@ func (s *Service) Handshake(ctx context.Context, stream p2p.Stream, peerMultiadd
 		return nil, address.ErrInvalidNodeMode
 	}
 	return &address.AddressInfo{
-		Address:  remoteBzzAddress,
+		Address:  remoteAddress,
 		NodeMode: md,
 	}, nil
 }
@@ -226,27 +228,28 @@ func (s *Service) Handle(ctx context.Context, stream p2p.Stream, remoteMultiaddr
 		return nil, err
 	}
 
-	bzzAddress, err := address.NewAddress(s.signer, advertisableUnderlay, s.overlay, s.networkID)
+	addr, err := address.NewAddress(s.signer, advertisableUnderlay, s.overlay, s.networkID)
 	if err != nil {
 		return nil, err
 	}
 
-	advertisableUnderlayBytes, err := bzzAddress.Underlay.MarshalBinary()
+	advertisableUnderlayBytes, err := addr.Underlay.MarshalBinary()
 	if err != nil {
 		return nil, err
 	}
 
 	welcomeMessage := s.GetWelcomeMessage()
 
-	if err := w.WriteMsgWithContext(ctx, &pb.SynAck{
+	if err = w.WriteMsgWithContext(ctx, &pb.SynAck{
 		Syn: &pb.Syn{
 			ObservedUnderlay: fullRemoteMABytes,
 		},
 		Ack: &pb.Ack{
-			Address: &pb.BzzAddress{
+			Address: &pb.Address{
 				Underlay:  advertisableUnderlayBytes,
-				Overlay:   bzzAddress.Overlay.Bytes(),
-				Signature: bzzAddress.Signature,
+				PublicKey: addr.PublicKey,
+				Overlay:   addr.Overlay.Bytes(),
+				Signature: addr.Signature,
 			},
 			NetworkID:      s.networkID,
 			NodeMode:       s.nodeMode.Bv.Bytes(),
@@ -288,18 +291,18 @@ func (s *Service) Handle(ctx context.Context, stream p2p.Stream, remoteMultiaddr
 		}
 	}
 
-	remoteBzzAddress, err := s.parseCheckAck(&ack)
+	remoteAddress, err := s.parseCheckAck(&ack)
 	if err != nil {
 		return nil, err
 	}
 
-	s.logger.Tracef("handshake finished for peer (inbound) %s", remoteBzzAddress.Overlay.String())
+	s.logger.Tracef("handshake finished for peer (inbound) %s", remoteAddress.Overlay.String())
 	if len(ack.WelcomeMessage) > 0 {
-		s.logger.Infof("greeting \"%s\" from peer: %s", ack.WelcomeMessage, remoteBzzAddress.Overlay.String())
+		s.logger.Infof("greeting \"%s\" from peer: %s", ack.WelcomeMessage, remoteAddress.Overlay.String())
 	}
 
 	return &address.AddressInfo{
-		Address:  remoteBzzAddress,
+		Address:  remoteAddress,
 		NodeMode: mode,
 	}, nil
 }
@@ -323,10 +326,10 @@ func buildFullMA(addr ma.Multiaddr, peerID libp2ppeer.ID) (ma.Multiaddr, error) 
 }
 
 func (s *Service) parseCheckAck(ack *pb.Ack) (*address.Address, error) {
-	bzzAddress, err := address.ParseAddress(ack.Address.Underlay, ack.Address.Overlay, ack.Address.Signature, s.networkID)
+	addr, err := address.ParseAddress(ack.Address.Underlay, ack.Address.PublicKey, ack.Address.Overlay, ack.Address.Signature, s.networkID)
 	if err != nil {
 		return nil, ErrInvalidAck
 	}
 
-	return bzzAddress, nil
+	return addr, nil
 }

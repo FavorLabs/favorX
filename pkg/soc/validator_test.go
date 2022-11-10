@@ -5,19 +5,22 @@ import (
 	"testing"
 
 	"github.com/FavorLabs/favorX/pkg/boson"
+	"github.com/FavorLabs/favorX/pkg/crypto"
 	"github.com/FavorLabs/favorX/pkg/soc"
 )
 
 // TestValid verifies that the validator can detect
 // valid soc chunks.
 func TestValid(t *testing.T) {
-	socAddress := boson.MustParseHexAddress("9d453ebb73b2fedaaf44ceddcf7a0aa37f3e3d6453fea5841c31f0ea6d61dc85")
+	socAddress := boson.MustParseHexAddress("034d0670c51f3737f3d08256c20440e72001aea2628ad0bfdd2a774eb5364d39")
+
+	dataBytes, _ := crypto.HexToBytes("0x0000000000000000000000000000000000000000000000000000000000000000307bfefaeabe8c8c1e78698808f2919eaf87aa0bbcab11fd434dd063398f73139c3ae8f3cc5ed0220e3f27d103787fcf61ced6488c1a90705542c3bb9c2e6f64cac570b65dc2cbecd24b3d1a01671772c1b3f4f34a22c92cb02a95051c00838c0300000000000000666f6f")
 
 	// signed soc chunk of:
 	// id: 0
 	// wrapped chunk of: `foo`
-	// owner: 0x8d3766440f0d7b949a5e32995d09619a7f86e632
-	sch := boson.NewChunk(socAddress, []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 90, 205, 56, 79, 235, 193, 51, 183, 178, 69, 229, 221, 198, 45, 130, 210, 205, 237, 145, 130, 210, 113, 97, 38, 205, 136, 68, 80, 154, 246, 90, 5, 61, 235, 65, 130, 8, 2, 127, 84, 142, 62, 136, 52, 58, 246, 248, 74, 135, 114, 251, 60, 235, 192, 161, 131, 58, 14, 167, 236, 12, 19, 72, 49, 27, 3, 0, 0, 0, 0, 0, 0, 0, 102, 111, 111})
+	// owner: 0x307bfefaeabe8c8c1e78698808f2919eaf87aa0bbcab11fd434dd063398f7313
+	sch := boson.NewChunk(socAddress, dataBytes)
 
 	// check valid chunk
 	if !soc.Valid(sch) {
@@ -28,13 +31,15 @@ func TestValid(t *testing.T) {
 // TestInvalid verifies that the validator can detect chunks
 // with invalid data and invalid address.
 func TestInvalid(t *testing.T) {
-	socAddress := boson.MustParseHexAddress("9d453ebb73b2fedaaf44ceddcf7a0aa37f3e3d6453fea5841c31f0ea6d61dc85")
+	socAddress := boson.MustParseHexAddress("034d0670c51f3737f3d08256c20440e72001aea2628ad0bfdd2a774eb5364d39")
+
+	dataBytes, _ := crypto.HexToBytes("0x0000000000000000000000000000000000000000000000000000000000000000307bfefaeabe8c8c1e78698808f2919eaf87aa0bbcab11fd434dd063398f73139c3ae8f3cc5ed0220e3f27d103787fcf61ced6488c1a90705542c3bb9c2e6f64cac570b65dc2cbecd24b3d1a01671772c1b3f4f34a22c92cb02a95051c00838c0300000000000000666f6f")
 
 	// signed soc chunk of:
 	// id: 0
 	// wrapped chunk of: `foo`
-	// owner: 0x8d3766440f0d7b949a5e32995d09619a7f86e632
-	sch := boson.NewChunk(socAddress, []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 90, 205, 56, 79, 235, 193, 51, 183, 178, 69, 229, 221, 198, 45, 130, 210, 205, 237, 145, 130, 210, 113, 97, 38, 205, 136, 68, 80, 154, 246, 90, 5, 61, 235, 65, 130, 8, 2, 127, 84, 142, 62, 136, 52, 58, 246, 248, 74, 135, 114, 251, 60, 235, 192, 161, 131, 58, 14, 167, 236, 12, 19, 72, 49, 27, 3, 0, 0, 0, 0, 0, 0, 0, 102, 111, 111})
+	// owner: 0x307bfefaeabe8c8c1e78698808f2919eaf87aa0bbcab11fd434dd063398f7313
+	sch := boson.NewChunk(socAddress, dataBytes)
 
 	for _, c := range []struct {
 		name  string

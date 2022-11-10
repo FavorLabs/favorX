@@ -36,7 +36,7 @@ func (c *command) initInitCmd() (err error) {
 
 			defer stateStore.Close()
 
-			return node.CheckOverlayWithStore(signerConfig.address, stateStore)
+			return node.CheckOverlayWithStore(signerConfig.Overlay, stateStore)
 		},
 		PreRunE: func(cmd *cobra.Command, args []string) error {
 			return c.config.BindPFlags(cmd.Flags())

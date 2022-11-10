@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
-	"github.com/ChainSafe/go-schnorrkel"
-	"github.com/tyler-smith/go-bip39"
+	"github.com/FavorLabs/favorX/pkg/crypto"
 )
 
 // Service is the file-based keystore.Service implementation.
@@ -37,7 +37,7 @@ func (s *Service) Exists(name string) (bool, error) {
 	return true, nil
 }
 
-func (s *Service) Key(name, password string) (pk *schnorrkel.MiniSecretKey, created bool, err error) {
+func (s *Service) Key(name, password string) (keypair crypto.Signer, created bool, err error) {
 	filename := s.keyFilename(name)
 
 	data, err := os.ReadFile(filename)
@@ -45,14 +45,13 @@ func (s *Service) Key(name, password string) (pk *schnorrkel.MiniSecretKey, crea
 		return nil, false, fmt.Errorf("read private key: %w", err)
 	}
 	if len(data) == 0 {
-		entropy, _ := bip39.NewEntropy(256)
-		mnemonic, _ := bip39.NewMnemonic(entropy)
-		pk, err = schnorrkel.MiniSecretKeyFromMnemonic(mnemonic, password)
+		mnemonic, _ := crypto.NewBIP39Mnemonic()
+		keypair, err = crypto.NewKeypairFromMnemonic(mnemonic)
 		if err != nil {
 			return nil, false, fmt.Errorf("generate sr25519 key: %w", err)
 		}
 
-		d, err := encryptKey(pk, mnemonic, password)
+		d, err := encryptKey(keypair, password)
 		if err != nil {
 			return nil, false, err
 		}
@@ -63,26 +62,26 @@ func (s *Service) Key(name, password string) (pk *schnorrkel.MiniSecretKey, crea
 		if err := os.WriteFile(filename, d, 0600); err != nil {
 			return nil, false, err
 		}
-		return pk, true, nil
+		return keypair, true, nil
 	}
 
-	pk, _, err = decryptKey(data, password)
+	keypair, err = decryptKey(data, password)
 	if err != nil {
 		return nil, false, err
 	}
-	return pk, false, nil
+	return keypair, false, nil
 }
 
 func (s *Service) ExportKey(name, password string) ([]byte, error) {
-	pk, mnemonic, err := s.read(name, password)
+	pk, err := s.read(name, password)
 	if err != nil {
 		return nil, err
 	}
-	return encryptKey(pk, mnemonic, password)
+	return encryptKey(pk, password)
 }
 
 func (s *Service) ImportKey(name, password string, keyJson []byte) (err error) {
-	_, _, err = s.read(name, password)
+	_, err = s.read(name, password)
 	if err != nil {
 		return err
 	}
@@ -96,11 +95,11 @@ func (s *Service) ImportKey(name, password string, keyJson []byte) (err error) {
 		}
 	}()
 
-	pk, mnemonic, err := decryptKey(keyJson, password)
+	pk, err := decryptKey(keyJson, password)
 	if err != nil {
 		return err
 	}
-	d, err := encryptKey(pk, mnemonic, password)
+	d, err := encryptKey(pk, password)
 	if err != nil {
 		return err
 	}
@@ -108,11 +107,28 @@ func (s *Service) ImportKey(name, password string, keyJson []byte) (err error) {
 	return s.write(name, d)
 }
 
-func (s *Service) ImportPrivateKey(name, password string, mnemonic string, pk *schnorrkel.MiniSecretKey) (err error) {
-	_, _, err = s.read(name, password)
+func (s *Service) ImportPrivateKey(name, password string, mnemonicOrPrivateData string) (err error) {
+	_, err = s.read(name, password)
 	if err != nil {
 		return err
 	}
+
+	var keypair crypto.Signer
+	if strings.Contains(mnemonicOrPrivateData, " ") {
+		keypair, err = crypto.NewKeypairFromMnemonic(mnemonicOrPrivateData)
+	} else {
+		keypair, err = crypto.NewKeypairFromSeedHex(mnemonicOrPrivateData)
+
+	}
+	if err != nil {
+		return err
+	}
+
+	d, err := encryptKey(keypair, password)
+	if err != nil {
+		return err
+	}
+
 	bakFile, err := s.bak(name)
 	if err != nil {
 		return err
@@ -122,12 +138,6 @@ func (s *Service) ImportPrivateKey(name, password string, mnemonic string, pk *s
 			_ = s.restore(name, bakFile)
 		}
 	}()
-
-	d, err := encryptKey(pk, mnemonic, password)
-	if err != nil {
-		return err
-	}
-
 	return s.write(name, d)
 }
 
@@ -135,12 +145,12 @@ func (s *Service) keyFilename(name string) string {
 	return filepath.Join(s.dir, fmt.Sprintf("%s.key", name))
 }
 
-func (s *Service) read(name, password string) (pk *schnorrkel.MiniSecretKey, mnemonic string, err error) {
+func (s *Service) read(name, password string) (kp crypto.Signer, err error) {
 	filename := s.keyFilename(name)
 
 	data, err := os.ReadFile(filename)
 	if err != nil {
-		return nil, "", fmt.Errorf("read private key failed")
+		return nil, fmt.Errorf("read private key failed")
 	}
 	return decryptKey(data, password)
 }

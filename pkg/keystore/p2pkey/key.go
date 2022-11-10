@@ -7,11 +7,10 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 
-	"github.com/FavorLabs/favorX/pkg/crypto"
-	"github.com/FavorLabs/favorX/pkg/keystore"
 	"github.com/google/uuid"
 	crypto2 "github.com/libp2p/go-libp2p-core/crypto"
 	"golang.org/x/crypto/scrypt"
@@ -107,10 +106,12 @@ func encryptData(data, password []byte) (*keyCripto, error) {
 	if err != nil {
 		return nil, err
 	}
-	mac, err := crypto.LegacyKeccak256(append(derivedKey[16:32], cipherText...))
+	hasher := sha3.NewLegacyKeccak256()
+	_, err = hasher.Write(append(derivedKey[16:32], cipherText...))
 	if err != nil {
 		return nil, err
 	}
+	mac := hasher.Sum(nil)
 
 	return &keyCripto{
 		Cipher:     "aes-128-ctr",
@@ -150,12 +151,15 @@ func decryptData(v keyCripto, password string) ([]byte, error) {
 	calculatedMAC := sha3.Sum256(append(derivedKey[16:32], cipherText...))
 	if !bytes.Equal(calculatedMAC[:], mac) {
 		// if this fails we might be trying to load an ethereum V3 keyfile
-		calculatedMACEth, err := crypto.LegacyKeccak256(append(derivedKey[16:32], cipherText...))
+		hasher := sha3.NewLegacyKeccak256()
+		_, err = hasher.Write(append(derivedKey[16:32], cipherText...))
 		if err != nil {
 			return nil, err
 		}
+		calculatedMACEth := hasher.Sum(nil)
+
 		if !bytes.Equal(calculatedMACEth[:], mac) {
-			return nil, keystore.ErrInvalidPassword
+			return nil, errors.New("ErrInvalidPassword")
 		}
 	}
 

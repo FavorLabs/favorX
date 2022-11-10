@@ -2,12 +2,10 @@ package debugapi
 
 import (
 	"bytes"
-	"encoding/hex"
 	"net/http"
 	"time"
 
 	"github.com/FavorLabs/favorX/pkg/boson"
-	"github.com/FavorLabs/favorX/pkg/crypto"
 	"github.com/FavorLabs/favorX/pkg/jsonhttp"
 	"github.com/FavorLabs/favorX/pkg/logging"
 	"github.com/multiformats/go-multiaddr"
@@ -122,6 +120,6 @@ func (s *Service) addressesHandler(w http.ResponseWriter, r *http.Request) {
 		NATRoute:  natAddresses,
 		PublicIP:  *pubIP,
 		NetworkID: s.nodeOptions.NetworkID,
-		PublicKey: hex.EncodeToString(crypto.EncodeSecp256k1PublicKey(&s.publicKey)),
+		PublicKey: s.publicKey.Hex(),
 	})
 }

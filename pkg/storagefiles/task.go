@@ -7,7 +7,6 @@ import (
 )
 
 type Task struct {
-	Session string
 	Info    UploadRequest `json:"info"` // Note that this field is compatible with version 1, leveldb storage
 	Option  Option
 	Running RunningParams
@@ -27,9 +26,8 @@ type Option struct {
 	Force       bool
 }
 
-func (t *Task) SetSessionID(id string) *Task {
-	t.Session = id
-	return t
+func (t *Task) Display() string {
+	return t.Info.Hash.String() + "," + t.Info.Source.String()
 }
 
 func (t *Task) SetRequest(req UploadRequest) *Task {

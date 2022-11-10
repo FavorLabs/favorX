@@ -4,6 +4,7 @@ import (
 	"crypto/ecdsa"
 	"math/big"
 
+	crypto2 "github.com/ChainSafe/gossamer/lib/crypto"
 	"github.com/FavorLabs/favorX/pkg/crypto"
 	"github.com/FavorLabs/favorX/pkg/crypto/eip712"
 	"github.com/ethereum/go-ethereum/common"
@@ -16,7 +17,28 @@ type signerMock struct {
 	ethereumAddress func() (common.Address, error)
 }
 
-func (m *signerMock) PrivateKey() *ecdsa.PrivateKey {
+func (m *signerMock) GetMnemonic() string {
+	// TODO implement me
+	panic("implement me")
+}
+
+func (m *signerMock) GetSeed() []byte {
+	// TODO implement me
+	panic("implement me")
+}
+
+func (m *signerMock) Type() crypto2.KeyType {
+	// TODO implement me
+	panic("implement me")
+}
+
+func (m *signerMock) Public() crypto2.PublicKey {
+	// TODO implement me
+	panic("implement me")
+}
+
+func (m *signerMock) Private() crypto2.PrivateKey {
+	// TODO implement me
 	panic("implement me")
 }
 

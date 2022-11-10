@@ -26,15 +26,17 @@ func NewDB(dir string) (*Database, error) {
 	return &Database{db: db}, nil
 }
 
-func (d *Database) SaveTask(sessionID string, task *Task) error {
+func (d *Database) SaveTask(task *Task) error {
 	b, err := json.Marshal(task)
 	if err != nil {
 		return err
 	}
+	sessionID := task.Info.Hash.String() + task.Info.Source.String()
 	return d.db.Put([]byte(TaskPrefix+sessionID), b, nil)
 }
 
-func (d *Database) DeleteTask(sessionID string) error {
+func (d *Database) DeleteTask(task *Task) error {
+	sessionID := task.Info.Hash.String() + task.Info.Source.String()
 	return d.db.Delete([]byte(TaskPrefix+sessionID), nil)
 }
 
