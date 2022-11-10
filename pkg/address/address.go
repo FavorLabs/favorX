@@ -23,12 +23,14 @@ var ErrInvalidAddress = errors.New("invalid address")
 // Signature is used to verify the `Overlay/Underlay` pair, as it is based on `underlay|networkID`, signed with the public key of Overlay address
 type Address struct {
 	Underlay  ma.Multiaddr
+	PublicKey []byte
 	Overlay   boson.Address
 	Signature []byte
 }
 
 type addressJSON struct {
 	Overlay   string `json:"overlay"`
+	PublicKey string `json:"publicKey"`
 	Underlay  string `json:"underlay"`
 	Signature string `json:"signature"`
 }
@@ -66,25 +68,33 @@ func NewAddress(signer crypto.Signer, underlay ma.Multiaddr, overlay boson.Addre
 		return nil, err
 	}
 
-	signature, err := signer.Sign(generateSignData(underlayBinary, overlay.Bytes(), networkID))
+	signature, err := signer.Sign(generateSignData(underlayBinary, signer.Public().Encode(), overlay.Bytes(), networkID))
 	if err != nil {
 		return nil, err
 	}
 
 	return &Address{
 		Underlay:  underlay,
+		PublicKey: signer.Public().Encode(),
 		Overlay:   overlay,
 		Signature: signature,
 	}, nil
 }
 
-func ParseAddress(underlay, overlay, signature []byte, networkID uint64) (*Address, error) {
-	recoveredPK, err := crypto.Recover(signature, generateSignData(underlay, overlay, networkID))
+func ParseAddress(underlay, publicKey, overlay, signature []byte, networkID uint64) (*Address, error) {
+	key, err := crypto.NewPublicKey(publicKey)
+	if err != nil {
+		return nil, err
+	}
+	ok, err := key.Verify(generateSignData(underlay, publicKey, overlay, networkID), signature)
 	if err != nil {
 		return nil, ErrInvalidAddress
 	}
+	if !ok {
+		return nil, ErrInvalidAddress
+	}
 
-	recoveredOverlay, err := crypto.NewOverlayAddress(*recoveredPK, networkID)
+	recoveredOverlay, err := crypto.NewOverlayAddress(publicKey, networkID)
 	if err != nil {
 		return nil, ErrInvalidAddress
 	}
@@ -99,27 +109,30 @@ func ParseAddress(underlay, overlay, signature []byte, networkID uint64) (*Addre
 
 	return &Address{
 		Underlay:  multiUnderlay,
+		PublicKey: publicKey,
 		Overlay:   boson.NewAddress(overlay),
 		Signature: signature,
 	}, nil
 }
 
-func generateSignData(underlay, overlay []byte, networkID uint64) []byte {
+func generateSignData(underlay, publicKey, overlay []byte, networkID uint64) []byte {
 	networkIDBytes := make([]byte, 8)
 	binary.BigEndian.PutUint64(networkIDBytes, networkID)
 	signData := append([]byte("favorx-handshake-"), underlay...)
+	signData = append(signData, publicKey...)
 	signData = append(signData, overlay...)
 	return append(signData, networkIDBytes...)
 }
 
 func (a *Address) Equal(b *Address) bool {
-	return a.Overlay.Equal(b.Overlay) && a.Underlay.Equal(b.Underlay) && bytes.Equal(a.Signature, b.Signature)
+	return a.Overlay.Equal(b.Overlay) && bytes.Equal(a.PublicKey, b.PublicKey) && a.Underlay.Equal(b.Underlay)
 }
 
 func (a *Address) MarshalJSON() ([]byte, error) {
 	return json.Marshal(&addressJSON{
 		Overlay:   a.Overlay.String(),
 		Underlay:  a.Underlay.String(),
+		PublicKey: crypto.BytesToHex(a.PublicKey),
 		Signature: base64.StdEncoding.EncodeToString(a.Signature),
 	})
 }
@@ -143,13 +156,17 @@ func (a *Address) UnmarshalJSON(b []byte) error {
 		return err
 	}
 
+	a.PublicKey, err = crypto.HexToBytes(v.PublicKey)
+	if err != nil {
+		return err
+	}
 	a.Underlay = m
 	a.Signature, err = base64.StdEncoding.DecodeString(v.Signature)
 	return err
 }
 
 func (a *Address) String() string {
-	return fmt.Sprintf("[Underlay: %v, Overlay %v, Signature %x]", a.Underlay, a.Overlay, a.Signature)
+	return fmt.Sprintf("[Underlay: %v, PublicKey %x Overlay %v, Signature %x]", a.Underlay, a.PublicKey, a.Overlay, a.Signature)
 }
 
 // ShortString returns shortened versions of address in a format: [Overlay, Underlay]

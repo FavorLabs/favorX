@@ -32,15 +32,8 @@ func (ms MockSOC) Chunk() boson.Chunk {
 func GenerateMockSOC(t *testing.T, data []byte) *MockSOC {
 	t.Helper()
 
-	privKey, err := crypto.GenerateSecp256k1Key()
-	if err != nil {
-		t.Fatal(err)
-	}
-	signer := crypto.NewDefaultSigner(privKey)
-	owner, err := signer.EthereumAddress()
-	if err != nil {
-		t.Fatal(err)
-	}
+	signer := crypto.NewDefaultSigner()
+	owner := signer.Public().Encode()
 
 	ch, err := cac.New(data)
 	if err != nil {
@@ -61,7 +54,7 @@ func GenerateMockSOC(t *testing.T, data []byte) *MockSOC {
 
 	return &MockSOC{
 		ID:           id,
-		Owner:        owner.Bytes(),
+		Owner:        owner,
 		Signature:    signature,
 		WrappedChunk: ch,
 	}

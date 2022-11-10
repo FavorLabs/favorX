@@ -134,9 +134,8 @@ func newTestNode(t *testing.T) *Node {
 }
 
 func randomAddress(t *testing.T) (addr *address.Address, signer crypto.Signer) {
-	pk, _ := crypto.GenerateSecp256k1Key()
-	signer = crypto.NewDefaultSigner(pk)
-	base, _ := crypto.NewOverlayAddress(pk.PublicKey, networkId)
+	signer = crypto.NewDefaultSigner()
+	base, _ := crypto.NewOverlayAddress(signer.Public().Encode(), networkId)
 	mu, err := ma.NewMultiaddr(underlayBase + base.String())
 	if err != nil {
 		t.Fatal(err)

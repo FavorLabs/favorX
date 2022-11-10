@@ -39,7 +39,7 @@ type Getter interface {
 }
 
 type Putter interface {
-	// Put saves relation between peer overlay address and bzz.Address address.
+	// Put saves relation between peer overlay address and Address.
 	Put(overlay boson.Address, addr address.Address) (err error)
 }
 

@@ -22,12 +22,9 @@ func TestConnect(t *testing.T) {
 	errorUnderlay := "/ip4/127.0.0.1/tcp/1634/p2p/16Uiu2HAkw88cjH2orYrB6fDui4eUNdmgkwnDM8W681UbfsPgM9QY"
 	testErr := errors.New("test error")
 
-	privateKey, err := crypto.GenerateSecp256k1Key()
-	if err != nil {
-		t.Fatal(err)
-	}
+	sig := crypto.NewDefaultSigner()
 
-	overlay, err := crypto.NewOverlayAddress(privateKey.PublicKey, 0)
+	overlay, err := crypto.NewOverlayAddress(sig.Public().Encode(), 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -36,7 +33,7 @@ func TestConnect(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	bzzAddress, err := address.NewAddress(crypto.NewDefaultSigner(privateKey), underlama, overlay, 0)
+	bzzAddress, err := address.NewAddress(sig, underlama, overlay, 0)
 	if err != nil {
 		t.Fatal(err)
 	}

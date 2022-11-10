@@ -55,40 +55,31 @@ func TestHandshake(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	privateKey1, err := crypto.GenerateSecp256k1Key()
+	signer1 := crypto.NewDefaultSigner()
+	signer2 := crypto.NewDefaultSigner()
+	addr1, err := crypto.NewOverlayAddress(signer1.Public().Encode(), networkID)
 	if err != nil {
 		t.Fatal(err)
 	}
-	privateKey2, err := crypto.GenerateSecp256k1Key()
+	node1Address, err := address.NewAddress(signer1, node1ma, addr1, networkID)
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	signer1 := crypto.NewDefaultSigner(privateKey1)
-	signer2 := crypto.NewDefaultSigner(privateKey2)
-	addr, err := crypto.NewOverlayAddress(privateKey1.PublicKey, networkID)
+	addr2, err := crypto.NewOverlayAddress(signer2.Public().Encode(), networkID)
 	if err != nil {
 		t.Fatal(err)
 	}
-	node1BzzAddress, err := address.NewAddress(signer1, node1ma, addr, networkID)
-	if err != nil {
-		t.Fatal(err)
-	}
-	addr2, err := crypto.NewOverlayAddress(privateKey2.PublicKey, networkID)
-	if err != nil {
-		t.Fatal(err)
-	}
-	node2BzzAddress, err := address.NewAddress(signer2, node2ma, addr2, networkID)
+	node2Address, err := address.NewAddress(signer2, node2ma, addr2, networkID)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	node1Info := address.AddressInfo{
-		Address:  node1BzzAddress,
+		Address:  node1Address,
 		NodeMode: address.NewModel().SetMode(address.FullNode),
 	}
 	node2Info := address.AddressInfo{
-		Address:  node2BzzAddress,
+		Address:  node2Address,
 		NodeMode: address.NewModel().SetMode(address.FullNode),
 	}
 
@@ -107,15 +98,16 @@ func TestHandshake(t *testing.T) {
 		stream2 := mock.NewStream(&buffer2, &buffer1)
 
 		w, r := protobuf.NewWriterAndReader(stream2)
-		if err := w.WriteMsg(&pb.SynAck{
+		if err = w.WriteMsg(&pb.SynAck{
 			Syn: &pb.Syn{
 				ObservedUnderlay: node1maBinary,
 			},
 			Ack: &pb.Ack{
-				Address: &pb.BzzAddress{
+				Address: &pb.Address{
 					Underlay:  node2maBinary,
-					Overlay:   node2BzzAddress.Overlay.Bytes(),
-					Signature: node2BzzAddress.Signature,
+					PublicKey: node2Address.PublicKey,
+					Overlay:   node2Address.Overlay.Bytes(),
+					Signature: node2Address.Signature,
 				},
 				NetworkID:      networkID,
 				NodeMode:       node2Info.NodeMode.Bv.Bytes(),
@@ -142,17 +134,18 @@ func TestHandshake(t *testing.T) {
 		}
 
 		var ack pb.Ack
-		if err := r.ReadMsg(&ack); err != nil {
+		if err = r.ReadMsg(&ack); err != nil {
 			t.Fatal(err)
 		}
 
-		if !bytes.Equal(ack.Address.Overlay, node1BzzAddress.Overlay.Bytes()) {
+		if !bytes.Equal(ack.Address.Overlay, node1Address.Overlay.Bytes()) {
 			t.Fatal("bad ack - overlay")
 		}
 		if !bytes.Equal(ack.Address.Underlay, node1maBinary) {
 			t.Fatal("bad ack - underlay")
 		}
-		if !bytes.Equal(ack.Address.Signature, node1BzzAddress.Signature) {
+
+		if bytes.Equal(ack.Address.Signature, node1Address.Signature) {
 			t.Fatal("bad ack - signature")
 		}
 		if ack.NetworkID != networkID {
@@ -191,10 +184,11 @@ func TestHandshake(t *testing.T) {
 		}
 
 		if err = w.WriteMsg(&pb.Ack{
-			Address: &pb.BzzAddress{
+			Address: &pb.Address{
 				Underlay:  node2maBinary,
-				Overlay:   node2BzzAddress.Overlay.Bytes(),
-				Signature: node2BzzAddress.Signature,
+				PublicKey: node2Address.PublicKey,
+				Overlay:   node2Address.Overlay.Bytes(),
+				Signature: node2Address.Signature,
 			},
 			NetworkID: networkID,
 			NodeMode:  address.NewModel().SetMode(address.FullNode).Bv.Bytes(),
@@ -231,10 +225,11 @@ func TestHandshake(t *testing.T) {
 		}
 
 		if err = w.WriteMsg(&pb.Ack{
-			Address: &pb.BzzAddress{
+			Address: &pb.Address{
 				Underlay:  node2maBinary,
-				Overlay:   node2BzzAddress.Overlay.Bytes(),
-				Signature: node2BzzAddress.Signature,
+				PublicKey: node2Address.PublicKey,
+				Overlay:   node2Address.Overlay.Bytes(),
+				Signature: node2Address.Signature,
 			},
 			NetworkID: networkID,
 			NodeMode:  address.NewModel().Bv.Bytes(),
@@ -327,10 +322,11 @@ func TestHandshake(t *testing.T) {
 				ObservedUnderlay: node1maBinary,
 			},
 			Ack: &pb.Ack{
-				Address: &pb.BzzAddress{
+				Address: &pb.Address{
 					Underlay:  node2maBinary,
-					Overlay:   node2BzzAddress.Overlay.Bytes(),
-					Signature: node2BzzAddress.Signature,
+					PublicKey: node2Address.PublicKey,
+					Overlay:   node2Address.Overlay.Bytes(),
+					Signature: node2Address.Signature,
 				},
 				NetworkID: networkID,
 				NodeMode:  node2Info.NodeMode.Bv.Bytes(),
@@ -362,10 +358,11 @@ func TestHandshake(t *testing.T) {
 				ObservedUnderlay: node1maBinary,
 			},
 			Ack: &pb.Ack{
-				Address: &pb.BzzAddress{
+				Address: &pb.Address{
 					Underlay:  node2maBinary,
-					Overlay:   node2BzzAddress.Overlay.Bytes(),
-					Signature: node2BzzAddress.Signature,
+					PublicKey: node2Address.PublicKey,
+					Overlay:   node2Address.Overlay.Bytes(),
+					Signature: node2Address.Signature,
 				},
 				NetworkID: 5,
 				NodeMode:  node2Info.NodeMode.Bv.Bytes(),
@@ -396,10 +393,11 @@ func TestHandshake(t *testing.T) {
 				ObservedUnderlay: node1maBinary,
 			},
 			Ack: &pb.Ack{
-				Address: &pb.BzzAddress{
+				Address: &pb.Address{
 					Underlay:  node2maBinary,
-					Overlay:   node2BzzAddress.Overlay.Bytes(),
-					Signature: node1BzzAddress.Signature,
+					PublicKey: node2Address.PublicKey,
+					Overlay:   node2Address.Overlay.Bytes(),
+					Signature: node1Address.Signature,
 				},
 				NetworkID: networkID,
 				NodeMode:  node2Info.NodeMode.Bv.Bytes(),
@@ -436,10 +434,11 @@ func TestHandshake(t *testing.T) {
 				ObservedUnderlay: node1maBinary,
 			},
 			Ack: &pb.Ack{
-				Address: &pb.BzzAddress{
+				Address: &pb.Address{
 					Underlay:  node2maBinary,
-					Overlay:   node2BzzAddress.Overlay.Bytes(),
-					Signature: node2BzzAddress.Signature,
+					PublicKey: node2Address.PublicKey,
+					Overlay:   node2Address.Overlay.Bytes(),
+					Signature: node2Address.Signature,
 				},
 				NetworkID: networkID,
 				NodeMode:  node2Info.NodeMode.Bv.Bytes(),
@@ -478,10 +477,11 @@ func TestHandshake(t *testing.T) {
 		}
 
 		if err = w.WriteMsg(&pb.Ack{
-			Address: &pb.BzzAddress{
+			Address: &pb.Address{
 				Underlay:  node2maBinary,
-				Overlay:   node2BzzAddress.Overlay.Bytes(),
-				Signature: node2BzzAddress.Signature,
+				PublicKey: node2Address.PublicKey,
+				Overlay:   node2Address.Overlay.Bytes(),
+				Signature: node2Address.Signature,
 			},
 			NetworkID: networkID,
 			NodeMode:  node2Info.NodeMode.Bv.Bytes(),
@@ -506,7 +506,7 @@ func TestHandshake(t *testing.T) {
 			t.Fatalf("got bad syn")
 		}
 
-		bzzAddress, err := address.ParseAddress(got.Ack.Address.Underlay, got.Ack.Address.Overlay, got.Ack.Address.Signature, got.Ack.NetworkID)
+		ackAddr, err := address.ParseAddress(got.Ack.Address.Underlay, got.Ack.Address.PublicKey, got.Ack.Address.Overlay, got.Ack.Address.Signature, got.Ack.NetworkID)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -516,7 +516,7 @@ func TestHandshake(t *testing.T) {
 			t.Fatal(err)
 		}
 		testInfo(t, node1Info, address.AddressInfo{
-			Address:  bzzAddress,
+			Address:  ackAddr,
 			NodeMode: nb2,
 		})
 	})
@@ -614,10 +614,10 @@ func TestHandshake(t *testing.T) {
 		}
 
 		if err = w.WriteMsg(&pb.Ack{
-			Address: &pb.BzzAddress{
+			Address: &pb.Address{
 				Underlay:  node2maBinary,
-				Overlay:   node2BzzAddress.Overlay.Bytes(),
-				Signature: node2BzzAddress.Signature,
+				Overlay:   node2Address.Overlay.Bytes(),
+				Signature: node2Address.Signature,
 			},
 			NetworkID: 5,
 			NodeMode:  node2Info.NodeMode.Bv.Bytes(),
@@ -653,10 +653,11 @@ func TestHandshake(t *testing.T) {
 		}
 
 		if err := w.WriteMsg(&pb.Ack{
-			Address: &pb.BzzAddress{
+			Address: &pb.Address{
 				Underlay:  node2maBinary,
-				Overlay:   node2BzzAddress.Overlay.Bytes(),
-				Signature: node1BzzAddress.Signature,
+				PublicKey: node2Address.PublicKey,
+				Overlay:   node2Address.Overlay.Bytes(),
+				Signature: node1Address.Signature,
 			},
 			NetworkID: networkID,
 			NodeMode:  node2Info.NodeMode.Bv.Bytes(),
@@ -669,42 +670,6 @@ func TestHandshake(t *testing.T) {
 			t.Fatalf("expected %s, got %v", handshake.ErrInvalidAck, err)
 		}
 	})
-
-	// t.Run("Handle - transaction is not on the blockchain", func(t *testing.T) {
-	//
-	//	handshakeService, err := handshake.New(signer1, aaddresser, node1Info.Address.Overlay, networkID, address.NewModel().SetMode(address.FullNode), "", logger)
-	//	if err != nil {
-	//		t.Fatal(err)
-	//	}
-	//	var buffer1 bytes.Buffer
-	//	var buffer2 bytes.Buffer
-	//	stream1 := mock.NewStream(&buffer1, &buffer2)
-	//	stream2 := mock.NewStream(&buffer2, &buffer1)
-	//
-	//	w := protobuf.NewWriter(stream2)
-	//	if err := w.WriteMsg(&pb.Syn{
-	//		ObservedUnderlay: node1maBinary,
-	//	}); err != nil {
-	//		t.Fatal(err)
-	//	}
-	//
-	//	if err := w.WriteMsg(&pb.Ack{
-	//		Address: &pb.BzzAddress{
-	//			Underlay:  node2maBinary,
-	//			Overlay:   node2BzzAddress.Overlay.Bytes(),
-	//			Signature: node2BzzAddress.Signature,
-	//		},
-	//		NetworkID: networkID,
-	//		NodeMode:  node2Info.NodeMode.Bv.Bytes(),
-	//	}); err != nil {
-	//		t.Fatal(err)
-	//	}
-	//
-	//	_, err = handshakeService.Handle(context.Background(), stream1, node2AddrInfo.Addrs[0], node2AddrInfo.ID)
-	//	if err == nil {
-	//		t.Fatalf("expected error, got nil")
-	//	}
-	// })
 
 	t.Run("Handle - advertisable error", func(t *testing.T) {
 		handshakeService, err = handshake.New(signer1, aaddresser, node1Info.Address.Overlay, networkID, address.NewModel().SetMode(address.FullNode), "", node1AddrInfo.ID, logger, light, lightnode.DefaultLightNodeLimit)

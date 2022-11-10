@@ -67,10 +67,10 @@ func (m *Syn) GetObservedUnderlay() []byte {
 }
 
 type Ack struct {
-	Address        *BzzAddress `protobuf:"bytes,1,opt,name=Address,proto3" json:"Address,omitempty"`
-	NetworkID      uint64      `protobuf:"varint,2,opt,name=NetworkID,proto3" json:"NetworkID,omitempty"`
-	NodeMode       []byte      `protobuf:"bytes,3,opt,name=NodeMode,proto3" json:"NodeMode,omitempty"`
-	WelcomeMessage string      `protobuf:"bytes,99,opt,name=WelcomeMessage,proto3" json:"WelcomeMessage,omitempty"`
+	Address        *Address `protobuf:"bytes,1,opt,name=Address,proto3" json:"Address,omitempty"`
+	NetworkID      uint64   `protobuf:"varint,2,opt,name=NetworkID,proto3" json:"NetworkID,omitempty"`
+	NodeMode       []byte   `protobuf:"bytes,3,opt,name=NodeMode,proto3" json:"NodeMode,omitempty"`
+	WelcomeMessage string   `protobuf:"bytes,99,opt,name=WelcomeMessage,proto3" json:"WelcomeMessage,omitempty"`
 }
 
 func (m *Ack) Reset()         { *m = Ack{} }
@@ -106,7 +106,7 @@ func (m *Ack) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_Ack proto.InternalMessageInfo
 
-func (m *Ack) GetAddress() *BzzAddress {
+func (m *Ack) GetAddress() *Address {
 	if m != nil {
 		return m.Address
 	}
@@ -186,24 +186,25 @@ func (m *SynAck) GetAck() *Ack {
 	return nil
 }
 
-type BzzAddress struct {
+type Address struct {
 	Underlay  []byte `protobuf:"bytes,1,opt,name=Underlay,proto3" json:"Underlay,omitempty"`
-	Signature []byte `protobuf:"bytes,2,opt,name=Signature,proto3" json:"Signature,omitempty"`
-	Overlay   []byte `protobuf:"bytes,3,opt,name=Overlay,proto3" json:"Overlay,omitempty"`
+	PublicKey []byte `protobuf:"bytes,2,opt,name=PublicKey,proto3" json:"PublicKey,omitempty"`
+	Signature []byte `protobuf:"bytes,3,opt,name=Signature,proto3" json:"Signature,omitempty"`
+	Overlay   []byte `protobuf:"bytes,4,opt,name=Overlay,proto3" json:"Overlay,omitempty"`
 }
 
-func (m *BzzAddress) Reset()         { *m = BzzAddress{} }
-func (m *BzzAddress) String() string { return proto.CompactTextString(m) }
-func (*BzzAddress) ProtoMessage()    {}
-func (*BzzAddress) Descriptor() ([]byte, []int) {
+func (m *Address) Reset()         { *m = Address{} }
+func (m *Address) String() string { return proto.CompactTextString(m) }
+func (*Address) ProtoMessage()    {}
+func (*Address) Descriptor() ([]byte, []int) {
 	return fileDescriptor_a77305914d5d202f, []int{3}
 }
-func (m *BzzAddress) XXX_Unmarshal(b []byte) error {
+func (m *Address) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *BzzAddress) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *Address) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_BzzAddress.Marshal(b, m, deterministic)
+		return xxx_messageInfo_Address.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -213,33 +214,40 @@ func (m *BzzAddress) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 		return b[:n], nil
 	}
 }
-func (m *BzzAddress) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_BzzAddress.Merge(m, src)
+func (m *Address) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Address.Merge(m, src)
 }
-func (m *BzzAddress) XXX_Size() int {
+func (m *Address) XXX_Size() int {
 	return m.Size()
 }
-func (m *BzzAddress) XXX_DiscardUnknown() {
-	xxx_messageInfo_BzzAddress.DiscardUnknown(m)
+func (m *Address) XXX_DiscardUnknown() {
+	xxx_messageInfo_Address.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_BzzAddress proto.InternalMessageInfo
+var xxx_messageInfo_Address proto.InternalMessageInfo
 
-func (m *BzzAddress) GetUnderlay() []byte {
+func (m *Address) GetUnderlay() []byte {
 	if m != nil {
 		return m.Underlay
 	}
 	return nil
 }
 
-func (m *BzzAddress) GetSignature() []byte {
+func (m *Address) GetPublicKey() []byte {
+	if m != nil {
+		return m.PublicKey
+	}
+	return nil
+}
+
+func (m *Address) GetSignature() []byte {
 	if m != nil {
 		return m.Signature
 	}
 	return nil
 }
 
-func (m *BzzAddress) GetOverlay() []byte {
+func (m *Address) GetOverlay() []byte {
 	if m != nil {
 		return m.Overlay
 	}
@@ -247,36 +255,36 @@ func (m *BzzAddress) GetOverlay() []byte {
 }
 
 func init() {
-	proto.RegisterType((*Syn)(nil), "handshakeFavorX.Syn")
-	proto.RegisterType((*Ack)(nil), "handshakeFavorX.Ack")
-	proto.RegisterType((*SynAck)(nil), "handshakeFavorX.SynAck")
-	proto.RegisterType((*BzzAddress)(nil), "handshakeFavorX.BzzAddress")
+	proto.RegisterType((*Syn)(nil), "handshake.Syn")
+	proto.RegisterType((*Ack)(nil), "handshake.Ack")
+	proto.RegisterType((*SynAck)(nil), "handshake.SynAck")
+	proto.RegisterType((*Address)(nil), "handshake.Address")
 }
 
 func init() { proto.RegisterFile("handshake.proto", fileDescriptor_a77305914d5d202f) }
 
 var fileDescriptor_a77305914d5d202f = []byte{
-	// 306 bytes of a gzipped FileDescriptorProto
+	// 309 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0xe2, 0xcf, 0x48, 0xcc, 0x4b,
-	0x29, 0xce, 0x48, 0xcc, 0x4e, 0xd5, 0x2b, 0x28, 0xca, 0x2f, 0xc9, 0x17, 0x42, 0x08, 0xb8, 0x25,
-	0x96, 0xe5, 0x17, 0x45, 0x28, 0x19, 0x72, 0x31, 0x07, 0x57, 0xe6, 0x09, 0x69, 0x71, 0x09, 0xf8,
-	0x27, 0x15, 0xa7, 0x16, 0x95, 0xa5, 0xa6, 0x84, 0xe6, 0xa5, 0xa4, 0x16, 0xe5, 0x24, 0x56, 0x4a,
-	0x30, 0x2a, 0x30, 0x6a, 0xf0, 0x04, 0x61, 0x88, 0x2b, 0xcd, 0x63, 0xe4, 0x62, 0x76, 0x4c, 0xce,
-	0x16, 0x32, 0xe5, 0x62, 0x77, 0x4c, 0x49, 0x29, 0x4a, 0x2d, 0x2e, 0x06, 0x2b, 0xe5, 0x36, 0x92,
-	0xd6, 0x43, 0x33, 0x5d, 0xcf, 0xa9, 0xaa, 0x0a, 0xaa, 0x24, 0x08, 0xa6, 0x56, 0x48, 0x86, 0x8b,
-	0xd3, 0x2f, 0xb5, 0xa4, 0x3c, 0xbf, 0x28, 0xdb, 0xd3, 0x45, 0x82, 0x49, 0x81, 0x51, 0x83, 0x25,
-	0x08, 0x21, 0x20, 0x24, 0xc5, 0xc5, 0xe1, 0x97, 0x9f, 0x92, 0xea, 0x9b, 0x9f, 0x92, 0x2a, 0xc1,
-	0x0c, 0x76, 0x00, 0x9c, 0x2f, 0xa4, 0xc6, 0xc5, 0x17, 0x9e, 0x9a, 0x93, 0x9c, 0x9f, 0x9b, 0xea,
-	0x9b, 0x5a, 0x5c, 0x9c, 0x98, 0x9e, 0x2a, 0x91, 0xac, 0xc0, 0xa8, 0xc1, 0x19, 0x84, 0x26, 0xaa,
-	0x14, 0xc1, 0xc5, 0x16, 0x5c, 0x99, 0x07, 0x72, 0xa2, 0x1a, 0xd8, 0x77, 0x50, 0xe7, 0x89, 0x60,
-	0x38, 0x2f, 0xb8, 0x32, 0x2f, 0x08, 0xec, 0x7d, 0x35, 0xb0, 0x8f, 0xc0, 0xae, 0xc1, 0xa6, 0xce,
-	0x31, 0x39, 0x3b, 0x08, 0xa4, 0x40, 0x29, 0x81, 0x8b, 0x0b, 0xe1, 0x25, 0x90, 0x5b, 0xd1, 0x02,
-	0x0b, 0xce, 0x07, 0xf9, 0x32, 0x38, 0x33, 0x3d, 0x2f, 0xb1, 0xa4, 0xb4, 0x28, 0x15, 0x6c, 0x2e,
-	0x4f, 0x10, 0x42, 0x40, 0x48, 0x82, 0x8b, 0xdd, 0xbf, 0x0c, 0xa2, 0x11, 0xe2, 0x49, 0x18, 0xd7,
-	0x49, 0xe6, 0xc4, 0x23, 0x39, 0xc6, 0x0b, 0x8f, 0xe4, 0x18, 0x1f, 0x3c, 0x92, 0x63, 0x9c, 0xf0,
-	0x58, 0x8e, 0xe1, 0xc2, 0x63, 0x39, 0x86, 0x1b, 0x8f, 0xe5, 0x18, 0xa2, 0x98, 0x0a, 0x92, 0x92,
-	0xd8, 0xc0, 0xb1, 0x68, 0x0c, 0x08, 0x00, 0x00, 0xff, 0xff, 0x5d, 0x8e, 0xa1, 0xbe, 0xd8, 0x01,
-	0x00, 0x00,
+	0x29, 0xce, 0x48, 0xcc, 0x4e, 0xd5, 0x2b, 0x28, 0xca, 0x2f, 0xc9, 0x17, 0xe2, 0x84, 0x0b, 0x28,
+	0x19, 0x72, 0x31, 0x07, 0x57, 0xe6, 0x09, 0x69, 0x71, 0x09, 0xf8, 0x27, 0x15, 0xa7, 0x16, 0x95,
+	0xa5, 0xa6, 0x84, 0xe6, 0xa5, 0xa4, 0x16, 0xe5, 0x24, 0x56, 0x4a, 0x30, 0x2a, 0x30, 0x6a, 0xf0,
+	0x04, 0x61, 0x88, 0x2b, 0x4d, 0x65, 0xe4, 0x62, 0x76, 0x4c, 0xce, 0x16, 0xd2, 0xe1, 0x62, 0x77,
+	0x4c, 0x49, 0x29, 0x4a, 0x2d, 0x2e, 0x06, 0x2b, 0xe5, 0x36, 0x12, 0xd2, 0x43, 0x58, 0x04, 0x95,
+	0x09, 0x82, 0x29, 0x11, 0x92, 0xe1, 0xe2, 0xf4, 0x4b, 0x2d, 0x29, 0xcf, 0x2f, 0xca, 0xf6, 0x74,
+	0x91, 0x60, 0x52, 0x60, 0xd4, 0x60, 0x09, 0x42, 0x08, 0x08, 0x49, 0x71, 0x71, 0xf8, 0xe5, 0xa7,
+	0xa4, 0xfa, 0xe6, 0xa7, 0xa4, 0x4a, 0x30, 0x83, 0xed, 0x85, 0xf3, 0x85, 0xd4, 0xb8, 0xf8, 0xc2,
+	0x53, 0x73, 0x92, 0xf3, 0x73, 0x53, 0x7d, 0x53, 0x8b, 0x8b, 0x13, 0xd3, 0x53, 0x25, 0x92, 0x15,
+	0x18, 0x35, 0x38, 0x83, 0xd0, 0x44, 0x95, 0x7c, 0xb8, 0xd8, 0x82, 0x2b, 0xf3, 0x40, 0x2e, 0x53,
+	0x00, 0x7b, 0x0a, 0xea, 0x2a, 0x3e, 0x24, 0x57, 0x05, 0x57, 0xe6, 0x05, 0x81, 0xfd, 0xab, 0x00,
+	0xf6, 0x02, 0xd8, 0x1d, 0xa8, 0x2a, 0x1c, 0x93, 0xb3, 0x83, 0x40, 0x52, 0x4a, 0xd5, 0x70, 0xdf,
+	0x81, 0x1c, 0x87, 0x16, 0x28, 0x70, 0x3e, 0xc8, 0x5b, 0x01, 0xa5, 0x49, 0x39, 0x99, 0xc9, 0xde,
+	0xa9, 0x95, 0x60, 0xe3, 0x78, 0x82, 0x10, 0x02, 0x20, 0xd9, 0xe0, 0xcc, 0xf4, 0xbc, 0xc4, 0x92,
+	0xd2, 0x22, 0x98, 0xbf, 0x10, 0x02, 0x42, 0x12, 0x5c, 0xec, 0xfe, 0x65, 0x10, 0x63, 0x59, 0xc0,
+	0x72, 0x30, 0xae, 0x93, 0xcc, 0x89, 0x47, 0x72, 0x8c, 0x17, 0x1e, 0xc9, 0x31, 0x3e, 0x78, 0x24,
+	0xc7, 0x38, 0xe1, 0xb1, 0x1c, 0xc3, 0x85, 0xc7, 0x72, 0x0c, 0x37, 0x1e, 0xcb, 0x31, 0x44, 0x31,
+	0x15, 0x24, 0x25, 0xb1, 0x81, 0x63, 0xd1, 0x18, 0x10, 0x00, 0x00, 0xff, 0xff, 0xd4, 0x61, 0x4c,
+	0x43, 0xd8, 0x01, 0x00, 0x00,
 }
 
 func (m *Syn) Marshal() (dAtA []byte, err error) {
@@ -412,7 +420,7 @@ func (m *SynAck) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
-func (m *BzzAddress) Marshal() (dAtA []byte, err error) {
+func (m *Address) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -422,12 +430,12 @@ func (m *BzzAddress) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *BzzAddress) MarshalTo(dAtA []byte) (int, error) {
+func (m *Address) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *BzzAddress) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *Address) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
@@ -437,12 +445,19 @@ func (m *BzzAddress) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 		copy(dAtA[i:], m.Overlay)
 		i = encodeVarintHandshake(dAtA, i, uint64(len(m.Overlay)))
 		i--
-		dAtA[i] = 0x1a
+		dAtA[i] = 0x22
 	}
 	if len(m.Signature) > 0 {
 		i -= len(m.Signature)
 		copy(dAtA[i:], m.Signature)
 		i = encodeVarintHandshake(dAtA, i, uint64(len(m.Signature)))
+		i--
+		dAtA[i] = 0x1a
+	}
+	if len(m.PublicKey) > 0 {
+		i -= len(m.PublicKey)
+		copy(dAtA[i:], m.PublicKey)
+		i = encodeVarintHandshake(dAtA, i, uint64(len(m.PublicKey)))
 		i--
 		dAtA[i] = 0x12
 	}
@@ -521,13 +536,17 @@ func (m *SynAck) Size() (n int) {
 	return n
 }
 
-func (m *BzzAddress) Size() (n int) {
+func (m *Address) Size() (n int) {
 	if m == nil {
 		return 0
 	}
 	var l int
 	_ = l
 	l = len(m.Underlay)
+	if l > 0 {
+		n += 1 + l + sovHandshake(uint64(l))
+	}
+	l = len(m.PublicKey)
 	if l > 0 {
 		n += 1 + l + sovHandshake(uint64(l))
 	}
@@ -691,7 +710,7 @@ func (m *Ack) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			if m.Address == nil {
-				m.Address = &BzzAddress{}
+				m.Address = &Address{}
 			}
 			if err := m.Address.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
@@ -925,7 +944,7 @@ func (m *SynAck) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *BzzAddress) Unmarshal(dAtA []byte) error {
+func (m *Address) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -948,10 +967,10 @@ func (m *BzzAddress) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: BzzAddress: wiretype end group for non-group")
+			return fmt.Errorf("proto: Address: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: BzzAddress: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: Address: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
@@ -990,6 +1009,40 @@ func (m *BzzAddress) Unmarshal(dAtA []byte) error {
 			iNdEx = postIndex
 		case 2:
 			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field PublicKey", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowHandshake
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthHandshake
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthHandshake
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.PublicKey = append(m.PublicKey[:0], dAtA[iNdEx:postIndex]...)
+			if m.PublicKey == nil {
+				m.PublicKey = []byte{}
+			}
+			iNdEx = postIndex
+		case 3:
+			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Signature", wireType)
 			}
 			var byteLen int
@@ -1022,7 +1075,7 @@ func (m *BzzAddress) Unmarshal(dAtA []byte) error {
 				m.Signature = []byte{}
 			}
 			iNdEx = postIndex
-		case 3:
+		case 4:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Overlay", wireType)
 			}

@@ -13,8 +13,9 @@ import (
 
 const (
 	IdSize        = 32
-	SignatureSize = 65
-	minChunkSize  = IdSize + SignatureSize + boson.SpanSize
+	OwnerSize     = 32
+	SignatureSize = 64
+	minChunkSize  = IdSize + OwnerSize + SignatureSize + boson.SpanSize
 )
 
 var (
@@ -45,7 +46,7 @@ func New(id ID, ch boson.Chunk) *SOC {
 // NewSigned creates a single-owner chunk based on already signed data.
 func NewSigned(id ID, ch boson.Chunk, owner, sig []byte) (*SOC, error) {
 	s := New(id, ch)
-	if len(owner) != crypto.AddressSize {
+	if len(owner) != OwnerSize {
 		return nil, errInvalidAddress
 	}
 	s.owner = owner
@@ -55,7 +56,7 @@ func NewSigned(id ID, ch boson.Chunk, owner, sig []byte) (*SOC, error) {
 
 // address returns the SOC chunk address.
 func (s *SOC) address() (boson.Address, error) {
-	if len(s.owner) != crypto.AddressSize {
+	if len(s.owner) != OwnerSize {
 		return boson.ZeroAddress, errInvalidAddress
 	}
 	return CreateAddress(s.id, s.owner)
@@ -79,6 +80,7 @@ func (s *SOC) Chunk() (boson.Chunk, error) {
 func (s *SOC) toBytes() []byte {
 	buf := bytes.NewBuffer(nil)
 	buf.Write(s.id)
+	buf.Write(s.owner)
 	buf.Write(s.signature)
 	buf.Write(s.chunk.Data())
 	return buf.Bytes()
@@ -87,19 +89,7 @@ func (s *SOC) toBytes() []byte {
 // Sign signs a SOC using the given signer.
 // It returns a signed SOC chunk ready for submission to the network.
 func (s *SOC) Sign(signer crypto.Signer) (boson.Chunk, error) {
-	// create owner
-	publicKey, err := signer.PublicKey()
-	if err != nil {
-		return nil, err
-	}
-	ownerAddressBytes, err := crypto.NewEthereumAddress(*publicKey)
-	if err != nil {
-		return nil, err
-	}
-	if len(ownerAddressBytes) != crypto.AddressSize {
-		return nil, errInvalidAddress
-	}
-	s.owner = ownerAddressBytes
+	s.owner = signer.Public().Encode()
 
 	// generate the data to sign
 	toSignBytes, err := hash(s.id, s.chunk.Address().Bytes())
@@ -131,6 +121,9 @@ func FromChunk(sch boson.Chunk) (*SOC, error) {
 	s.id = chunkData[cursor:IdSize]
 	cursor += IdSize
 
+	s.owner = chunkData[cursor : cursor+OwnerSize]
+	cursor += OwnerSize
+
 	s.signature = chunkData[cursor : cursor+SignatureSize]
 	cursor += SignatureSize
 
@@ -144,15 +137,14 @@ func FromChunk(sch boson.Chunk) (*SOC, error) {
 		return nil, err
 	}
 
-	// recover owner information
-	recoveredOwnerAddress, err := recoverAddress(s.signature, toSignBytes)
+	pub, err := crypto.NewPublicKey(s.owner)
 	if err != nil {
 		return nil, err
 	}
-	if len(recoveredOwnerAddress) != crypto.AddressSize {
-		return nil, errInvalidAddress
+	_, err = pub.Verify(toSignBytes, s.signature)
+	if err != nil {
+		return nil, err
 	}
-	s.owner = recoveredOwnerAddress
 	s.chunk = ch
 
 	return s, nil
@@ -168,7 +160,7 @@ func CreateAddress(id ID, owner []byte) (boson.Address, error) {
 	return boson.NewAddress(sum), nil
 }
 
-// hash hashes the given values in order.
+// hash the given values in order.
 func hash(values ...[]byte) ([]byte, error) {
 	h := boson.NewHasher()
 	for _, v := range values {
@@ -178,17 +170,4 @@ func hash(values ...[]byte) ([]byte, error) {
 		}
 	}
 	return h.Sum(nil), nil
-}
-
-// recoverAddress returns the ethereum address of the owner of a SOC.
-func recoverAddress(signature, digest []byte) ([]byte, error) {
-	recoveredPublicKey, err := crypto.Recover(signature, digest)
-	if err != nil {
-		return nil, err
-	}
-	recoveredEthereumAddress, err := crypto.NewEthereumAddress(*recoveredPublicKey)
-	if err != nil {
-		return nil, err
-	}
-	return recoveredEthereumAddress, nil
 }

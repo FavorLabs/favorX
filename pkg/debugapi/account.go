@@ -2,21 +2,20 @@ package debugapi
 
 import (
 	"bytes"
-	"encoding/hex"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"path/filepath"
 
-	"github.com/FavorLabs/favorX/pkg/crypto"
 	"github.com/FavorLabs/favorX/pkg/jsonhttp"
-	"github.com/FavorLabs/favorX/pkg/keystore/file"
+	"github.com/FavorLabs/favorX/pkg/keystore/subkey"
 	"github.com/gogf/gf/v2/encoding/gjson"
 )
 
 func (s *Service) importKeyHandler(w http.ResponseWriter, r *http.Request) {
 	path := filepath.Join(s.nodeOptions.DataDir, "keys")
-	f := file.New(path)
+	f := subkey.New(path)
 	req, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		jsonhttp.InternalServerError(w, err)
@@ -41,17 +40,7 @@ func (s *Service) importKeyHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	} else {
-		b, err := hex.DecodeString(pkData)
-		if err != nil {
-			jsonhttp.InternalServerError(w, err)
-			return
-		}
-		pk, err := crypto.DecodeSecp256k1PrivateKey(b)
-		if err != nil {
-			jsonhttp.InternalServerError(w, err)
-			return
-		}
-		err = f.ImportPrivateKey("boson", password, pk)
+		err = f.ImportPrivateKey("boson", password, pkData)
 		if err != nil {
 			jsonhttp.InternalServerError(w, err)
 			return
@@ -63,7 +52,7 @@ func (s *Service) importKeyHandler(w http.ResponseWriter, r *http.Request) {
 
 func (s *Service) exportKeyHandler(w http.ResponseWriter, r *http.Request) {
 	path := filepath.Join(s.nodeOptions.DataDir, "keys")
-	f := file.New(path)
+	f := subkey.New(path)
 	req, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		jsonhttp.InternalServerError(w, err)
@@ -77,7 +66,7 @@ func (s *Service) exportKeyHandler(w http.ResponseWriter, r *http.Request) {
 	password := j.Get("password").String()
 	tp := j.Get("type").String()
 	if tp == "private" {
-		privateKey, _, err := f.Key("boson", password)
+		kp, _, err := f.Key("boson", password)
 		if err != nil {
 			jsonhttp.InternalServerError(w, err)
 			return
@@ -85,8 +74,13 @@ func (s *Service) exportKeyHandler(w http.ResponseWriter, r *http.Request) {
 		type out struct {
 			PrivateKey string `json:"private_key"`
 		}
-		pk := crypto.EncodeSecp256k1PrivateKey(privateKey)
-		jsonhttp.OK(w, out{PrivateKey: hex.EncodeToString(pk)})
+		var data = func() string {
+			if kp.GetMnemonic() == "" {
+				return fmt.Sprintf("0x%x", kp.GetSeed())
+			}
+			return kp.GetMnemonic()
+		}
+		jsonhttp.OK(w, out{PrivateKey: data()})
 		return
 	}
 	b, err := f.ExportKey("boson", password)

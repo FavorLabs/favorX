@@ -2,7 +2,6 @@ package node
 
 import (
 	"context"
-	"crypto/ecdsa"
 	"fmt"
 	"io"
 	"log"
@@ -17,7 +16,6 @@ import (
 	"github.com/FavorLabs/favorX/pkg/addressbook"
 	"github.com/FavorLabs/favorX/pkg/api"
 	"github.com/FavorLabs/favorX/pkg/auth"
-	"github.com/FavorLabs/favorX/pkg/boson"
 	"github.com/FavorLabs/favorX/pkg/chain"
 	"github.com/FavorLabs/favorX/pkg/chunkinfo"
 	"github.com/FavorLabs/favorX/pkg/crypto"
@@ -46,9 +44,7 @@ import (
 	"github.com/FavorLabs/favorX/pkg/topology/lightnode"
 	"github.com/FavorLabs/favorX/pkg/tracing"
 	"github.com/FavorLabs/favorX/pkg/traversal"
-	"github.com/centrifuge/go-substrate-rpc-client/v4/signature"
 	"github.com/gogf/gf/v2/util/gconv"
-	crypto2 "github.com/libp2p/go-libp2p-core/crypto"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
@@ -114,8 +110,7 @@ type Options struct {
 	StorageFilesConfig     storagefiles.Config
 }
 
-func NewNode(nodeMode address.Model, addr string, bosonAddress boson.Address, publicKey ecdsa.PublicKey, signer crypto.Signer, keyPair signature.KeyringPair,
-	networkID uint64, logger logging.Logger, libp2pPrivateKey crypto2.PrivKey, o Options) (b *Favor, err error) {
+func NewNode(nodeMode address.Model, p2pAddr string, networkID uint64, logger logging.Logger, signer *crypto.SignerConfig, o Options) (b *Favor, err error) {
 	tracer, tracerCloser, err := tracing.NewTracer(&tracing.Options{
 		Enabled:     o.TracingEnabled,
 		Endpoint:    o.TracingEndpoint,
@@ -164,7 +159,7 @@ func NewNode(nodeMode address.Model, addr string, bosonAddress boson.Address, pu
 
 	if o.DebugAPIAddr != "" {
 		// set up basic debug api endpoints for debugging and /health endpoint
-		debugAPIService = debugapi.New(bosonAddress, publicKey, logger, tracer, o.CORSAllowedOrigins, o.Restricted, authenticator, debugapi.Options{
+		debugAPIService = debugapi.New(signer.Overlay, signer.Signer.Public(), logger, tracer, o.CORSAllowedOrigins, o.Restricted, authenticator, debugapi.Options{
 			DataDir:        o.DataDir,
 			NATAddr:        o.NATAddr,
 			NetworkID:      networkID,
@@ -212,16 +207,16 @@ func NewNode(nodeMode address.Model, addr string, bosonAddress boson.Address, pu
 	}
 	b.stateStoreCloser = stateStore
 
-	err = CheckOverlayWithStore(bosonAddress, stateStore)
+	err = CheckOverlayWithStore(signer.Overlay, stateStore)
 	if err != nil {
 		return nil, err
 	}
 
 	addressBook := addressbook.New(stateStore)
-	lightNodes := lightnode.NewContainer(bosonAddress)
-	bootNodes := bootnode.NewContainer(bosonAddress)
-	p2ps, err := libp2p.New(p2pCtx, signer, networkID, bosonAddress, addr, addressBook, stateStore, lightNodes, bootNodes, logger, tracer, libp2p.Options{
-		PrivateKey:     libp2pPrivateKey,
+	lightNodes := lightnode.NewContainer(signer.Overlay)
+	bootNodes := bootnode.NewContainer(signer.Overlay)
+	p2ps, err := libp2p.New(p2pCtx, signer.Signer, networkID, signer.Overlay, p2pAddr, addressBook, stateStore, lightNodes, bootNodes, logger, tracer, libp2p.Options{
+		PrivateKey:     signer.Libp2pPrivateKey,
 		NATAddr:        o.NATAddr,
 		EnableWS:       o.EnableWS,
 		EnableQUIC:     o.EnableQUIC,
@@ -236,7 +231,7 @@ func NewNode(nodeMode address.Model, addr string, bosonAddress boson.Address, pu
 	}
 
 	// TODO add KeyringPairAlice
-	client, err := chain.NewClient("ws://127.0.0.1:9944", keyPair)
+	client, err := chain.NewClient("ws://127.0.0.1:9944", signer.SubKey)
 	if err != nil {
 		return nil, err
 	}
@@ -248,7 +243,7 @@ func NewNode(nodeMode address.Model, addr string, bosonAddress boson.Address, pu
 		o.ChainEndpoint,
 		o.OracleContractAddress,
 		stateStore,
-		signer,
+		signer.Signer,
 		o.TrafficEnable,
 		o.TrafficContractAddr,
 		p2ps,
@@ -319,7 +314,7 @@ func NewNode(nodeMode address.Model, addr string, bosonAddress boson.Address, pu
 		return nil, fmt.Errorf("hive service: %w", err)
 	}
 
-	kad, err := kademlia.New(bosonAddress, addressBook, hiveObj, p2ps, pingPong, lightNodes, bootNodes, metricsDB, logger, subPub, kademlia.Options{
+	kad, err := kademlia.New(signer.Overlay, addressBook, hiveObj, p2ps, pingPong, lightNodes, bootNodes, metricsDB, logger, subPub, kademlia.Options{
 		Bootnodes:   bootnodes,
 		NodeMode:    nodeMode,
 		BinMaxPeers: o.KadBinMaxPeers,
@@ -329,7 +324,7 @@ func NewNode(nodeMode address.Model, addr string, bosonAddress boson.Address, pu
 	}
 	b.topologyCloser = kad
 	hiveObj.SetAddPeersHandler(kad.AddPeers)
-	hiveObj.SetConfig(hive2.Config{Kad: kad, Base: bosonAddress, AllowPrivateCIDRs: o.AllowPrivateCIDRs}) // hive2
+	hiveObj.SetConfig(hive2.Config{Kad: kad, Base: signer.Overlay, AllowPrivateCIDRs: o.AllowPrivateCIDRs}) // hive2
 
 	p2ps.SetPickyNotifier(kad)
 	addrs, err := p2ps.Addresses()
@@ -341,12 +336,12 @@ func NewNode(nodeMode address.Model, addr string, bosonAddress boson.Address, pu
 		logger.Debugf("p2p address: %s", addr)
 	}
 
-	route := routetab.New(bosonAddress, p2pCtx, p2ps, p2ps, addressBook, networkID, lightNodes, kad, stateStore, logger, routetab.Options{Alpha: o.RouteAlpha})
+	route := routetab.New(signer.Overlay, p2pCtx, p2ps, p2ps, addressBook, networkID, lightNodes, kad, stateStore, logger, routetab.Options{Alpha: o.RouteAlpha})
 	if err = p2ps.AddProtocol(route.Protocol()); err != nil {
 		return nil, fmt.Errorf("routetab service: %w", err)
 	}
 
-	p2ps.ApplyRoute(bosonAddress, route, nodeMode)
+	p2ps.ApplyRoute(signer.Overlay, route, nodeMode)
 
 	if o.StorageFilesConfig.CacheDir == "" {
 		o.StorageFilesConfig.CacheDir = filepath.Join(o.DataDir, "storagefilescache")
@@ -366,7 +361,7 @@ func NewNode(nodeMode address.Model, addr string, bosonAddress boson.Address, pu
 		Driver:   o.DBDriver,
 		FullNode: nodeMode.IsFull(),
 	}
-	storer, err := localstore.New(path, bosonAddress.Bytes(), stateStore, lo, logger)
+	storer, err := localstore.New(path, signer.Overlay.Bytes(), stateStore, lo, logger)
 	if err != nil {
 		return nil, fmt.Errorf("localstore: %w", err)
 	}
@@ -376,12 +371,12 @@ func NewNode(nodeMode address.Model, addr string, bosonAddress boson.Address, pu
 	}
 	b.localstoreCloser = storer
 
-	retrieve := retrieval.New(bosonAddress, p2ps, route, storer, nodeMode.IsFull(), logger, tracer, acc, subPub)
+	retrieve := retrieval.New(signer.Overlay, p2ps, route, storer, nodeMode.IsFull(), logger, tracer, acc, subPub)
 	if err = p2ps.AddProtocol(retrieve.Protocol()); err != nil {
 		return nil, fmt.Errorf("retrieval service: %w", err)
 	}
 
-	ns := netstore.New(storer, retrieve, logger, bosonAddress)
+	ns := netstore.New(storer, retrieve, logger, signer.Overlay)
 
 	pinningService := pinning.NewService(storer, stateStore, traversal.New(storer))
 
@@ -392,8 +387,8 @@ func NewNode(nodeMode address.Model, addr string, bosonAddress boson.Address, pu
 	)
 	b.resolverCloser = multiResolver
 
-	fileInfo := fileinfo.New(bosonAddress, storer, logger, multiResolver)
-	chunkInfo := chunkinfo.New(bosonAddress, p2ps, logger, storer, route, oracleChain, fileInfo, subPub)
+	fileInfo := fileinfo.New(signer.Overlay, storer, logger, multiResolver)
+	chunkInfo := chunkinfo.New(signer.Overlay, p2ps, logger, storer, route, oracleChain, fileInfo, subPub)
 
 	if err = p2ps.AddProtocol(chunkInfo.Protocol()); err != nil {
 		return nil, fmt.Errorf("chunkInfo service: %w", err)
@@ -401,7 +396,7 @@ func NewNode(nodeMode address.Model, addr string, bosonAddress boson.Address, pu
 	ns.SetChunkInfo(chunkInfo)
 	retrieve.Config(chunkInfo)
 
-	group := multicast.NewService(bosonAddress, nodeMode, p2ps, p2ps, kad, route, logger, subPub, multicast.Option{Dev: o.IsDev})
+	group := multicast.NewService(signer.Overlay, nodeMode, p2ps, p2ps, kad, route, logger, subPub, multicast.Option{Dev: o.IsDev})
 	group.Start()
 	b.groupCloser = group
 	err = p2ps.AddProtocol(group.Protocol())
@@ -436,7 +431,7 @@ func NewNode(nodeMode address.Model, addr string, bosonAddress boson.Address, pu
 	var apiService api.Service
 	if o.APIAddr != "" {
 		// API server
-		apiService = api.New(ns, multiResolver, bosonAddress, chunkInfo, fileInfo, traversal.New(ns), pinningService,
+		apiService = api.New(ns, multiResolver, signer.Overlay, chunkInfo, fileInfo, traversal.New(ns), pinningService,
 			authenticator, logger, kad, tracer, apiInterface, client, oracleChain, relay, group, route, notify,
 			api.Options{
 				CORSAllowedOrigins: o.CORSAllowedOrigins,
@@ -550,7 +545,7 @@ func NewNode(nodeMode address.Model, addr string, bosonAddress boson.Address, pu
 		b.storagefilesCloser = services
 		services.Start()
 	} else {
-		err = storagefiles.CheckAndUnRegisterMerchant(bosonAddress, client)
+		err = storagefiles.CheckAndUnRegisterMerchant(signer.Overlay, client)
 		if err != nil {
 			return nil, err
 		}

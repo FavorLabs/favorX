@@ -3,80 +3,81 @@ package crypto
 import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
-	"crypto/rand"
-	"encoding/binary"
 	"errors"
-	"fmt"
 
+	"github.com/ChainSafe/gossamer/lib/common"
+	"github.com/ChainSafe/gossamer/lib/crypto"
+	"github.com/ChainSafe/gossamer/lib/crypto/sr25519"
 	"github.com/FavorLabs/favorX/pkg/boson"
+	"github.com/FavorLabs/favorX/pkg/crypto/eip712"
 	"github.com/btcsuite/btcd/btcec"
 	"golang.org/x/crypto/sha3"
 )
 
-// RecoverFunc is a function to recover the public key from a signature
-type RecoverFunc func(signature, data []byte) (*ecdsa.PublicKey, error)
+type PublicKey crypto.PublicKey
+type PrivateKey crypto.PrivateKey
+type Keypair crypto.Keypair
 
-const (
-	AddressSize = 20
-)
-
-// NewOverlayAddress constructs an Address from ECDSA public key.
-func NewOverlayAddress(p ecdsa.PublicKey, networkID uint64) (boson.Address, error) {
-	if p.X == nil || p.Y == nil {
-		return boson.ZeroAddress, errors.New("invalid public key")
-	}
-	pubBytes := elliptic.Marshal(btcec.S256(), p.X, p.Y)
-	pubHash, err := LegacyKeccak256(pubBytes[1:])
-	if err != nil {
-		return boson.ZeroAddress, err
-	}
-	overlay := sha3.Sum256(pubHash)
+func NewOverlayAddress(pub []byte, networkID uint64) (boson.Address, error) {
+	overlay := sha3.Sum256(pub)
 	return boson.NewAddress(overlay[:]), nil
 }
 
-// NewOverlayFromEthereumAddress constructs a Address for an Ethereum address.
-func NewOverlayFromEthereumAddress(ethAddr []byte, networkID uint64) boson.Address {
-	netIDBytes := make([]byte, 8)
-	binary.LittleEndian.PutUint64(netIDBytes, networkID)
-	// h := sha3.Sum256(append(ethAddr, netIDBytes...))
-	h := append(ethAddr, netIDBytes...)
-	return boson.NewAddress(h[:])
+func NewPublicKey(in []byte) (crypto.PublicKey, error) {
+	return sr25519.NewPublicKey(in)
 }
 
-// GenerateSecp256k1Key generates an ECDSA private key using
-// secp256k1 elliptic curve.
-func GenerateSecp256k1Key() (*ecdsa.PrivateKey, error) {
-	return ecdsa.GenerateKey(btcec.S256(), rand.Reader)
+func HexToBytes(in string) ([]byte, error) {
+	return common.HexToBytes(in)
 }
 
-// EncodeSecp256k1PrivateKey encodes raw ECDSA private key.
-func EncodeSecp256k1PrivateKey(k *ecdsa.PrivateKey) []byte {
-	return (*btcec.PrivateKey)(k).Serialize()
+func BytesToHex(in []byte) string {
+	return common.BytesToHex(in)
 }
 
-// EncodeSecp256k1PublicKey encodes raw ECDSA public key in a 33-byte compressed format.
-func EncodeSecp256k1PublicKey(k *ecdsa.PublicKey) []byte {
-	return (*btcec.PublicKey)(k).SerializeCompressed()
+func NewBIP39Mnemonic() (string, error) {
+	return crypto.NewBIP39Mnemonic()
 }
 
-// DecodeSecp256k1PrivateKey decodes raw ECDSA private key.
-func DecodeSecp256k1PrivateKey(data []byte) (*ecdsa.PrivateKey, error) {
-	if l := len(data); l != btcec.PrivKeyBytesLen {
-		return nil, fmt.Errorf("secp256k1 data size %d expected %d", l, btcec.PrivKeyBytesLen)
+// RecoverEIP712 recovers the public key for eip712 signed data.
+// Deprecated
+func RecoverEIP712(signature []byte, data *eip712.TypedData) (*ecdsa.PublicKey, error) {
+	if len(signature) != 65 {
+		return nil, errors.New("invalid length")
 	}
-	privk, _ := btcec.PrivKeyFromBytes(btcec.S256(), data)
-	return (*ecdsa.PrivateKey)(privk), nil
+	// Convert to btcec input format with 'recovery id' v at the beginning.
+	btcsig := make([]byte, 65)
+	btcsig[0] = signature[64]
+	copy(btcsig[1:], signature)
+
+	rawData, err := eip712.EncodeForSigning(data)
+	if err != nil {
+		return nil, err
+	}
+
+	sighash, err := LegacyKeccak256(rawData)
+	if err != nil {
+		return nil, err
+	}
+
+	p, _, err := btcec.RecoverCompact(btcec.S256(), btcsig, sighash)
+	return (*ecdsa.PublicKey)(p), err
 }
 
-// Secp256k1PrivateKeyFromBytes returns an ECDSA private key based on
-// the byte slice.
-func Secp256k1PrivateKeyFromBytes(data []byte) *ecdsa.PrivateKey {
-	privk, _ := btcec.PrivKeyFromBytes(btcec.S256(), data)
-	return (*ecdsa.PrivateKey)(privk)
+// LegacyKeccak256
+// Deprecated
+func LegacyKeccak256(data []byte) ([]byte, error) {
+	var err error
+	hasher := sha3.NewLegacyKeccak256()
+	_, err = hasher.Write(data)
+	if err != nil {
+		return nil, err
+	}
+	return hasher.Sum(nil), err
 }
 
-// NewEthereumAddress returns a binary representation of ethereum blockchain address.
-// This function is based on github.com/ethereum/go-ethereum/crypto.PubkeyToAddress.
+// NewEthereumAddress
+// Deprecated
 func NewEthereumAddress(p ecdsa.PublicKey) ([]byte, error) {
 	if p.X == nil || p.Y == nil {
 		return nil, errors.New("invalid public key")
@@ -87,14 +88,4 @@ func NewEthereumAddress(p ecdsa.PublicKey) ([]byte, error) {
 		return nil, err
 	}
 	return pubHash[12:], err
-}
-
-func LegacyKeccak256(data []byte) ([]byte, error) {
-	var err error
-	hasher := sha3.NewLegacyKeccak256()
-	_, err = hasher.Write(data)
-	if err != nil {
-		return nil, err
-	}
-	return hasher.Sum(nil), err
 }

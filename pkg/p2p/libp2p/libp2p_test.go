@@ -3,13 +3,12 @@ package libp2p_test
 import (
 	"bytes"
 	"context"
-	"crypto/ecdsa"
-	"github.com/FavorLabs/favorX/pkg/address"
 	"io"
 	"sort"
 	"testing"
 	"time"
 
+	"github.com/FavorLabs/favorX/pkg/address"
 	"github.com/FavorLabs/favorX/pkg/addressbook"
 	"github.com/FavorLabs/favorX/pkg/boson"
 	"github.com/FavorLabs/favorX/pkg/crypto"
@@ -25,8 +24,7 @@ import (
 type libp2pServiceOpts struct {
 	Logger      logging.Logger
 	Addressbook addressbook.Interface
-	PrivateKey  *ecdsa.PrivateKey
-	MockPeerKey *ecdsa.PrivateKey
+	PrivateKey  crypto.Signer
 	libp2pOpts  libp2p.Options
 	lightNodes  *lightnode.Container
 	bootNodes   *bootnode.Container
@@ -37,12 +35,9 @@ type libp2pServiceOpts struct {
 func newService(t *testing.T, networkID uint64, o libp2pServiceOpts) (s *libp2p.Service, overlay boson.Address) {
 	t.Helper()
 
-	k, err := crypto.GenerateSecp256k1Key()
-	if err != nil {
-		t.Fatal(err)
-	}
+	k := crypto.NewDefaultSigner()
 
-	overlay, err = crypto.NewOverlayAddress(k.PublicKey, networkID)
+	overlay, err := crypto.NewOverlayAddress(k.Public().Encode(), networkID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -59,10 +54,7 @@ func newService(t *testing.T, networkID uint64, o libp2pServiceOpts) (s *libp2p.
 	}
 
 	if o.PrivateKey == nil {
-		libp2pKey, err := crypto.GenerateSecp256k1Key()
-		if err != nil {
-			t.Fatal(err)
-		}
+		libp2pKey := crypto.NewDefaultSigner()
 
 		o.PrivateKey = libp2pKey
 	}
@@ -80,7 +72,7 @@ func newService(t *testing.T, networkID uint64, o libp2pServiceOpts) (s *libp2p.
 	}
 	opts := o.libp2pOpts
 
-	s, err = libp2p.New(ctx, crypto.NewDefaultSigner(k), networkID, overlay, addr, o.Addressbook, statestore, o.lightNodes, o.bootNodes, o.Logger, nil, opts)
+	s, err = libp2p.New(ctx, k, networkID, overlay, addr, o.Addressbook, statestore, o.lightNodes, o.bootNodes, o.Logger, nil, opts)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -1,29 +1,28 @@
-
-
 syntax = "proto3";
 
-package handshakeFavorX;
+package handshake;
 
 option go_package = "pb";
 
 message Syn {
-    bytes ObservedUnderlay = 1;
+  bytes ObservedUnderlay = 1;
 }
 
 message Ack {
-    BzzAddress Address = 1;
-    uint64 NetworkID = 2;
-    bytes NodeMode = 3;
-    string WelcomeMessage  = 99;
+  Address Address = 1;
+  uint64 NetworkID = 2;
+  bytes NodeMode = 3;
+  string WelcomeMessage = 99;
 }
 
 message SynAck {
-    Syn Syn = 1;
-    Ack Ack = 2;
+  Syn Syn = 1;
+  Ack Ack = 2;
 }
 
-message BzzAddress {
-    bytes Underlay = 1;
-    bytes Signature = 2;
-    bytes Overlay = 3;
+message Address {
+  bytes Underlay = 1;
+  bytes PublicKey = 2;
+  bytes Signature = 3;
+  bytes Overlay = 4;
 }

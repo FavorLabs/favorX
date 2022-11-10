@@ -1,8 +1,10 @@
 package debugapi_test
 
 import (
-	"encoding/hex"
 	"errors"
+	"net/http"
+	"testing"
+
 	"github.com/FavorLabs/favorX/pkg/boson"
 	"github.com/FavorLabs/favorX/pkg/crypto"
 	"github.com/FavorLabs/favorX/pkg/debugapi"
@@ -10,15 +12,10 @@ import (
 	"github.com/FavorLabs/favorX/pkg/jsonhttp/jsonhttptest"
 	"github.com/FavorLabs/favorX/pkg/p2p/mock"
 	"github.com/multiformats/go-multiaddr"
-	"net/http"
-	"testing"
 )
 
 func TestAddresses(t *testing.T) {
-	privateKey, err := crypto.GenerateSecp256k1Key()
-	if err != nil {
-		t.Fatal(err)
-	}
+	privateKey := crypto.NewDefaultSigner()
 
 	overlay := boson.MustParseHexAddress("ca1e9f3938cc1425c6061b96ad9eb93e134dfe8734ad490164ef20af9d1cf59c")
 	addresses := []multiaddr.Multiaddr{
@@ -28,7 +25,7 @@ func TestAddresses(t *testing.T) {
 	}
 
 	testServer := newTestServer(t, testServerOptions{
-		PublicKey: privateKey.PublicKey,
+		PublicKey: privateKey.Public(),
 		Overlay:   overlay,
 		P2P: mock.New(mock.WithAddressesFunc(func() ([]multiaddr.Multiaddr, error) {
 			return addresses, nil
@@ -43,7 +40,7 @@ func TestAddresses(t *testing.T) {
 				NATRoute:  []string{"1.1.1.1"},
 				PublicIP:  *debugapi.GetPublicIp(logger),
 				NetworkID: 0,
-				PublicKey: hex.EncodeToString(crypto.EncodeSecp256k1PublicKey(&privateKey.PublicKey)),
+				PublicKey: privateKey.Public().Hex(),
 			}),
 		)
 	})

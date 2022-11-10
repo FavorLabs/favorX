@@ -651,7 +651,7 @@ func (s *Service) FindUnderlay(ctx context.Context, target boson.Address) (addr 
 		return nil, err
 	}
 
-	addr, err = address.ParseAddress(resp.Underlay, resp.Dest, resp.Signature, s.networkID)
+	addr, err = address.ParseAddress(resp.Underlay, resp.PublicKey, resp.Dest, resp.Signature, s.networkID)
 	if err != nil {
 		s.logger.Errorf("find underlay dest %s parse err %s", target.String(), err.Error())
 		return nil, err
@@ -686,6 +686,7 @@ func (s *Service) onFindUnderlay(ctx context.Context, p p2p.Peer, stream p2p.Str
 			Dest:      req.Dest,
 			Underlay:  addr.Underlay.Bytes(),
 			Signature: addr.Signature,
+			PublicKey: addr.PublicKey,
 		})
 		if err != nil {
 			return err
@@ -878,7 +879,7 @@ func (s *Service) convUnderlayList(uType int32, target, last boson.Address, old 
 
 func (s *Service) saveUnderlay(uList []*pb.UnderlayResp) {
 	for _, v := range uList {
-		addr, err := address.ParseAddress(v.Underlay, v.Dest, v.Signature, s.networkID)
+		addr, err := address.ParseAddress(v.Underlay, v.PublicKey, v.Dest, v.Signature, s.networkID)
 		if err != nil {
 			s.logger.Errorf("route: parse address %s", err.Error())
 		} else {
