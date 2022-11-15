@@ -5,11 +5,12 @@ import (
 	"errors"
 	"fmt"
 	"path"
+	"time"
 
-	"github.com/FavorLabs/favorX/pkg/boson"
 	"github.com/FavorLabs/favorX/pkg/chain"
 	"github.com/FavorLabs/favorX/pkg/chain/rpc/base"
 	"github.com/FavorLabs/favorX/pkg/chunkinfo"
+	"github.com/FavorLabs/favorX/pkg/crypto"
 	"github.com/FavorLabs/favorX/pkg/fileinfo"
 	"github.com/FavorLabs/favorX/pkg/logging"
 	"github.com/FavorLabs/favorX/pkg/settlement/chain/oracle"
@@ -20,19 +21,21 @@ type Services struct {
 	panel *Panel
 }
 
-func CheckAndUnRegisterMerchant(my boson.Address, subClient *chain.Client) error {
-	info, err := subClient.Storage.GetMerchantInfo(my.Bytes())
+func CheckAndUnRegisterMerchant(signer crypto.Signer, subClient *chain.Client) error {
+	info, err := subClient.Storage.GetMerchantInfo(signer.Public().Encode())
 	if err != nil && !errors.Is(err, base.KeyEmptyError) {
-		return err
+		return fmt.Errorf("merchant info check err %s", err)
 	}
 	if info != nil {
 		err = subClient.Storage.MerchantUnregisterWatch(context.Background())
-		return fmt.Errorf("merchant unregister err %s", err)
+		if err != nil {
+			return fmt.Errorf("merchant unregister err %s", err)
+		}
 	}
 	return nil
 }
 
-func NewServices(cfg Config, logger logging.Logger, subPub subscribe.SubPub, subClient *chain.Client,
+func NewServices(cfg Config, signer crypto.Signer, logger logging.Logger, subPub subscribe.SubPub, subClient *chain.Client,
 	chunkInfo chunkinfo.Interface, fileInfo fileinfo.Interface, oracle oracle.Resolver) (*Services, error) {
 
 	if cfg.CacheDir == "" {
@@ -54,16 +57,26 @@ func NewServices(cfg Config, logger logging.Logger, subPub subscribe.SubPub, sub
 		return nil, errors.New("the available storage space is less than 10GB")
 	}
 
-	info, err := subClient.Storage.GetMerchantInfo(cfg.Overlay.Bytes())
-	if err != nil && !errors.Is(err, base.KeyEmptyError) {
-		return nil, err
-	}
-	if info == nil {
-		err = subClient.Storage.MerchantRegisterWatch(context.Background(), freeDisk)
-		if err != nil {
-			return nil, fmt.Errorf("merchant register err %s", err)
+	go func() {
+		for {
+			info, e := subClient.Storage.GetMerchantInfo(signer.Public().Encode())
+			if e != nil && !errors.Is(e, base.KeyEmptyError) {
+				logger.Errorf("merchant info check err %s", e)
+				<-time.After(time.Second * 5)
+				continue
+			}
+			if info == nil || uint64(info.DiskTotal) != cfg.Capacity {
+				e = subClient.Storage.MerchantRegisterWatch(context.Background(), cfg.Capacity)
+				if e != nil {
+					logger.Errorf("merchant register err %s", e)
+					<-time.After(time.Second * 5)
+					continue
+				}
+				logger.Infof("merchant register successful")
+			}
+			break
 		}
-	}
+	}()
 
 	p, err := NewPanel(context.Background(), cfg, dm, logger, subPub, subClient, chunkInfo, fileInfo, oracle)
 	if err != nil {

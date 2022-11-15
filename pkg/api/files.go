@@ -19,6 +19,7 @@ import (
 
 	"github.com/FavorLabs/favorX/pkg/address"
 	"github.com/FavorLabs/favorX/pkg/boson"
+	"github.com/FavorLabs/favorX/pkg/crypto"
 	"github.com/FavorLabs/favorX/pkg/file/joiner"
 	"github.com/FavorLabs/favorX/pkg/file/loadsave"
 	"github.com/FavorLabs/favorX/pkg/fileinfo"
@@ -640,38 +641,38 @@ func (s *server) fileRegister(w http.ResponseWriter, r *http.Request) {
 	nameOrHex := mux.Vars(r)["address"]
 	addr, err := s.resolveNameOrAddress(nameOrHex)
 	defer s.tranProcess.Delete(apiName + addr.String())
-	var gasPrice, minGasPrice *big.Int
-	price := r.URL.Query().Get("gasPrice")
-	if price == "" {
-		gasPrice = big.NewInt(0)
-	} else {
-		gas, err := strconv.ParseInt(price, 10, 64)
-		if err != nil {
-			logger.Errorf("gasPrice:%v to int64 error", price)
-			jsonhttp.InternalServerError(w, fmt.Sprintf("incoming parameters gasPrice error"))
-			return
-		}
-		gasPrice = big.NewInt(gas)
-	}
-
-	minPrice := r.URL.Query().Get("minGasPrice")
-	if minPrice == "" {
-		minGasPrice = big.NewInt(0)
-	} else {
-		gas, err := strconv.ParseInt(minPrice, 10, 64)
-		if err != nil {
-			logger.Errorf("minGasPrice:%v to int64 error", price)
-			jsonhttp.InternalServerError(w, fmt.Sprintf("incoming parameters minGasPrice error"))
-			return
-		}
-		minGasPrice = big.NewInt(gas)
-	}
-	if err != nil {
-		logger.Debugf("file fileRegister: parse address %s: %v", nameOrHex, err)
-		logger.Errorf("file fileRegister: parse address")
-		jsonhttp.NotFound(w, nil)
-		return
-	}
+	// var gasPrice, minGasPrice *big.Int
+	// price := r.URL.Query().Get("gasPrice")
+	// if price == "" {
+	// 	gasPrice = big.NewInt(0)
+	// } else {
+	// 	gas, err := strconv.ParseInt(price, 10, 64)
+	// 	if err != nil {
+	// 		logger.Errorf("gasPrice:%v to int64 error", price)
+	// 		jsonhttp.InternalServerError(w, fmt.Sprintf("incoming parameters gasPrice error"))
+	// 		return
+	// 	}
+	// 	gasPrice = big.NewInt(gas)
+	// }
+	//
+	// minPrice := r.URL.Query().Get("minGasPrice")
+	// if minPrice == "" {
+	// 	minGasPrice = big.NewInt(0)
+	// } else {
+	// 	gas, err := strconv.ParseInt(minPrice, 10, 64)
+	// 	if err != nil {
+	// 		logger.Errorf("minGasPrice:%v to int64 error", price)
+	// 		jsonhttp.InternalServerError(w, fmt.Sprintf("incoming parameters minGasPrice error"))
+	// 		return
+	// 	}
+	// 	minGasPrice = big.NewInt(gas)
+	// }
+	// if err != nil {
+	// 	logger.Debugf("file fileRegister: parse address %s: %v", nameOrHex, err)
+	// 	logger.Errorf("file fileRegister: parse address")
+	// 	jsonhttp.NotFound(w, nil)
+	// 	return
+	// }
 	if _, ok := s.tranProcess.Load(apiName + addr.String()); ok {
 		logger.Errorf("parse address %s under processing", nameOrHex)
 		jsonhttp.InternalServerError(w, fmt.Sprintf("parse address %s under processing", nameOrHex))
@@ -686,12 +687,28 @@ func (s *server) fileRegister(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	err = s.oracleChain.RegisterCidAndNode(r.Context(), addr, s.overlay, gasPrice, minGasPrice)
+	info, err := s.fileInfo.GetFileView(addr)
 	if err != nil {
-		logger.Errorf("fileRegister failed: %v ", err)
-		jsonhttp.InternalServerError(w, fmt.Sprintf("fileRegister failed: %v ", err))
+		jsonhttp.InternalServerError(w, err)
 		return
 	}
+
+	users, err := s.commonChain.Storage.PlaceOrderWatch(r.Context(), addr.Bytes(), uint64(info.Size), 2, 14400)
+	if err != nil {
+		jsonhttp.InternalServerError(w, err)
+		return
+	}
+	for _, v := range users {
+		target, _ := crypto.NewOverlayAddress(v.ToBytes(), s.NetWorkID)
+		go s.orderNotify.Notify(context.Background(), target, addr)
+	}
+
+	// err = s.oracleChain.RegisterCidAndNode(r.Context(), addr, s.overlay, gasPrice, minGasPrice)
+	// if err != nil {
+	// 	logger.Errorf("fileRegister failed: %v ", err)
+	// 	jsonhttp.InternalServerError(w, fmt.Sprintf("fileRegister failed: %v ", err))
+	// 	return
+	// }
 
 	err = s.fileInfo.RegisterFile(addr, true)
 	if err != nil {
@@ -753,16 +770,13 @@ func (s *server) fileRegisterRemove(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 	}
-	if !isDel {
-		jsonhttp.Forbidden(w, fmt.Sprintf("address:%v Already Remove", addr.String()))
-		return
-	}
-
-	err = s.oracleChain.RemoveCidAndNode(r.Context(), addr, s.overlay, gasPrice, minGasPrice)
-	if err != nil {
-		s.logger.Error("fileRegisterRemove failed: %v ", err)
-		jsonhttp.InternalServerError(w, fmt.Sprintf("fileRegisterRemove failed: %v ", err))
-		return
+	if isDel {
+		err = s.oracleChain.RemoveCidAndNode(r.Context(), addr, s.overlay, gasPrice, minGasPrice)
+		if err != nil {
+			s.logger.Error("fileRegisterRemove failed: %v ", err)
+			jsonhttp.InternalServerError(w, fmt.Sprintf("fileRegisterRemove failed: %v ", err))
+			return
+		}
 	}
 
 	err = s.fileInfo.RegisterFile(addr, false)

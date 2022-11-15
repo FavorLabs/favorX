@@ -5,9 +5,11 @@ import (
 	"fmt"
 
 	"github.com/FavorLabs/favorX/pkg/boson"
+	"github.com/FavorLabs/favorX/pkg/crypto"
 	"github.com/FavorLabs/favorX/pkg/logging"
 	"github.com/FavorLabs/favorX/pkg/p2p"
 	"github.com/FavorLabs/favorX/pkg/p2p/protobuf"
+	"github.com/FavorLabs/favorX/pkg/routetab"
 	"github.com/FavorLabs/favorX/pkg/storagefiles/pb"
 	"github.com/FavorLabs/favorX/pkg/subscribe"
 )
@@ -39,21 +41,31 @@ type StreamService struct {
 	streamer p2p.Streamer
 	logger   logging.Logger
 	sub      subscribe.SubPub
+	route    routetab.RouteTab
+	signer   crypto.Signer
 }
 
-func NewNotifyService(streamer p2p.Streamer, logging logging.Logger, sub subscribe.SubPub) *StreamService {
+func NewNotifyService(streamer p2p.Streamer, signer crypto.Signer, logging logging.Logger, sub subscribe.SubPub, route routetab.RouteTab) *StreamService {
 	return &StreamService{
 		streamer: streamer,
 		logger:   logging,
 		sub:      sub,
+		route:    route,
+		signer:   signer,
 	}
 }
 
 func (s *StreamService) Notify(ctx context.Context, target boson.Address, cid boson.Address) error {
 	stream, err := s.streamer.NewStream(ctx, target, nil, protocolName, protocolVersion, streamNotify)
 	if err != nil {
-		s.logger.Debugf("placeorder: Notify NewStream %s, err=%s", target.String(), err)
-		return err
+		err = s.route.Connect(ctx, target)
+		if err == nil {
+			stream, err = s.streamer.NewStream(ctx, target, nil, protocolName, protocolVersion, streamNotify)
+		}
+		if err != nil {
+			s.logger.Debugf("placeorder: Notify NewStream %s, err=%s", target.String(), err)
+			return err
+		}
 	}
 
 	defer func() {
@@ -66,7 +78,8 @@ func (s *StreamService) Notify(ctx context.Context, target boson.Address, cid bo
 
 	w := protobuf.NewWriter(stream)
 	err = w.WriteMsgWithContext(ctx, &pb.Request{
-		Cid: cid.Bytes(),
+		Cid:   cid.Bytes(),
+		Buyer: s.signer.Public().Encode(),
 	})
 	return err
 }
@@ -90,6 +103,7 @@ func (s *StreamService) onNotify(ctx context.Context, peer p2p.Peer, stream p2p.
 	data := UploadRequest{
 		Source: peer.Address,
 		Hash:   cid,
+		Buyer:  boson.NewAddress(req.Buyer),
 	}
 	return s.sub.Publish("storagefiles", "order", "notify", data)
 }

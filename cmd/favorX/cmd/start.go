@@ -312,7 +312,7 @@ func (c *command) configureSigner(cmd *cobra.Command, logger logging.Logger) (co
 		logger.Debugf("using existing libp2p key")
 	}
 
-	keyPair, err := signature.KeyringPairFromSecret(fmt.Sprintf("0x%x", kp.GetSeed()), 42)
+	keyPair, err := signature.KeyringPairFromSecret(fmt.Sprintf("0x%x", kp.GetSecretKey64()), 42)
 	if err != nil {
 		return nil, fmt.Errorf("subkey keyPair: %w", err)
 	}

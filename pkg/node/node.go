@@ -424,7 +424,7 @@ func NewNode(nodeMode address.Model, p2pAddr string, networkID uint64, logger lo
 		return nil, err
 	}
 
-	notify := storagefiles.NewNotifyService(p2ps, logger, subPub)
+	notify := storagefiles.NewNotifyService(p2ps, signer.Signer, logger, subPub, route)
 	err = p2ps.AddProtocol(notify.Protocol())
 	if err != nil {
 		return nil, err
@@ -443,6 +443,7 @@ func NewNode(nodeMode address.Model, p2pAddr string, networkID uint64, logger lo
 				Restricted:         o.Restricted,
 				DebugApiAddr:       o.DebugAPIAddr,
 				RPCWSAddr:          o.WSAddr,
+				NetWorkID:          networkID,
 			})
 		apiListener, err := net.Listen("tcp", o.APIAddr)
 		if err != nil {
@@ -540,17 +541,25 @@ func NewNode(nodeMode address.Model, p2pAddr string, networkID uint64, logger lo
 	}
 
 	if o.StorageFilesEnable {
-		services, err := storagefiles.NewServices(o.StorageFilesConfig, logger, subPub, client, chunkInfo, fileInfo, oracleChain)
+		services, err := storagefiles.NewServices(o.StorageFilesConfig, signer.Signer, logger, subPub, client, chunkInfo, fileInfo, oracleChain)
 		if err != nil {
 			return nil, err
 		}
 		b.storagefilesCloser = services
 		services.Start()
 	} else {
-		err = storagefiles.CheckAndUnRegisterMerchant(signer.Overlay, client)
-		if err != nil {
-			return nil, err
-		}
+		go func() {
+			for {
+				err = storagefiles.CheckAndUnRegisterMerchant(signer.Signer, client)
+				if err != nil {
+					logger.Error(err)
+					<-time.After(time.Second * 5)
+					continue
+				}
+				logger.Infof("merchant unregister successful")
+				break
+			}
+		}()
 	}
 
 	return b, nil

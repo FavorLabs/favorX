@@ -67,7 +67,10 @@ func (s *Service) Key(name, password string) (keypair crypto.Signer, created boo
 
 	keypair, err = decryptKey(data, password)
 	if err != nil {
-		return nil, false, err
+		keypair, err = decryptKeyPair(data, password)
+		if err != nil {
+			return nil, false, err
+		}
 	}
 	return keypair, false, nil
 }
@@ -77,10 +80,13 @@ func (s *Service) ExportKey(name, password string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	return encryptKey(pk, password)
+	return encryptKeyPair(pk, password)
 }
 
-func (s *Service) ImportKey(name, password string, keyJson []byte) (err error) {
+func (s *Service) ImportKey(name, password, passwordNow string, keyJson []byte) (err error) {
+	if passwordNow == "" {
+		passwordNow = password
+	}
 	_, err = s.read(name, password)
 	if err != nil {
 		return err
@@ -95,11 +101,11 @@ func (s *Service) ImportKey(name, password string, keyJson []byte) (err error) {
 		}
 	}()
 
-	pk, err := decryptKey(keyJson, password)
+	pk, err := decryptKeyPair(keyJson, passwordNow)
 	if err != nil {
 		return err
 	}
-	d, err := encryptKey(pk, password)
+	d, err := encryptKeyPair(pk, passwordNow)
 	if err != nil {
 		return err
 	}
@@ -107,7 +113,10 @@ func (s *Service) ImportKey(name, password string, keyJson []byte) (err error) {
 	return s.write(name, d)
 }
 
-func (s *Service) ImportPrivateKey(name, password string, mnemonicOrPrivateData string) (err error) {
+func (s *Service) ImportPrivateKey(name, password, passwordNow string, mnemonicOrPrivateData string) (err error) {
+	if passwordNow == "" {
+		passwordNow = password
+	}
 	_, err = s.read(name, password)
 	if err != nil {
 		return err
@@ -124,7 +133,7 @@ func (s *Service) ImportPrivateKey(name, password string, mnemonicOrPrivateData 
 		return err
 	}
 
-	d, err := encryptKey(keypair, password)
+	d, err := encryptKey(keypair, passwordNow)
 	if err != nil {
 		return err
 	}
@@ -152,7 +161,11 @@ func (s *Service) read(name, password string) (kp crypto.Signer, err error) {
 	if err != nil {
 		return nil, fmt.Errorf("read private key failed")
 	}
-	return decryptKey(data, password)
+	kp, err = decryptKey(data, password)
+	if err != nil {
+		return decryptKeyPair(data, password)
+	}
+	return
 }
 
 func (s *Service) write(name string, data []byte) (err error) {

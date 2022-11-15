@@ -27,6 +27,19 @@ func NewPublicKey(in []byte) (crypto.PublicKey, error) {
 	return sr25519.NewPublicKey(in)
 }
 
+func NewPublicKeyFromPubHex(h string) (crypto.PublicKey, error) {
+	in, err := common.HexToBytes(h)
+	if err != nil {
+		return nil, err
+	}
+	return sr25519.NewPublicKey(in)
+}
+
+func NewPublicKeyFromSs58(b58 string) (crypto.PublicKey, error) {
+	in := crypto.PublicAddressToByteArray(common.Address(b58))
+	return sr25519.NewPublicKey(in)
+}
+
 func HexToBytes(in string) ([]byte, error) {
 	return common.HexToBytes(in)
 }

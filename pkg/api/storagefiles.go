@@ -1,11 +1,13 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"io"
 	"net/http"
 
 	"github.com/FavorLabs/favorX/pkg/boson"
+	"github.com/FavorLabs/favorX/pkg/crypto"
 	"github.com/FavorLabs/favorX/pkg/jsonhttp"
 )
 
@@ -45,9 +47,9 @@ func (s *server) placeOrder(w http.ResponseWriter, r *http.Request) {
 	}
 	var res []boson.Address
 	for _, v := range users {
-		target := boson.NewAddress(v.ToBytes())
+		target, _ := crypto.NewOverlayAddress(v.ToBytes(), s.NetWorkID)
 		res = append(res, target)
-		_ = s.orderNotify.Notify(r.Context(), target, req.Cid)
+		go s.orderNotify.Notify(context.Background(), target, req.Cid)
 	}
 	jsonhttp.OK(w, res)
 }

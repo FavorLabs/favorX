@@ -46,6 +46,7 @@ require (
 	github.com/spf13/viper v1.12.0
 	github.com/stretchr/testify v1.8.1
 	github.com/syndtr/goleveldb v1.0.1-0.20220614013038-64ee5596c38a
+	github.com/twystd/tweetnacl-go v0.0.0-20210413205227-681aa97ec383
 	github.com/uber/jaeger-client-go v2.30.0+incompatible
 	github.com/vedhavyas/go-subkey v1.0.3
 	github.com/wealdtech/go-ens/v3 v3.5.1
@@ -65,6 +66,8 @@ require (
 
 require (
 	github.com/BurntSushi/toml v0.4.1 // indirect
+	github.com/ChainSafe/chaindb v0.1.5-0.20220708005902-df45dbc8e840 // indirect
+	github.com/ChainSafe/log15 v1.0.0 // indirect
 	github.com/HdrHistogram/hdrhistogram-go v1.1.2 // indirect
 	github.com/Knetic/govaluate v3.0.1-0.20171022003610-9aa49832a739+incompatible // indirect
 	github.com/OneOfOne/xxhash v1.2.8 // indirect
@@ -73,6 +76,7 @@ require (
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/btcsuite/btcd/btcec/v2 v2.2.0 // indirect
 	github.com/btcsuite/btcutil v1.0.3-0.20201208143702-a53e38424cce // indirect
+	github.com/cespare/xxhash v1.1.0 // indirect
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect
 	github.com/cheekybits/genny v1.0.0 // indirect
 	github.com/clbanning/mxj/v2 v2.5.5 // indirect
@@ -82,8 +86,12 @@ require (
 	github.com/davidlazar/go-crypto v0.0.0-20200604182044-b73af7476f6c // indirect
 	github.com/decred/base58 v1.0.4 // indirect
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.0.1 // indirect
+	github.com/dgraph-io/badger/v2 v2.2007.4 // indirect
+	github.com/dgraph-io/ristretto v0.0.3-0.20200630154024-f66de99634de // indirect
+	github.com/dgryski/go-farm v0.0.0-20190423205320-6a90982ecee2 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/docker/go-units v0.4.0 // indirect
+	github.com/dustin/go-humanize v1.0.0 // indirect
 	github.com/elastic/gosigar v0.14.2 // indirect
 	github.com/fatih/color v1.13.0 // indirect
 	github.com/flynn/noise v1.0.0 // indirect
