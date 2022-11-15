@@ -79,7 +79,7 @@ func Test_CheckOrder(t *testing.T) {
 	assert.NoError(t, err)
 	mch, err := crypto.NewPublicKeyFromSs58("5EAPiyvna7EeeFXPEjvcHyKtqb7esErxCypRkcWTraWvm7ho")
 	assert.NoError(t, err)
-	fileHash := boson.MustParseHexAddress("3db47e7511eb12b3932a18e41fd4f8b7bd2cf2287c26ce328cd8cd1305f98117")
+	fileHash := boson.MustParseHexAddress("2b08759c571c60e372070b2651e03ae11937a2edce2cecdbb3afbf3633953f88")
 	err = cli.Storage.CheckOrder(buyer.Encode(), fileHash.Bytes(), mch.Encode())
 	assert.NoError(t, err)
 }

@@ -200,7 +200,7 @@ func (p *Panel) subOrderMessage(ch chan error) {
 			}
 			err := p.manager.subClient.Storage.CheckOrder(reqInfo.Buyer.Bytes(), reqInfo.Hash.Bytes(), p.manager.subClient.Default.Signer.PublicKey)
 			if err != nil {
-				p.logger.Infof("worker %d received, check chain state err: %s", wk.id, err)
+				p.logger.Infof("order fileHash %s request from %s, check chain state err: %s", reqInfo.Hash, reqInfo.Source, err)
 				break
 			}
 			task := new(Task).SetRequest(reqInfo).SetOption(Option{
