@@ -12,7 +12,7 @@ import (
 	"github.com/FavorLabs/favorX/pkg/p2p/protobuf"
 	"github.com/FavorLabs/favorX/pkg/settlement/traffic/cheque"
 	"github.com/FavorLabs/favorX/pkg/settlement/traffic/trafficprotocol/pb"
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/centrifuge/go-substrate-rpc-client/v4/types"
 )
 
 const (
@@ -30,7 +30,7 @@ type Interface interface {
 type Traffic interface {
 	ReceiveCheque(ctx context.Context, peer boson.Address, cheque *cheque.SignedCheque) error
 
-	Handshake(peer boson.Address, beneficiary common.Address, cheque cheque.SignedCheque) error
+	Handshake(peer boson.Address, beneficiary types.AccountID, cheque cheque.SignedCheque) error
 
 	LastReceivedCheque(peer boson.Address) (*cheque.SignedCheque, error)
 
@@ -40,11 +40,11 @@ type Traffic interface {
 type Service struct {
 	streamer p2p.Streamer
 	logging  logging.Logger
-	address  common.Address
+	address  types.AccountID
 	traffic  Traffic
 }
 
-func New(streamer p2p.Streamer, logging logging.Logger, address common.Address) *Service {
+func New(streamer p2p.Streamer, logging logging.Logger, address types.AccountID) *Service {
 	return &Service{streamer: streamer, logging: logging, address: address}
 }
 
@@ -89,7 +89,13 @@ func (s *Service) initHandler(ctx context.Context, p p2p.Peer, stream p2p.Stream
 	if err != nil {
 		return err
 	}
-	err = s.traffic.Handshake(p.Address, common.BytesToAddress(req.Address), c)
+
+	accountId, err := types.NewAccountID(req.Address)
+	if err != nil {
+		return err
+	}
+
+	err = s.traffic.Handshake(p.Address, *accountId, c)
 	if err != nil {
 		s.logging.Error(err)
 	}
@@ -104,7 +110,7 @@ func (s *Service) initHandler(ctx context.Context, p p2p.Peer, stream p2p.Stream
 	}
 
 	err = w.WriteMsgWithContext(ctx, &pb.EmitCheque{
-		Address:      s.address.Bytes(),
+		Address:      s.address.ToBytes(),
 		SignedCheque: signedCheque,
 	})
 	if err != nil {
@@ -140,7 +146,7 @@ func (s *Service) init(ctx context.Context, p p2p.Peer) error {
 	}
 
 	err = w.WriteMsgWithContext(ctx, &pb.EmitCheque{
-		Address:      s.address.Bytes(),
+		Address:      s.address.ToBytes(),
 		SignedCheque: signedCheque,
 	})
 	if err != nil {
@@ -157,8 +163,11 @@ func (s *Service) init(ctx context.Context, p p2p.Peer) error {
 	if err != nil {
 		return err
 	}
-
-	return s.traffic.Handshake(p.Address, common.BytesToAddress(req.Address), c)
+	accountId, err := types.NewAccountID(req.Address)
+	if err != nil {
+		return err
+	}
+	return s.traffic.Handshake(p.Address, *accountId, c)
 }
 
 func (s *Service) handler(ctx context.Context, p p2p.Peer, stream p2p.Stream) (err error) {

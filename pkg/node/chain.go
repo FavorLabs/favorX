@@ -5,23 +5,19 @@ import (
 	"fmt"
 
 	subChain "github.com/FavorLabs/favorX/pkg/chain"
+	chainTraffic "github.com/FavorLabs/favorX/pkg/chain/rpc/traffic"
 	"github.com/FavorLabs/favorX/pkg/crypto"
 	"github.com/FavorLabs/favorX/pkg/logging"
 	"github.com/FavorLabs/favorX/pkg/p2p/libp2p"
 	"github.com/FavorLabs/favorX/pkg/settlement"
-	"github.com/FavorLabs/favorX/pkg/settlement/chain"
-	chainCommon "github.com/FavorLabs/favorX/pkg/settlement/chain/common"
 	"github.com/FavorLabs/favorX/pkg/settlement/chain/oracle"
-	chainTraffic "github.com/FavorLabs/favorX/pkg/settlement/chain/traffic"
-	"github.com/FavorLabs/favorX/pkg/settlement/chain/transaction"
 	"github.com/FavorLabs/favorX/pkg/settlement/pseudosettle"
 	"github.com/FavorLabs/favorX/pkg/settlement/traffic"
 	chequePkg "github.com/FavorLabs/favorX/pkg/settlement/traffic/cheque"
 	"github.com/FavorLabs/favorX/pkg/settlement/traffic/trafficprotocol"
 	"github.com/FavorLabs/favorX/pkg/storage"
 	"github.com/FavorLabs/favorX/pkg/subscribe"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/centrifuge/go-substrate-rpc-client/v4/types"
 )
 
 // InitChain will initialize the Ethereum backend at the given endpoint and
@@ -33,80 +29,51 @@ func InitChain(
 	endpoint string,
 	oracleContractAddress string,
 	stateStore storage.StateStorer,
+	localStore storage.Storer,
 	signer crypto.Signer,
 	trafficEnable bool,
 	trafficContractAddr string,
 	p2pService *libp2p.Service,
 	subPub subscribe.SubPub,
-) (oracle.Resolver, settlement.Interface, traffic.ApiInterface, chain.Common, error) {
-	backend, err := ethclient.Dial(endpoint)
-	if err != nil {
-		return nil, nil, nil, nil, fmt.Errorf("dial eth client: %w", err)
-	}
+) (oracle.Resolver, settlement.Interface, traffic.ApiInterface, error) {
 
-	chainID, err := backend.ChainID(ctx)
+	address := signer.Public().Encode()
+	accountId, _ := types.NewAccountID(address)
+	oracleServer, err := oracle.NewServer(logger, subClient, subPub)
 	if err != nil {
-		logger.Infof("could not connect to backend at %v. In a swap-enabled network a working blockchain node (for goerli network in production) is required. Check your node or specify another node using --chain-endpoint.", endpoint)
-		return nil, nil, nil, nil, fmt.Errorf("get chain id: %w", err)
+		return nil, nil, nil, fmt.Errorf("new oracle service: %w", err)
 	}
-	cc, err := chainCommon.New(logger, signer, chainID, endpoint)
-	if err != nil {
-		return nil, nil, nil, nil, fmt.Errorf("new common serveice: %v", err)
-	}
-	if oracleContractAddress == "" {
-		return nil, nil, nil, nil, fmt.Errorf("oracle contract address is empty")
-	}
-	oracleServer, err := oracle.NewServer(logger, subClient, cc, subPub)
-	if err != nil {
-		return nil, nil, nil, nil, fmt.Errorf("new oracle service: %w", err)
-	}
-	transactionService, err := transaction.NewService(logger, backend, signer, stateStore, cc, chainID)
-	if err != nil {
-		return nil, nil, nil, nil, fmt.Errorf("new transaction service: %w", err)
-	}
-	address, err := signer.EthereumAddress()
-	logger.Infof("address  %s", address.String())
-	if err != nil {
-		return nil, nil, nil, nil, fmt.Errorf("chain address: %w", err)
-	}
-
 	if !trafficEnable {
-		service := pseudosettle.New(p2pService, logger, stateStore, address)
+		service := pseudosettle.New(p2pService, logger, stateStore, *accountId)
 		if err = service.Init(); err != nil {
-			return nil, nil, nil, nil, fmt.Errorf("InitTraffic:: %w", err)
+			return nil, nil, nil, fmt.Errorf("InitTraffic:: %w", err)
 		}
-
-		return oracleServer, service, service, cc, nil
+		return oracleServer, service, service, nil
 	}
 
-	trafficChainService, err := chainTraffic.NewServer(logger, chainID, backend, signer, transactionService, trafficContractAddr, cc)
+	trafficService, err := InitTraffic(stateStore, localStore, *accountId, subClient.Traffic, logger, p2pService, signer, subPub)
 	if err != nil {
-		return nil, nil, nil, nil, fmt.Errorf("new traffic service: %w", err)
-	}
-
-	trafficService, err := InitTraffic(stateStore, address, trafficChainService, transactionService, logger, p2pService, signer, chainID.Int64(), trafficContractAddr, subPub)
-	if err != nil {
-		return nil, nil, nil, nil, err
+		return nil, nil, nil, err
 	}
 	err = trafficService.Init()
 	if err != nil {
-		return nil, nil, nil, nil, fmt.Errorf("InitChain: %w", err)
+		return nil, nil, nil, fmt.Errorf("InitChain: %w", err)
 	}
 
-	return oracleServer, trafficService, trafficService, cc, nil
+	return oracleServer, trafficService, trafficService, nil
 }
 
-func InitTraffic(store storage.StateStorer, address common.Address, trafficChainService chain.Traffic,
-	transactionService chain.Transaction, logger logging.Logger, p2pService *libp2p.Service, signer crypto.Signer, chainID int64, trafficContractAddr string, subPub subscribe.SubPub) (*traffic.Service, error) {
-	chequeStore := chequePkg.NewChequeStore(store, address, chequePkg.RecoverCheque, chainID)
-	cashOut := chequePkg.NewCashoutService(store, transactionService, trafficChainService, chequeStore, common.HexToAddress(trafficContractAddr))
+func InitTraffic(store storage.StateStorer, localStore storage.Storer, address types.AccountID,
+	transactionService chainTraffic.Interface, logger logging.Logger, p2pService *libp2p.Service, signer crypto.Signer, subPub subscribe.SubPub) (*traffic.Service, error) {
+	chequeStore := chequePkg.NewChequeStore(store, address, chequePkg.RecoverCheque)
+	cashOut := chequePkg.NewCashoutService(store, transactionService, chequeStore)
 	addressBook := traffic.NewAddressBook(store)
 	protocol := trafficprotocol.New(p2pService, logger, address)
 	if err := p2pService.AddProtocol(protocol.Protocol()); err != nil {
 		return nil, fmt.Errorf("traffic server :%v", err)
 	}
-	chequeSigner := chequePkg.NewChequeSigner(signer, chainID)
-	trafficService := traffic.New(logger, address, store, trafficChainService, chequeStore, cashOut, p2pService, addressBook, chequeSigner, protocol, chainID, subPub)
+	chequeSigner := chequePkg.NewChequeSigner(signer)
+	trafficService := traffic.New(logger, address, store, localStore, transactionService, chequeStore, cashOut, p2pService, addressBook, chequeSigner, protocol, subPub)
 	protocol.SetTraffic(trafficService)
 	return trafficService, nil
 }

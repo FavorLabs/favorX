@@ -50,7 +50,11 @@ func (s *Store) Get(ctx context.Context, mode storage.ModeGet, addr boson.Addres
 				return nil, err
 			}
 			// request from network
-			ch, err = s.retrieval.RetrieveChunk(ctx, rootHash, addr, index)
+			if mode == storage.ModeGetRequest {
+				ch, err = s.retrieval.RetrieveChunk(ctx, rootHash, addr, index)
+			} else {
+				ch, err = s.retrieval.RetrieveChainChunk(ctx, rootHash)
+			}
 			if err != nil {
 				return nil, ErrRecoveryAttempt
 			}

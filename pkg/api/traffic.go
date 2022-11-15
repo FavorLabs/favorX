@@ -1,15 +1,13 @@
 package api
 
 import (
-	"context"
+	"github.com/centrifuge/go-substrate-rpc-client/v4/types"
 	"math/big"
 	"net/http"
 	"sort"
 
 	"github.com/FavorLabs/favorX/pkg/boson"
 	"github.com/FavorLabs/favorX/pkg/jsonhttp"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/gorilla/mux"
 )
 
 type trafficInfo struct {
@@ -48,7 +46,7 @@ func (s *server) trafficInfo(w http.ResponseWriter, r *http.Request) {
 func (s *server) address(w http.ResponseWriter, r *http.Request) {
 	address := s.traffic.Address()
 	jsonhttp.OK(w, struct {
-		References common.Address `json:"references"`
+		References types.AccountID `json:"references"`
 	}{
 		References: address,
 	})
@@ -83,22 +81,15 @@ func (s *server) trafficCheques(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *server) cashCheque(w http.ResponseWriter, r *http.Request) {
-	nameOrHex := mux.Vars(r)["address"]
-	peer, err := s.resolveNameOrAddress(nameOrHex)
+	hash, err := s.traffic.CashCheque()
 	if err != nil {
-		s.logger.Errorf("api cashCheque: parse address %s: %v", nameOrHex, err)
-		jsonhttp.NotFound(w, err)
-		return
-	}
-	hash, err := s.traffic.CashCheque(context.Background(), peer)
-	if err != nil {
-		s.logger.Errorf("api cashCheque: query failed %s: %v", nameOrHex, err)
+		s.logger.Errorf("api cashCheque: query failed %v", err)
 		jsonhttp.NotFound(w, err)
 		return
 	}
 
 	type out struct {
-		Hash common.Hash `json:"hash"`
+		Hash types.Hash `json:"hash"`
 	}
 	jsonhttp.OK(w, out{Hash: hash})
 }

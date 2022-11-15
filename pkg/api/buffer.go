@@ -67,8 +67,11 @@ func (s *server) bufferUploadHandler(w http.ResponseWriter, r *http.Request) {
 
 func (s *server) bufferGetHandler(w http.ResponseWriter, r *http.Request) {
 	logger := tracing.NewLoggerWithTraceID(r.Context(), s.logger).Logger
+	targets := r.URL.Query().Get("targets")
+	if targets != "" {
+		r = r.WithContext(sctx.SetTargets(r.Context(), targets))
+	}
 	nameOrHex := mux.Vars(r)["address"]
-
 	address, err := s.resolveNameOrAddress(nameOrHex)
 	if err != nil {
 		logger.Debugf("buffer: parse address %s: %v", nameOrHex, err)
@@ -84,6 +87,7 @@ func (s *server) bufferGetHandler(w http.ResponseWriter, r *http.Request) {
 		s.logger.Error("buffer upload: chunk read error")
 		jsonhttp.BadRequest(w, "chunk read error")
 		jsonhttp.NotFound(w, err)
+		return
 	}
 
 	jsonhttp.Created(w, ch.Data()[boson.SpanSize:])

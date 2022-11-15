@@ -1,69 +1,47 @@
 package cheque
 
 import (
-	"context"
-	"errors"
-
 	"github.com/FavorLabs/favorX/pkg/boson"
-	"github.com/FavorLabs/favorX/pkg/settlement/chain"
+	"github.com/FavorLabs/favorX/pkg/chain/rpc/traffic"
 	"github.com/FavorLabs/favorX/pkg/storage"
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/centrifuge/go-substrate-rpc-client/v4/types"
 )
 
 // CashoutService is the service responsible for managing cashout actions
 type CashoutService interface {
 	// CashCheque
-	CashCheque(ctx context.Context, peer boson.Address, beneficiary common.Address, recipient common.Address) (common.Hash, error)
+	CashCheque(cid, peer boson.Address) (types.Hash, error)
 	//WaitForReceipt
-	WaitForReceipt(ctx context.Context, ctxHash common.Hash) (uint64, error)
+	//WaitForReceipt(ctx context.Context, ctxHash types.Hash) (uint64, error)
 }
 
 type cashoutService struct {
-	store               storage.StateStorer
-	transactionService  chain.Transaction
-	trafficService      chain.Traffic
-	chequeStore         ChequeStore
-	trafficContractAddr common.Address
+	store          storage.StateStorer
+	trafficService traffic.Interface
+	chequeStore    ChequeStore
 }
 
 // NewCashoutService creates a new CashoutService
-func NewCashoutService(store storage.StateStorer, transactionService chain.Transaction, trafficService chain.Traffic, chequeStore ChequeStore, trafficContractAddr common.Address) CashoutService {
+func NewCashoutService(store storage.StateStorer, trafficService traffic.Interface, chequeStore ChequeStore) CashoutService {
 
 	return &cashoutService{
-		store:               store,
-		transactionService:  transactionService,
-		trafficService:      trafficService,
-		chequeStore:         chequeStore,
-		trafficContractAddr: trafficContractAddr,
+		store:          store,
+		trafficService: trafficService,
+		chequeStore:    chequeStore,
 	}
 }
 
 // CashCheque
-func (s *cashoutService) CashCheque(ctx context.Context, peer boson.Address, beneficiary, recipient common.Address) (common.Hash, error) {
-	cheque, err := s.chequeStore.LastReceivedCheque(beneficiary)
+func (s *cashoutService) CashCheque(cid, peer boson.Address) (types.Hash, error) {
+	tx, err := s.trafficService.CashChequeBeneficiary(cid, peer)
 	if err != nil {
-		return common.Hash{}, err
+		return types.Hash{}, err
 	}
-
-	if beneficiary != cheque.Beneficiary {
-		return common.Hash{}, errors.New("exchange failed")
-	}
-
-	tx, err := s.trafficService.CashChequeBeneficiary(ctx, peer, beneficiary, recipient, cheque.CumulativePayout, cheque.Signature)
-	if err != nil {
-		return common.Hash{}, err
-	}
-
-	if err != nil {
-		return common.Hash{}, err
-	}
-
-	return tx.Hash(), nil
+	return tx, nil
 }
 
-func (s *cashoutService) WaitForReceipt(ctx context.Context, ctxHash common.Hash) (uint64, error) {
-	receipt, err := s.transactionService.WaitForReceipt(ctx, ctxHash)
-
-	return receipt.Status, err
-
-}
+//func (s *cashoutService) WaitForReceipt(ctx context.Context, ctxHash types.Hash) (uint64, error) {
+//	receipt, err := s.transactionService.WaitForReceipt(ctx, ctxHash)
+//
+//	return receipt.Status, err
+//}

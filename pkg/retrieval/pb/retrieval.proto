@@ -2,7 +2,7 @@
 
 syntax = "proto3";
 
-package retievalFavorx;
+package pb;
 
 option go_package = "pb";
 
@@ -19,4 +19,9 @@ message RequestChunk{
     bytes RootAddr = 2;
     bytes ChunkAddr = 3;
     int64 Bit = 4;
+}
+
+
+message RequestChainChunk{
+    bytes RootAddr = 1;
 }

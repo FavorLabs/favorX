@@ -31,7 +31,7 @@ import (
 	"github.com/FavorLabs/favorX/pkg/subscribe"
 	"github.com/FavorLabs/favorX/pkg/topology/bootnode"
 	"github.com/FavorLabs/favorX/pkg/topology/lightnode"
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/centrifuge/go-substrate-rpc-client/v4/types"
 )
 
 type libp2pServiceOpts struct {
@@ -56,15 +56,15 @@ func (m *trafficProtocolMock) EmitCheque(ctx context.Context, peer boson.Address
 }
 
 type cashOutMock struct {
-	cashCheque     func(ctx context.Context, peer boson.Address, beneficiary common.Address, recipient common.Address) (common.Hash, error)
-	waitForReceipt func(ctx context.Context, ctxHash common.Hash) (uint64, error)
+	cashCheque     func(cid, addr boson.Address) (types.Hash, error)
+	waitForReceipt func(ctx context.Context, ctxHash types.Hash) (uint64, error)
 }
 
-func (m *cashOutMock) CashCheque(ctx context.Context, peer boson.Address, beneficiary common.Address, recipient common.Address) (common.Hash, error) {
-	return m.cashCheque(ctx, peer, beneficiary, recipient)
+func (m *cashOutMock) CashCheque(cid, addr boson.Address) (types.Hash, error) {
+	return m.cashCheque(cid, addr)
 }
 
-func (m *cashOutMock) WaitForReceipt(ctx context.Context, ctxHash common.Hash) (uint64, error) {
+func (m *cashOutMock) WaitForReceipt(ctx context.Context, ctxHash types.Hash) (uint64, error) {
 	return m.waitForReceipt(ctx, ctxHash)
 }
 
@@ -77,20 +77,20 @@ func (m *chequeSignerMock) Sign(cheque *chequePkg.Cheque) ([]byte, error) {
 }
 
 type addressBookMock struct {
-	beneficiary     func(peer boson.Address) (beneficiary common.Address, known bool)
-	beneficiaryPeer func(beneficiary common.Address) (peer boson.Address, known bool)
-	putBeneficiary  func(peer boson.Address, beneficiary common.Address) error
+	beneficiary     func(peer boson.Address) (beneficiary types.AccountID, known bool)
+	beneficiaryPeer func(beneficiary types.AccountID) (peer boson.Address, known bool)
+	putBeneficiary  func(peer boson.Address, beneficiary types.AccountID) error
 }
 
-func (m *addressBookMock) Beneficiary(peer boson.Address) (beneficiary common.Address, known bool) {
+func (m *addressBookMock) Beneficiary(peer boson.Address) (beneficiary types.AccountID, known bool) {
 	return m.beneficiary(peer)
 }
 
-func (m *addressBookMock) BeneficiaryPeer(beneficiary common.Address) (peer boson.Address, known bool) {
+func (m *addressBookMock) BeneficiaryPeer(beneficiary types.AccountID) (peer boson.Address, known bool) {
 	return m.beneficiaryPeer(beneficiary)
 }
 
-func (m *addressBookMock) PutBeneficiary(peer boson.Address, beneficiary common.Address) error {
+func (m *addressBookMock) PutBeneficiary(peer boson.Address, beneficiary types.AccountID) error {
 	return m.putBeneficiary(peer, beneficiary)
 }
 
@@ -110,36 +110,36 @@ func TestHandSake(t *testing.T) {
 	store := mock.NewStateStore()
 	chainID := int64(1)
 	peerAddress := boson.MustParseHexAddress("03")
-	chainAddress := common.HexToAddress("0xab")
-	Beneficiary := common.HexToAddress("0xcd")
-	sig := common.Hex2Bytes(Beneficiary.String())
+	chainAddress, _ := types.NewAccountIDFromHexString("0xab")
+	Beneficiary, _ := types.NewAccountIDFromHexString("0xcd")
+	sig := Beneficiary.ToBytes()
 	p2pStream := &trafficProtocolMock{}
 
 	logger := logging.New(ioutil.Discard, 0)
 	// transactionService, err := chainTraffic.NewServer(logger, nil, "") //transaction.NewService(logger, nil, Signer, nil, new(big.Int).SetInt64(10))
 	transactionService := chainTrafficMock.New(
-		chainTrafficMock.WithBalanceOf(func(account common.Address) (*big.Int, error) {
+		chainTrafficMock.WithBalanceOf(func(account types.AccountID) (*big.Int, error) {
 			return new(big.Int).SetInt64(0), nil
 		}))
 
 	chequeStore := chequePkg.NewChequeStore(
 		store,
-		chainAddress,
-		func(cheque *chequePkg.SignedCheque, chaindID int64) (common.Address, error) {
-			return chainAddress, nil
+		*chainAddress,
+		func(cheque *chequePkg.SignedCheque, chaindID int64) (types.AccountID, error) {
+			return *chainAddress, nil
 		},
 		chainID)
 
 	cashOut := cashOutMock{}          // chequePkg.NewCashoutService(store, transactionService, chequeStore)
 	addressBook := &addressBookMock{} // NewAddressBook(store)
-	addressBook.putBeneficiary = func(peer boson.Address, beneficiary common.Address) error {
+	addressBook.putBeneficiary = func(peer boson.Address, beneficiary types.AccountID) error {
 		return nil
 	}
-	addressBook.beneficiary = func(peer boson.Address) (beneficiary common.Address, known bool) {
-		return Beneficiary, true
+	addressBook.beneficiary = func(peer boson.Address) (beneficiary types.AccountID, known bool) {
+		return *Beneficiary, true
 	}
 
-	addressBook.beneficiaryPeer = func(beneficiary common.Address) (peer boson.Address, known bool) {
+	addressBook.beneficiaryPeer = func(beneficiary types.AccountID) (peer boson.Address, known bool) {
 		return peerAddress, false
 	}
 	chequeSigner := chequeSignerMock{}
@@ -148,8 +148,8 @@ func TestHandSake(t *testing.T) {
 	}
 
 	c := chequePkg.Cheque{
-		Recipient:        Beneficiary,
-		Beneficiary:      chainAddress,
+		Recipient:        *Beneficiary,
+		Beneficiary:      *chainAddress,
 		CumulativePayout: big.NewInt(10),
 	}
 	sin, err := chequeSigner.Sign(&c)
@@ -161,9 +161,9 @@ func TestHandSake(t *testing.T) {
 		Signature: sin,
 	}
 
-	trafficService := newTrafficTest(t, store, logger, p2pStream, chainAddress, transactionService, chequeStore, &cashOut, addressBook, &chequeSigner, chainID)
+	trafficService := newTrafficTest(t, store, logger, p2pStream, *chainAddress, transactionService, chequeStore, &cashOut, addressBook, &chequeSigner, chainID)
 
-	err = trafficService.Handshake(peerAddress, Beneficiary, signedCheque)
+	err = trafficService.Handshake(peerAddress, *Beneficiary, signedCheque)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -176,14 +176,14 @@ func TestPayUnknownBeneficiary(t *testing.T) {
 	logger := logging.New(ioutil.Discard, 0)
 	store := mock.NewStateStore()
 	peer := boson.MustParseHexAddress("abcd")
-	chainAddress := common.HexToAddress("05")
+	chainAddress := types.HexToAddress("05")
 	chainID := int64(1)
 	addressBook := &addressBookMock{
-		beneficiary: func(p boson.Address) (common.Address, bool) {
+		beneficiary: func(p boson.Address) (types.AccountID, bool) {
 			if !peer.Equal(p) {
 				t.Fatal("querying beneficiary for wrong peer")
 			}
-			return common.Address{}, false
+			return types.AccountID{}, false
 		},
 	}
 	chequeSigner := &chequeSignerMock{}
@@ -231,15 +231,15 @@ func TestPay(t *testing.T) {
 
 	logger := logging.New(ioutil.Discard, 0)
 	store := mock.NewStateStore()
-	chainAddress := common.HexToAddress("0xab")
-	beneficiary := common.HexToAddress("0xcd")
-	sig := common.Hex2Bytes(chainAddress.String())
+	chainAddress := types.HexToAddress("0xab")
+	beneficiary := types.HexToAddress("0xcd")
+	sig := types.Hex2Bytes(chainAddress.String())
 	chainID := int64(1)
 
 	peer := boson.MustParseHexAddress("abcd")
 
 	addressBook := &addressBookMock{
-		beneficiary: func(p boson.Address) (common.Address, bool) {
+		beneficiary: func(p boson.Address) (types.AccountID, bool) {
 			if !peer.Equal(p) {
 				t.Fatal("querying beneficiary for wrong peer")
 			}
@@ -252,13 +252,13 @@ func TestPay(t *testing.T) {
 		return sig, nil
 	}
 	chequeStore := mockchequestore.NewChequeStore(
-		mockchequestore.WithLastSendCheque(func(chainAddress common.Address) (*chequePkg.Cheque, error) {
+		mockchequestore.WithLastSendCheque(func(chainAddress types.AccountID) (*chequePkg.Cheque, error) {
 			return &chequePkg.Cheque{
 				CumulativePayout: new(big.Int).SetInt64(0),
 			}, nil
 		},
 		),
-		mockchequestore.WithPutSendCheque(func(ctx context.Context, cheque *chequePkg.Cheque, chainAddress common.Address) error {
+		mockchequestore.WithPutSendCheque(func(ctx context.Context, cheque *chequePkg.Cheque, chainAddress types.AccountID) error {
 			return nil
 		}),
 	)
@@ -323,9 +323,9 @@ func TestPayIssueError(t *testing.T) {
 	store := mock.NewStateStore()
 	chainID := int64(1)
 	peerAddress := boson.MustParseHexAddress("03")
-	chainAddress := common.HexToAddress("0xab")
-	beneficiarys := common.HexToAddress("0xcd")
-	sig := common.Hex2Bytes(beneficiarys.String())
+	chainAddress := types.HexToAddress("0xab")
+	beneficiarys := types.HexToAddress("0xcd")
+	sig := types.Hex2Bytes(beneficiarys.String())
 	p2pStream := &trafficProtocolMock{}
 
 	logger := logging.New(ioutil.Discard, 0)
@@ -336,14 +336,14 @@ func TestPayIssueError(t *testing.T) {
 	chequeStore := chequePkg.NewChequeStore(
 		store,
 		chainAddress,
-		func(cheque *chequePkg.SignedCheque, chaindID int64) (common.Address, error) {
+		func(cheque *chequePkg.SignedCheque, chaindID int64) (types.AccountID, error) {
 			return beneficiarys, nil
 		},
 		chainID)
 
 	cashOut := cashOutMock{}         // chequePkg.NewCashoutService(store, transactionService, chequeStore)
 	addressBook := addressBookMock{} // NewAddressBook(store)
-	addressBook.beneficiary = func(peer boson.Address) (beneficiary common.Address, known bool) {
+	addressBook.beneficiary = func(peer boson.Address) (beneficiary types.AccountID, known bool) {
 		return beneficiarys, true
 	}
 
@@ -382,18 +382,18 @@ func TestPayIssueError(t *testing.T) {
 func TestCashOut(t *testing.T) {
 	logger := logging.New(ioutil.Discard, 0)
 	store := mock.NewStateStore()
-	chainAddress := common.HexToAddress("0xab")
+	chainAddress := types.HexToAddress("0xab")
 
 	peer := boson.MustParseHexAddress("abcd")
-	txHash := common.HexToHash("eeee")
+	txHash := types.HexToHash("eeee")
 	addressBook := &addressBookMock{}
-	addressBook.beneficiary = func(peer boson.Address) (beneficiary common.Address, known bool) {
+	addressBook.beneficiary = func(peer boson.Address) (beneficiary types.AccountID, known bool) {
 		return chainAddress, true
 	}
 	chainID := int64(1)
 	chequeStore := mockchequestore.NewChequeStore()
 	cashOut := &cashOutMock{}
-	cashOut.cashCheque = func(ctx context.Context, peer boson.Address, beneficiary common.Address, recipient common.Address) (common.Hash, error) {
+	cashOut.cashCheque = func(ctx context.Context, peer boson.Address, beneficiary types.AccountID, recipient types.AccountID) (types.Hash, error) {
 		return txHash, nil
 	}
 	chequeSigner := &chequeSignerMock{}
@@ -426,9 +426,9 @@ func TestCashOut(t *testing.T) {
 }
 
 func TestSignCheque(t *testing.T) {
-	chequebookAddress := common.HexToAddress("0x8d3766440f0d7b949a5e32995d09619a7f86e632")
-	beneficiaryAddress := common.HexToAddress("0xb8d424e9662fe0837fb1d728f1ac97cebb1085fe")
-	signature := common.Hex2Bytes("abcd")
+	chequebookAddress := types.HexToAddress("0x8d3766440f0d7b949a5e32995d09619a7f86e632")
+	beneficiaryAddress := types.HexToAddress("0xb8d424e9662fe0837fb1d728f1ac97cebb1085fe")
+	signature := types.Hex2Bytes("abcd")
 	cumulativePayout := big.NewInt(10)
 	chainId := int64(1)
 	cheque := &chequePkg.Cheque{
@@ -469,7 +469,7 @@ func TestSignCheque(t *testing.T) {
 	fmt.Println("TestPayUnknownBeneficiary - Success")
 }
 
-func newTrafficTest(t *testing.T, store storage.StateStorer, logger logging.Logger, protocol trafficprotocol.Interface, chainAddress common.Address,
+func newTrafficTest(t *testing.T, store storage.StateStorer, logger logging.Logger, protocol trafficprotocol.Interface, chainAddress types.AccountID,
 	trafficChainService chain.Traffic, chequeStore chequePkg.ChequeStore, cashout chequePkg.CashoutService,
 	addressBook Addressbook, chequeSigner chequePkg.ChequeSigner, chainID int64) *Service {
 
