@@ -1,7 +1,9 @@
 package storage
 
 import (
+	"bytes"
 	"context"
+	"errors"
 
 	"github.com/FavorLabs/favorX/pkg/chain/rpc/base"
 	"github.com/FavorLabs/favorX/pkg/logging"
@@ -20,6 +22,7 @@ type Interface interface {
 	MerchantRegisterWatch(ctx context.Context, diskTotal uint64) (err error)
 	MerchantUnregisterWatch(ctx context.Context) (err error)
 	GetMerchantInfo(mch []byte) (*MerchantInfo, error)
+	CheckOrder(buyer, rootCid, mch []byte) error
 }
 
 // storage exposes methods for querying storage
@@ -278,4 +281,25 @@ func (s *service) GetMerchantInfo(mch []byte) (*MerchantInfo, error) {
 		return nil, base.KeyEmptyError
 	}
 	return &info, nil
+}
+
+func (s *service) CheckOrder(buyer, rootCid, mch []byte) error {
+	key, err := types.CreateStorageKey(s.meta, "Storage", "Orders", buyer, rootCid)
+	if err != nil {
+		return err
+	}
+	var info OrderInfo
+	ok, err := s.client.RPC.State.GetStorageLatest(key, &info)
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return base.KeyEmptyError
+	}
+	for _, v := range info.StorageInfo {
+		if bytes.Equal(v.User.ToBytes(), mch) {
+			return nil
+		}
+	}
+	return errors.New("mismatch merchant")
 }
