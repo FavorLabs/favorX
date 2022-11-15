@@ -83,7 +83,6 @@ type Options struct {
 	WelcomeMessage         string
 	Bootnodes              []string
 	ChainEndpoint          string
-	OracleContractAddress  string
 	CORSAllowedOrigins     []string
 	Logger                 logging.Logger
 	Standalone             bool
@@ -94,7 +93,6 @@ type Options struct {
 	ResolverConnectionCfgs []multiresolver.ConnectionConfig
 	GatewayMode            bool
 	TrafficEnable          bool
-	TrafficContractAddr    string
 	KadBinMaxPeers         int
 	LightNodeMaxPeers      int
 	AllowPrivateCIDRs      bool
@@ -230,8 +228,7 @@ func NewNode(nodeMode address.Model, p2pAddr string, networkID uint64, logger lo
 		return nil, fmt.Errorf("p2p service: %w", err)
 	}
 
-	// TODO add KeyringPairAlice
-	client, err := chain.NewClient("ws://127.0.0.1:9944", signer.SubKey)
+	client, err := chain.NewClient(o.ChainEndpoint, signer.SubKey)
 	if err != nil {
 		return nil, err
 	}
@@ -260,18 +257,15 @@ func NewNode(nodeMode address.Model, p2pAddr string, networkID uint64, logger lo
 	}
 	b.localstoreCloser = storer
 
-	//apiInterface := client.Traffic
+	// apiInterface := client.Traffic
 	oracleChain, settlement, apiInterface, err := InitChain(
 		p2pCtx,
 		logger,
 		client,
-		o.ChainEndpoint,
-		o.OracleContractAddress,
 		stateStore,
 		storer,
 		signer.Signer,
 		o.TrafficEnable,
-		o.TrafficContractAddr,
 		p2ps,
 		subPub)
 	if err != nil {

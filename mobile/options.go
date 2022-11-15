@@ -41,12 +41,10 @@ type Options struct {
 	EnableFullNode bool
 
 	// chain setting
-	ChainEndpoint  string
-	OracleContract string
+	ChainEndpoint string
 
 	// traffic stat
 	EnableFlowStat bool
-	FlowContract   string
 
 	// domain resolver
 	ResolverOptions string // default type []string
@@ -133,16 +131,8 @@ func (o Options) LightNodeMaxPeers(c *node.Options) {
 	c.LightNodeMaxPeers = o.LightMaxPeers
 }
 
-func (o Options) OracleContractAddress(c *node.Options) {
-	c.OracleContractAddress = o.OracleContract
-}
-
 func (o Options) TrafficEnable(c *node.Options) {
 	c.TrafficEnable = o.EnableFlowStat
-}
-
-func (o Options) TrafficContractAddr(c *node.Options) {
-	c.TrafficContractAddr = o.FlowContract
 }
 
 // Export exports Options to node.Options, skipping all other extra fields

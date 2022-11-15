@@ -26,8 +26,7 @@ func ExportDefaultConfig() (o *Options, err error) {
 	}
 
 	// dev chain
-	o.OracleContract = "0x7F578e5ade91A30aC8ABf120d102E282821bd142"
-	o.ChainEndpoint = "https://data-seed-prebsc-1-s1.binance.org:8545"
+	o.ChainEndpoint = "ws://127.0.0.1:9944"
 
 	return
 }
