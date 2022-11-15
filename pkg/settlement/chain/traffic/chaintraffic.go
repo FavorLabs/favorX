@@ -3,6 +3,10 @@ package traffic
 import (
 	"context"
 	"errors"
+	subChain "github.com/FavorLabs/favorX/pkg/chain"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 	"math/big"
 	"sync"
 	"time"
@@ -11,10 +15,6 @@ import (
 	"github.com/FavorLabs/favorX/pkg/crypto"
 	"github.com/FavorLabs/favorX/pkg/logging"
 	"github.com/FavorLabs/favorX/pkg/settlement/chain"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/ethclient"
 )
 
 type ChainTraffic struct {
@@ -22,13 +22,13 @@ type ChainTraffic struct {
 	logger             logging.Logger
 	signer             crypto.Signer
 	chainID            *big.Int
-	backend            *ethclient.Client
+	backend            *subChain.Client
 	traffic            *Traffic
 	transactionService chain.Transaction
 	commonService      chain.Common
 }
 
-func NewServer(logger logging.Logger, chainID *big.Int, backend *ethclient.Client, signer crypto.Signer,
+func NewServer(logger logging.Logger, chainID *big.Int, backend *subChain.Client, signer crypto.Signer,
 	transactionService chain.Transaction, address string, commonService chain.Common) (chain.Traffic, error) {
 
 	traffic, err := NewTraffic(common.HexToAddress(address), backend)

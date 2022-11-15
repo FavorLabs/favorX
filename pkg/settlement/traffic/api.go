@@ -4,7 +4,7 @@ import (
 	"context"
 	"github.com/FavorLabs/favorX/pkg/boson"
 	"github.com/FavorLabs/favorX/pkg/rpc"
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/centrifuge/go-substrate-rpc-client/v4/types"
 )
 
 func (s *Service) API() rpc.API {
@@ -36,7 +36,7 @@ func (a *apiService) TrafficCheque(ctx context.Context, overlays []string) (*rpc
 		return &rpc.Subscription{}, rpc.ErrNotificationsUnsupported
 	}
 	sub := notifier.CreateSubscription()
-	overs := make([]common.Address, 0, len(overlays))
+	overs := make([]types.AccountID, 0, len(overlays))
 	for _, overlay := range overlays {
 		over, err := boson.ParseHexAddress(overlay)
 		if err != nil {

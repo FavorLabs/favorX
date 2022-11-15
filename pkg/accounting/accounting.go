@@ -5,14 +5,15 @@ package accounting
 import (
 	"context"
 	"errors"
+	"math/big"
+	"sync"
+	"time"
+
 	"github.com/FavorLabs/favorX/pkg/boson"
 	"github.com/FavorLabs/favorX/pkg/logging"
 	"github.com/FavorLabs/favorX/pkg/p2p"
 	"github.com/FavorLabs/favorX/pkg/settlement"
 	"github.com/FavorLabs/favorX/pkg/storage"
-	"math/big"
-	"sync"
-	"time"
 )
 
 var (

@@ -31,12 +31,14 @@ const (
 	protocolName    = "retrieval"
 	protocolVersion = "2.0.0"
 	streamName      = "retrieval"
+	streamChainName = "chain"
 )
 
 var _ Interface = (*Service)(nil)
 
 type Interface interface {
 	RetrieveChunk(ctx context.Context, rootAddr, chunkAddr boson.Address, index int64) (chunk boson.Chunk, err error)
+	RetrieveChainChunk(ctx context.Context, rootAddr boson.Address) (chunk boson.Chunk, err error)
 	GetRouteScore(time int64) map[string]int64
 }
 
@@ -97,6 +99,10 @@ func (s *Service) Protocol() p2p.ProtocolSpec {
 			{
 				Name:    streamName,
 				Handler: s.handler,
+			},
+			{
+				Name:    streamChainName,
+				Handler: s.handlerChain,
 			},
 		},
 	}
@@ -168,6 +174,71 @@ func (s *Service) RetrieveChunk(ctx context.Context, rootAddr, chunkAddr boson.A
 	if err != nil {
 		return nil, err
 	}
+	return v.(boson.Chunk), nil
+}
+
+func (s *Service) RetrieveChainChunk(ctx context.Context, rootAddr boson.Address) (chunk boson.Chunk, err error) {
+	topCtx := ctx
+	v, _, err := s.singleflight.Do(context.Background(), rootAddr.String(), func(ctx context.Context) (interface{}, error) {
+
+		var (
+			maxRequestAttempt = 2
+			requestAttempt    int
+			resultC           = make(chan retrievalResult, totalRouteCount)
+		)
+		ctx = tracing.WithContext(context.Background(), tracing.FromContext(topCtx))
+		// get the tracing span
+		span, _, ctx := s.tracer.StartSpanFromContext(ctx, "retrieve-chunk", s.logger,
+			opentracing.Tag{Key: "rootAddr", Value: rootAddr.String()})
+		defer span.Finish()
+		ticker := time.NewTicker(retrieveRetryIntervalDuration)
+		defer ticker.Stop()
+
+		targets, _ := sctx.GetTargets(topCtx)
+		if len(targets) == 0 {
+			return nil, fmt.Errorf("no targets available")
+		}
+
+		for requestAttempt < maxRequestAttempt {
+			requestAttempt++
+			for _, target := range targets {
+				s.metrics.PeerRequestCounter.Inc()
+				go func() {
+					ctx, cancel := context.WithCancel(ctx)
+					defer cancel()
+					chunk, err := s.retrieveChainChunk(ctx, target, rootAddr)
+					select {
+					case resultC <- retrievalResult{
+						chunk: chunk,
+						err:   err,
+					}:
+					case <-ctx.Done():
+					}
+				}()
+
+				select {
+				case <-ticker.C:
+					// continue next route
+				case result := <-resultC:
+					if result.err != nil {
+						s.logger.Debugf("retrieval: failed to get chain chunk (%s) from target %s: %v",
+							rootAddr, target, result.err)
+					} else {
+						return result.chunk, nil
+					}
+				case <-ctx.Done():
+					s.logger.Tracef("retrieval: failed to get chunk: ctx.Done() (%s): %v", rootAddr, ctx.Err())
+					return nil, fmt.Errorf("retrieval: %w", ctx.Err())
+				}
+			}
+		}
+		return nil, storage.ErrNotFound
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
 	return v.(boson.Chunk), nil
 }
 
@@ -337,6 +408,61 @@ func (s *Service) retrieveChunk(ctx context.Context, route aco.Route, rootAddr, 
 	return
 }
 
+func (s *Service) retrieveChainChunk(ctx context.Context, target, rootAddr boson.Address) (chunk boson.Chunk, err error) {
+
+	ctx, cancel := context.WithTimeout(ctx, retrieveChunkTimeout)
+	defer cancel()
+	stream, err := s.streamer.NewStream(ctx, target, nil, protocolName, protocolVersion, streamChainName)
+	if err != nil {
+		s.metrics.TotalErrors.Inc()
+		s.logger.Errorf("new stream: %w", err)
+		return nil, err
+	}
+	defer func() {
+		if err != nil {
+			_ = stream.Reset()
+		} else {
+			go func() {
+				_ = stream.FullClose()
+			}()
+		}
+	}()
+
+	w, r := protobuf.NewWriterAndReader(stream)
+	if err := w.WriteMsgWithContext(ctx, &pb.RequestChainChunk{
+		RootAddr: rootAddr.Bytes(),
+	}); err != nil {
+		s.metrics.TotalErrors.Inc()
+		return nil, fmt.Errorf("write request: %w target %s", err, target.String())
+	}
+
+	var d pb.Delivery
+	if err := r.ReadMsgWithContext(ctx, &d); err != nil {
+		s.metrics.TotalErrors.Inc()
+		return nil, fmt.Errorf("read delivery: %w target  %v", err, target.String())
+	}
+	s.metrics.TotalRetrieved.Inc()
+
+	chunk = boson.NewChunk(rootAddr, d.Data)
+	if !cac.Valid(chunk) {
+		if !soc.Valid(chunk) {
+			s.metrics.InvalidChunkRetrieved.Inc()
+			s.metrics.TotalErrors.Inc()
+			return nil, boson.ErrInvalidChunk
+		}
+	}
+
+	s.logger.Tracef("retrieval: chunk %s is received", rootAddr.String())
+	exists, err := s.storer.Put(sctx.SetRootHash(ctx, rootAddr), storage.ModePutChain, chunk)
+	if err != nil {
+		return nil, fmt.Errorf("retrieval: storage put cache:%v", err)
+	}
+	if exists[0] {
+		s.logger.Warningf("cid %s store is exists", rootAddr.String())
+	}
+	return
+}
+
 func (s *Service) handler(ctx context.Context, p p2p.Peer, stream p2p.Stream) (err error) {
 	w, r := protobuf.NewWriterAndReader(stream)
 	defer func() {
@@ -397,6 +523,44 @@ func (s *Service) handler(ctx context.Context, p p2p.Peer, stream p2p.Stream) (e
 	}
 
 	s.metrics.TotalTransferred.Inc()
+	return nil
+}
+
+func (s *Service) handlerChain(ctx context.Context, p p2p.Peer, stream p2p.Stream) (err error) {
+	w, r := protobuf.NewWriterAndReader(stream)
+	defer func() {
+		if err != nil {
+			s.metrics.ChunkTransferredError.Inc()
+			_ = stream.Reset()
+		} else {
+			go func() {
+				_ = stream.FullClose()
+			}()
+		}
+	}()
+	s.logger.Tracef("handler %v recv msg from: %v", s.addr.String(), p.Address.String())
+
+	ctx = context.WithValue(ctx, requestSourceContextKey{}, p.Address.String())
+
+	var req pb.RequestChainChunk
+	if err := r.ReadMsgWithContext(ctx, &req); err != nil {
+		return fmt.Errorf("read request: %w peer %s", err, p.Address.String())
+	}
+	rootAddr := boson.NewAddress(req.RootAddr)
+	span, _, ctx := s.tracer.StartSpanFromContext(ctx, "handle-retrieve-chunk",
+		s.logger, opentracing.Tag{Key: "address", Value: fmt.Sprintf("%s", rootAddr)},
+	)
+	defer span.Finish()
+
+	chunk, err := s.storer.Get(ctx, storage.ModeGetChain, rootAddr, 0)
+	if err != nil {
+		return fmt.Errorf("get from store: %w", err)
+	}
+	if err := w.WriteMsgWithContext(ctx, &pb.Delivery{
+		Data: chunk.Data(),
+	}); err != nil {
+		return fmt.Errorf("write delivery: %w peer %s", err, p.Address.String())
+	}
 	return nil
 }
 

@@ -2,15 +2,16 @@ package cheque
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/FavorLabs/favorX/pkg/crypto"
 	"math/big"
 	"strings"
 	"sync"
 
-	"github.com/FavorLabs/favorX/pkg/crypto"
 	"github.com/FavorLabs/favorX/pkg/storage"
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/centrifuge/go-substrate-rpc-client/v4/types"
 )
 
 var (
@@ -38,92 +39,89 @@ type ChequeStore interface {
 	// ReceiveCheque verifies and stores a cheque. It returns the totam amount earned.
 	ReceiveCheque(ctx context.Context, cheque *SignedCheque) (*big.Int, error)
 
-	VerifyCheque(cheque *SignedCheque, chaindID int64) (common.Address, error)
+	VerifyCheque(cheque *SignedCheque) (types.AccountID, error)
 
-	PutSendCheque(ctx context.Context, cheque *Cheque, chainAddress common.Address) error
+	PutSendCheque(ctx context.Context, cheque *Cheque, chainAddress types.AccountID) error
 
-	PutReceivedCheques(chainAddress common.Address, cheque SignedCheque) error
+	PutReceivedCheques(chainAddress types.AccountID, cheque SignedCheque) error
 
 	// LastReceivedCheque returns the last cheque we received from a specific chainAddress.
-	LastReceivedCheque(chainAddress common.Address) (*SignedCheque, error)
+	LastReceivedCheque(chainAddress types.AccountID) (*SignedCheque, error)
 	// LastReceivedCheques returns the last received cheques from every known chainAddress.
-	LastReceivedCheques() (map[common.Address]*SignedCheque, error)
+	LastReceivedCheques() (map[types.AccountID]*SignedCheque, error)
 
-	LastSendCheque(chainAddress common.Address) (*Cheque, error)
+	LastSendCheque(chainAddress types.AccountID) (*Cheque, error)
 
-	LastSendCheques() (map[common.Address]*Cheque, error)
+	LastSendCheques() (map[types.AccountID]*Cheque, error)
 
-	PutRetrieveTraffic(chainAddress common.Address, traffic *big.Int) error
+	PutRetrieveTraffic(chainAddress types.AccountID, traffic *big.Int) error
 
-	PutTransferTraffic(chainAddress common.Address, traffic *big.Int) error
+	PutTransferTraffic(chainAddress types.AccountID, traffic *big.Int) error
 
-	GetRetrieveTraffic(chainAddress common.Address) (traffic *big.Int, err error)
+	GetRetrieveTraffic(chainAddress types.AccountID) (traffic *big.Int, err error)
 
-	GetTransferTraffic(chainAddress common.Address) (traffic *big.Int, err error)
+	GetTransferTraffic(chainAddress types.AccountID) (traffic *big.Int, err error)
 
-	PutChainRetrieveTraffic(chainAddress common.Address, traffic *big.Int) error
+	PutChainRetrieveTraffic(chainAddress types.AccountID, traffic *big.Int) error
 
-	PutChainTransferTraffic(chainAddress common.Address, traffic *big.Int) error
+	PutChainTransferTraffic(chainAddress types.AccountID, traffic *big.Int) error
 
-	GetChainRetrieveTraffic(chainAddress common.Address) (traffic *big.Int, err error)
+	GetChainRetrieveTraffic(chainAddress types.AccountID) (traffic *big.Int, err error)
 
-	GetChainTransferTraffic(chainAddress common.Address) (traffic *big.Int, err error)
+	GetChainTransferTraffic(chainAddress types.AccountID) (traffic *big.Int, err error)
 
 	// GetAllRetrieveTransferAddresses return all addresses that we have transferred or retrieved traffic
-	GetAllRetrieveTransferAddresses() (map[common.Address]struct{}, error)
+	GetAllRetrieveTransferAddresses() (map[types.AccountID]struct{}, error)
 }
 
 type chequeStore struct {
 	lock              sync.Mutex
 	store             storage.StateStorer
-	recipient         common.Address // the beneficiary we expect in cheques sent to us
+	recipient         types.AccountID // the beneficiary we expect in cheques sent to us
 	recoverChequeFunc RecoverChequeFunc
-	chainID           int64
 }
 
-type RecoverChequeFunc func(cheque *SignedCheque, chainID int64) (common.Address, error)
+type RecoverChequeFunc func(cheque *SignedCheque) (types.AccountID, error)
 
 // NewChequeStore creates new ChequeStore
 func NewChequeStore(
 	store storage.StateStorer,
-	recipient common.Address,
-	recoverChequeFunc RecoverChequeFunc,
-	chainID int64) ChequeStore {
+	recipient types.AccountID,
+	recoverChequeFunc RecoverChequeFunc) ChequeStore {
 	return &chequeStore{
 		store:             store,
 		recipient:         recipient,
 		recoverChequeFunc: recoverChequeFunc,
-		chainID:           chainID,
 	}
 }
 
 // lastTransferredTrafficChequeKey computes the key where to store the last cheque received from a chainAddress.
-func lastReceivedChequeKey(chainAddress common.Address) string {
-	return fmt.Sprintf("%s_%x", lastReceivedChequePrefix, chainAddress)
+func lastReceivedChequeKey(chainAddress types.AccountID) string {
+	return fmt.Sprintf("%s%s", lastReceivedChequePrefix, chainAddress.ToHexString())
 }
 
-func lastSendChequeKey(chainAddress common.Address) string {
-	return fmt.Sprintf("%s_%x", lastSendChequePrefix, chainAddress)
+func lastSendChequeKey(chainAddress types.AccountID) string {
+	return fmt.Sprintf("%s%s", lastSendChequePrefix, chainAddress.ToHexString())
 }
 
-func retrievedTraffic(chainAddress common.Address) string {
-	return fmt.Sprintf("%s_%x", retrievedTrafficPrefix, chainAddress)
+func retrievedTraffic(chainAddress types.AccountID) string {
+	return fmt.Sprintf("%s%s", retrievedTrafficPrefix, chainAddress.ToHexString())
 }
 
-func transferredTraffic(chainAddress common.Address) string {
-	return fmt.Sprintf("%s_%x", transferredTrafficPrefix, chainAddress)
+func transferredTraffic(chainAddress types.AccountID) string {
+	return fmt.Sprintf("%s%s", transferredTrafficPrefix, chainAddress.ToHexString())
 }
 
-func chainRetrievedTraffic(chainAddress common.Address) string {
-	return fmt.Sprintf("%s_%x", chainRetrievedTrafficPrefix, chainAddress)
+func chainRetrievedTraffic(chainAddress types.AccountID) string {
+	return fmt.Sprintf("%s%s", chainRetrievedTrafficPrefix, chainAddress.ToHexString())
 }
 
-func chainTransferredTraffic(chainAddress common.Address) string {
-	return fmt.Sprintf("%s_%x", chainTransferredTrafficPrefix, chainAddress)
+func chainTransferredTraffic(chainAddress types.AccountID) string {
+	return fmt.Sprintf("%s%s", chainTransferredTrafficPrefix, chainAddress.ToHexString())
 }
 
 // LastReceivedCheque returns the last cheque we received from a specific chainAddress.
-func (s *chequeStore) LastReceivedCheque(chainAddress common.Address) (*SignedCheque, error) {
+func (s *chequeStore) LastReceivedCheque(chainAddress types.AccountID) (*SignedCheque, error) {
 	var cheque *SignedCheque
 	err := s.store.Get(lastReceivedChequeKey(chainAddress), &cheque)
 	if err != nil {
@@ -132,8 +130,8 @@ func (s *chequeStore) LastReceivedCheque(chainAddress common.Address) (*SignedCh
 		}
 		return &SignedCheque{
 			Cheque: Cheque{
-				Recipient:        common.Address{},
-				Beneficiary:      common.Address{},
+				Recipient:        types.AccountID{},
+				Beneficiary:      types.AccountID{},
 				CumulativePayout: big.NewInt(0),
 			},
 		}, ErrNoCheque
@@ -150,7 +148,7 @@ func (s *chequeStore) ReceiveCheque(ctx context.Context, cheque *SignedCheque) (
 	}
 
 	// verify the cheque signature
-	issuer, err := s.recoverChequeFunc(cheque, s.chainID)
+	issuer, err := s.recoverChequeFunc(cheque)
 	if err != nil {
 		return nil, err
 	}
@@ -193,58 +191,60 @@ func (s *chequeStore) ReceiveCheque(ctx context.Context, cheque *SignedCheque) (
 	return amount, nil
 }
 
-func (s *chequeStore) PutSendCheque(ctx context.Context, cheque *Cheque, chainAddress common.Address) error {
+func (s *chequeStore) PutSendCheque(ctx context.Context, cheque *Cheque, chainAddress types.AccountID) error {
 	return s.store.Put(lastSendChequeKey(chainAddress), cheque)
 }
 
 // RecoverCheque recovers the issuer ethereum address from a signed cheque
-func RecoverCheque(cheque *SignedCheque, chaindID int64) (common.Address, error) {
-	eip712Data := eip712DataForCheque(&cheque.Cheque, chaindID)
-
-	pubkey, err := crypto.RecoverEIP712(cheque.Signature, eip712Data)
-	if err != nil {
-		return common.Address{}, err
+func RecoverCheque(signedCheque *SignedCheque) (types.AccountID, error) {
+	publicly, err := crypto.NewPublicKey(signedCheque.Beneficiary.ToBytes())
+	cheque := Cheque{
+		Recipient:        signedCheque.Recipient,
+		Beneficiary:      signedCheque.Beneficiary,
+		CumulativePayout: signedCheque.CumulativePayout,
 	}
-
-	ethAddr, err := crypto.NewEthereumAddress(*pubkey)
+	c, err := json.Marshal(cheque)
 	if err != nil {
-		return common.Address{}, err
+		return types.AccountID{}, err
 	}
-
-	var issuer common.Address
-	copy(issuer[:], ethAddr)
+	_, err = publicly.Verify(c, signedCheque.Signature)
+	if err != nil {
+		return [32]byte{}, err
+	}
+	var issuer types.AccountID
+	copy(issuer[:], signedCheque.Beneficiary[:])
 	return issuer, nil
 }
 
 // keyChequebook computes the chainAddress a store entry is for.
-func keyChainAddress(key []byte, prefix string) (chainAddress common.Address, err error) {
+func keyChainAddress(key []byte, prefix string) (chainAddress *types.AccountID, err error) {
 	k := string(key)
 
 	split := strings.SplitAfter(k, prefix)
 	if len(split) != 2 {
-		return common.Address{}, errors.New("no peer in key")
+		return &types.AccountID{}, errors.New("no peer in key")
 	}
-	return common.HexToAddress(split[1]), nil
+	return types.NewAccountIDFromHexString(split[1])
 }
 
 // LastReceivedCheques returns the last received cheques from every known chainAddress.
-func (s *chequeStore) LastReceivedCheques() (map[common.Address]*SignedCheque, error) {
-	result := make(map[common.Address]*SignedCheque)
+func (s *chequeStore) LastReceivedCheques() (map[types.AccountID]*SignedCheque, error) {
+	result := make(map[types.AccountID]*SignedCheque)
 	err := s.store.Iterate(lastReceivedChequePrefix, func(key, val []byte) (stop bool, err error) {
-		addr, err := keyChainAddress(key, lastReceivedChequePrefix+"_")
+		addr, err := keyChainAddress(key, lastReceivedChequePrefix)
 		if err != nil {
 			return false, fmt.Errorf("parse address from key: %s: %w", string(key), err)
 		}
 
-		if _, ok := result[addr]; !ok {
-			lastCheque, err := s.LastReceivedCheque(addr)
+		if _, ok := result[*addr]; !ok {
+			lastCheque, err := s.LastReceivedCheque(*addr)
 			if err != nil && err != ErrNoCheque {
 				return false, err
 			} else if err == ErrNoCheque {
 				return false, nil
 			}
 
-			result[addr] = lastCheque
+			result[*addr] = lastCheque
 		}
 		return false, nil
 	})
@@ -254,7 +254,7 @@ func (s *chequeStore) LastReceivedCheques() (map[common.Address]*SignedCheque, e
 	return result, nil
 }
 
-func (s *chequeStore) LastSendCheque(chainAddress common.Address) (*Cheque, error) {
+func (s *chequeStore) LastSendCheque(chainAddress types.AccountID) (*Cheque, error) {
 	var cheque *Cheque
 	err := s.store.Get(lastSendChequeKey(chainAddress), &cheque)
 	if err != nil {
@@ -262,8 +262,8 @@ func (s *chequeStore) LastSendCheque(chainAddress common.Address) (*Cheque, erro
 			return nil, err
 		}
 		return &Cheque{
-			Recipient:        common.Address{},
-			Beneficiary:      common.Address{},
+			Recipient:        types.AccountID{},
+			Beneficiary:      types.AccountID{},
 			CumulativePayout: new(big.Int).SetInt64(0),
 		}, ErrNoCheque
 	}
@@ -271,23 +271,23 @@ func (s *chequeStore) LastSendCheque(chainAddress common.Address) (*Cheque, erro
 	return cheque, nil
 }
 
-func (s *chequeStore) LastSendCheques() (map[common.Address]*Cheque, error) {
-	result := make(map[common.Address]*Cheque)
+func (s *chequeStore) LastSendCheques() (map[types.AccountID]*Cheque, error) {
+	result := make(map[types.AccountID]*Cheque)
 	err := s.store.Iterate(lastSendChequePrefix, func(key, val []byte) (stop bool, err error) {
-		addr, err := keyChainAddress(key, lastSendChequePrefix+"_")
+		addr, err := keyChainAddress(key, lastSendChequePrefix)
 		if err != nil {
 			return false, fmt.Errorf("parse address from key: %s: %w", string(key), err)
 		}
 
-		if _, ok := result[addr]; !ok {
-			lastCheque, err := s.LastSendCheque(addr)
+		if _, ok := result[*addr]; !ok {
+			lastCheque, err := s.LastSendCheque(*addr)
 			if err != nil && err != ErrNoCheque {
 				return false, err
 			} else if err == ErrNoCheque {
 				return false, nil
 			}
 
-			result[addr] = lastCheque
+			result[*addr] = lastCheque
 		}
 		return false, nil
 	})
@@ -297,19 +297,19 @@ func (s *chequeStore) LastSendCheques() (map[common.Address]*Cheque, error) {
 	return result, nil
 }
 
-func (s *chequeStore) PutRetrieveTraffic(chainAddress common.Address, traffic *big.Int) error {
+func (s *chequeStore) PutRetrieveTraffic(chainAddress types.AccountID, traffic *big.Int) error {
 	return s.store.Put(retrievedTraffic(chainAddress), traffic)
 }
 
-func (s *chequeStore) PutTransferTraffic(chainAddress common.Address, traffic *big.Int) error {
+func (s *chequeStore) PutTransferTraffic(chainAddress types.AccountID, traffic *big.Int) error {
 	return s.store.Put(transferredTraffic(chainAddress), traffic)
 }
 
-func (s *chequeStore) PutReceivedCheques(chainAddress common.Address, cheque SignedCheque) error {
+func (s *chequeStore) PutReceivedCheques(chainAddress types.AccountID, cheque SignedCheque) error {
 	return s.store.Put(lastReceivedChequeKey(chainAddress), cheque)
 }
 
-func (s *chequeStore) GetRetrieveTraffic(chainAddress common.Address) (traffic *big.Int, err error) {
+func (s *chequeStore) GetRetrieveTraffic(chainAddress types.AccountID) (traffic *big.Int, err error) {
 	err = s.store.Get(retrievedTraffic(chainAddress), &traffic)
 	if err != nil {
 		if err != storage.ErrNotFound {
@@ -321,7 +321,7 @@ func (s *chequeStore) GetRetrieveTraffic(chainAddress common.Address) (traffic *
 	return traffic, nil
 }
 
-func (s *chequeStore) GetTransferTraffic(chainAddress common.Address) (traffic *big.Int, err error) {
+func (s *chequeStore) GetTransferTraffic(chainAddress types.AccountID) (traffic *big.Int, err error) {
 	err = s.store.Get(transferredTraffic(chainAddress), &traffic)
 	if err != nil {
 		if err != storage.ErrNotFound {
@@ -334,37 +334,23 @@ func (s *chequeStore) GetTransferTraffic(chainAddress common.Address) (traffic *
 }
 
 // RecoverCheque recovers the issuer ethereum address from a signed cheque
-func (s *chequeStore) RecoverCheque(cheque *SignedCheque, chainID int64) (common.Address, error) {
-	eip712Data := eip712DataForCheque(&cheque.Cheque, chainID)
-
-	pubkey, err := crypto.RecoverEIP712(cheque.Signature, eip712Data)
-	if err != nil {
-		return common.Address{}, err
-	}
-
-	ethAddr, err := crypto.NewEthereumAddress(*pubkey)
-	if err != nil {
-		return common.Address{}, err
-	}
-
-	var issuer common.Address
-	copy(issuer[:], ethAddr)
-	return issuer, nil
+func (s *chequeStore) RecoverCheque(signedCheque *SignedCheque) (types.AccountID, error) {
+	return RecoverCheque(signedCheque)
 }
 
-func (s *chequeStore) VerifyCheque(cheque *SignedCheque, chaindID int64) (common.Address, error) {
-	return s.recoverChequeFunc(cheque, chaindID)
+func (s *chequeStore) VerifyCheque(cheque *SignedCheque) (types.AccountID, error) {
+	return s.recoverChequeFunc(cheque)
 }
 
-func (s *chequeStore) PutChainRetrieveTraffic(chainAddress common.Address, traffic *big.Int) error {
+func (s *chequeStore) PutChainRetrieveTraffic(chainAddress types.AccountID, traffic *big.Int) error {
 	return s.store.Put(chainRetrievedTraffic(chainAddress), traffic)
 }
 
-func (s *chequeStore) PutChainTransferTraffic(chainAddress common.Address, traffic *big.Int) error {
+func (s *chequeStore) PutChainTransferTraffic(chainAddress types.AccountID, traffic *big.Int) error {
 	return s.store.Put(chainTransferredTraffic(chainAddress), traffic)
 }
 
-func (s *chequeStore) GetChainRetrieveTraffic(chainAddress common.Address) (traffic *big.Int, err error) {
+func (s *chequeStore) GetChainRetrieveTraffic(chainAddress types.AccountID) (traffic *big.Int, err error) {
 	err = s.store.Get(chainRetrievedTraffic(chainAddress), &traffic)
 	if err != nil {
 		if err != storage.ErrNotFound {
@@ -376,7 +362,7 @@ func (s *chequeStore) GetChainRetrieveTraffic(chainAddress common.Address) (traf
 	return traffic, nil
 }
 
-func (s *chequeStore) GetChainTransferTraffic(chainAddress common.Address) (traffic *big.Int, err error) {
+func (s *chequeStore) GetChainTransferTraffic(chainAddress types.AccountID) (traffic *big.Int, err error) {
 	err = s.store.Get(chainTransferredTraffic(chainAddress), &traffic)
 	if err != nil {
 		if err != storage.ErrNotFound {
@@ -388,14 +374,14 @@ func (s *chequeStore) GetChainTransferTraffic(chainAddress common.Address) (traf
 	return traffic, nil
 }
 
-func (s *chequeStore) GetAllRetrieveTransferAddresses() (map[common.Address]struct{}, error) {
-	result := make(map[common.Address]struct{})
+func (s *chequeStore) GetAllRetrieveTransferAddresses() (map[types.AccountID]struct{}, error) {
+	result := make(map[types.AccountID]struct{})
 	err := s.store.Iterate(retrievedTrafficPrefix, func(key, val []byte) (stop bool, err error) {
-		addr, err := keyChainAddress(key, retrievedTrafficPrefix+"_")
+		addr, err := keyChainAddress(key, retrievedTrafficPrefix)
 		if err != nil {
 			return false, fmt.Errorf("parse address from key: %s: %w", string(key), err)
 		}
-		result[addr] = struct{}{}
+		result[*addr] = struct{}{}
 		return false, nil
 	})
 	if err != nil {
@@ -403,11 +389,11 @@ func (s *chequeStore) GetAllRetrieveTransferAddresses() (map[common.Address]stru
 	}
 
 	err = s.store.Iterate(transferredTrafficPrefix, func(key, val []byte) (stop bool, err error) {
-		addr, err := keyChainAddress(key, transferredTrafficPrefix+"_")
+		addr, err := keyChainAddress(key, transferredTrafficPrefix)
 		if err != nil {
 			return false, fmt.Errorf("parse address from key: %s: %w", string(key), err)
 		}
-		result[addr] = struct{}{}
+		result[*addr] = struct{}{}
 		return false, nil
 	})
 	if err != nil {

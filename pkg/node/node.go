@@ -236,13 +236,39 @@ func NewNode(nodeMode address.Model, p2pAddr string, networkID uint64, logger lo
 		return nil, err
 	}
 
-	oracleChain, settlement, apiInterface, _, err := InitChain(
+	var path string
+
+	if o.DBPath != "" {
+		path = o.DBPath
+	} else if o.DataDir != "" {
+		path = filepath.Join(o.DataDir, "localstore")
+	}
+	o.StorageFilesConfig.DataDir = path
+
+	lo := &localstore.Options{
+		Capacity: o.CacheCapacity,
+		Driver:   o.DBDriver,
+		FullNode: nodeMode.IsFull(),
+	}
+	storer, err := localstore.New(path, signer.Overlay.Bytes(), stateStore, lo, logger)
+	if err != nil {
+		return nil, fmt.Errorf("localstore: %w", err)
+	}
+	err = storer.Init()
+	if err != nil {
+		return nil, err
+	}
+	b.localstoreCloser = storer
+
+	//apiInterface := client.Traffic
+	oracleChain, settlement, apiInterface, err := InitChain(
 		p2pCtx,
 		logger,
 		client,
 		o.ChainEndpoint,
 		o.OracleContractAddress,
 		stateStore,
+		storer,
 		signer.Signer,
 		o.TrafficEnable,
 		o.TrafficContractAddr,
@@ -346,30 +372,6 @@ func NewNode(nodeMode address.Model, p2pAddr string, networkID uint64, logger lo
 	if o.StorageFilesConfig.CacheDir == "" {
 		o.StorageFilesConfig.CacheDir = filepath.Join(o.DataDir, "storagefilescache")
 	}
-
-	var path string
-
-	if o.DBPath != "" {
-		path = o.DBPath
-	} else if o.DataDir != "" {
-		path = filepath.Join(o.DataDir, "localstore")
-	}
-	o.StorageFilesConfig.DataDir = path
-
-	lo := &localstore.Options{
-		Capacity: o.CacheCapacity,
-		Driver:   o.DBDriver,
-		FullNode: nodeMode.IsFull(),
-	}
-	storer, err := localstore.New(path, signer.Overlay.Bytes(), stateStore, lo, logger)
-	if err != nil {
-		return nil, fmt.Errorf("localstore: %w", err)
-	}
-	err = storer.Init()
-	if err != nil {
-		return nil, err
-	}
-	b.localstoreCloser = storer
 
 	retrieve := retrieval.New(signer.Overlay, p2ps, route, storer, nodeMode.IsFull(), logger, tracer, acc, subPub)
 	if err = p2ps.AddProtocol(retrieve.Protocol()); err != nil {

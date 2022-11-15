@@ -11,7 +11,7 @@ import (
 
 	"github.com/FavorLabs/favorX/pkg/boson"
 	"github.com/FavorLabs/favorX/pkg/storage"
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/centrifuge/go-substrate-rpc-client/v4/types"
 )
 
 var (
@@ -22,11 +22,11 @@ var (
 // Addressbook maps peers to beneficaries, chequebooks and in reverse.
 type Addressbook interface {
 	// Beneficiary returns the beneficiary for the given peer.
-	Beneficiary(peer boson.Address) (beneficiary common.Address, known bool)
+	Beneficiary(peer boson.Address) (beneficiary types.AccountID, known bool)
 	// BeneficiaryPeer returns the peer for a beneficiary.
-	BeneficiaryPeer(beneficiary common.Address) (peer boson.Address, known bool)
+	BeneficiaryPeer(beneficiary types.AccountID) (peer boson.Address, known bool)
 	// PutBeneficiary stores the beneficiary for the given peer.
-	PutBeneficiary(peer boson.Address, beneficiary common.Address) error
+	PutBeneficiary(peer boson.Address, beneficiary types.AccountID) error
 
 	InitAddressBook() error
 }
@@ -58,7 +58,7 @@ func (a *addressBook) InitAddressBook() error {
 			return false, err
 		}
 
-		var beneficiary common.Address
+		var beneficiary types.AccountID
 		if err = a.store.Get(key, &beneficiary); err != nil {
 			return true, err
 		}
@@ -88,7 +88,7 @@ func (a *addressBook) InitAddressBook() error {
 			return true, err
 		}
 
-		if err := a.putBeneficiaryPeer(peer, beneficiary); err != nil {
+		if err := a.putBeneficiaryPeer(peer, *beneficiary); err != nil {
 			return true, err
 		}
 
@@ -99,28 +99,28 @@ func (a *addressBook) InitAddressBook() error {
 
 	return nil
 }
-func (a *addressBook) putPeerBeneficiary(peer boson.Address, beneficiary common.Address) error {
+func (a *addressBook) putPeerBeneficiary(peer boson.Address, beneficiary types.AccountID) error {
 	a.peerBeneficiary.Store(peer.String(), beneficiary)
 	return nil
 }
 
-func (a *addressBook) putBeneficiaryPeer(peer boson.Address, beneficiary common.Address) error {
-	a.beneficiaryPeer.Store(beneficiary.String(), peer)
+func (a *addressBook) putBeneficiaryPeer(peer boson.Address, beneficiary types.AccountID) error {
+	a.beneficiaryPeer.Store(beneficiary.ToHexString(), peer)
 	return nil
 }
 
 // Beneficiary returns the beneficiary for the given peer.
-func (a *addressBook) Beneficiary(peer boson.Address) (beneficiary common.Address, known bool) {
+func (a *addressBook) Beneficiary(peer boson.Address) (beneficiary types.AccountID, known bool) {
 	if value, ok := a.peerBeneficiary.Load(peer.String()); ok {
-		return value.(common.Address), true
+		return value.(types.AccountID), true
 	} else {
-		return common.Address{}, false
+		return types.AccountID{}, false
 	}
 }
 
 // BeneficiaryPeer returns the peer for a beneficiary.
-func (a *addressBook) BeneficiaryPeer(beneficiary common.Address) (peer boson.Address, known bool) {
-	if value, ok := a.beneficiaryPeer.Load(beneficiary.String()); ok {
+func (a *addressBook) BeneficiaryPeer(beneficiary types.AccountID) (peer boson.Address, known bool) {
+	if value, ok := a.beneficiaryPeer.Load(beneficiary.ToHexString()); ok {
 		return value.(boson.Address), true
 	} else {
 		return boson.Address{}, false
@@ -128,7 +128,7 @@ func (a *addressBook) BeneficiaryPeer(beneficiary common.Address) (peer boson.Ad
 }
 
 // PutBeneficiary stores the beneficiary for the given peer.
-func (a *addressBook) PutBeneficiary(peer boson.Address, beneficiary common.Address) error {
+func (a *addressBook) PutBeneficiary(peer boson.Address, beneficiary types.AccountID) error {
 	err := a.putPeerBeneficiary(peer, beneficiary)
 	if err != nil {
 		return err
@@ -147,12 +147,12 @@ func (a *addressBook) PutBeneficiary(peer boson.Address, beneficiary common.Addr
 
 // peerBeneficiaryKey computes the key where to store the beneficiary for a peer.
 func peerBeneficiaryKey(peer boson.Address) string {
-	return fmt.Sprintf("%s-%s", peerBeneficiaryPrefix, peer)
+	return fmt.Sprintf("%s-%s", peerBeneficiaryPrefix, peer.String())
 }
 
 // beneficiaryPeerKey computes the key where to store the peer for a beneficiary.
-func beneficiaryPeerKey(peer common.Address) string {
-	return fmt.Sprintf("%s-%s", beneficiaryPeerPrefix, peer)
+func beneficiaryPeerKey(peer types.AccountID) string {
+	return fmt.Sprintf("%s-%s", beneficiaryPeerPrefix, peer.ToHexString())
 }
 
 func peerUnmarshalKey(keyPrefix, key string) (boson.Address, error) {
@@ -166,13 +166,13 @@ func peerUnmarshalKey(keyPrefix, key string) (boson.Address, error) {
 	return overlay, nil
 }
 
-func beneficiaryUnmarshalKey(keyPrefix, key string) (common.Address, error) {
+func beneficiaryUnmarshalKey(keyPrefix, key string) (*types.AccountID, error) {
 	addr := strings.TrimPrefix(key, keyPrefix)
 	keys := strings.Split(addr, "-")
 
 	if len(keys) > 1 {
-		return common.HexToAddress(keys[1]), nil
+		return types.NewAccountIDFromHexString(keys[1])
 	} else {
-		return common.BytesToAddress([]byte("")), nil
+		return types.NewAccountID([]byte(""))
 	}
 }

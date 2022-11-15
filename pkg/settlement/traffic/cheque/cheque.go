@@ -2,19 +2,18 @@ package cheque
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"math/big"
 
 	"github.com/FavorLabs/favorX/pkg/crypto"
-	"github.com/FavorLabs/favorX/pkg/crypto/eip712"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/math"
+	"github.com/centrifuge/go-substrate-rpc-client/v4/types"
 )
 
 // Cheque represents a cheque for a SimpleSwap chequebook
 type Cheque struct {
-	Recipient        common.Address
-	Beneficiary      common.Address
+	Recipient        types.AccountID
+	Beneficiary      types.AccountID
 	CumulativePayout *big.Int
 }
 
@@ -24,34 +23,6 @@ type SignedCheque struct {
 	Signature []byte
 }
 
-// chequebookDomain computes chainId-dependant EIP712 domain
-func chequeDomain(chainID int64) eip712.TypedDataDomain {
-	return eip712.TypedDataDomain{
-		Name:    "Cheque",
-		Version: "1.0",
-		ChainId: math.NewHexOrDecimal256(chainID),
-	}
-}
-
-// ChequeTypes are the needed type descriptions for cheque signing
-var ChequeTypes = eip712.Types{
-	"EIP712Domain": eip712.EIP712DomainType,
-	"Cheque": []eip712.Type{
-		{
-			Name: "recipient",
-			Type: "address",
-		},
-		{
-			Name: "beneficiary",
-			Type: "address",
-		},
-		{
-			Name: "cumulativePayout",
-			Type: "uint256",
-		},
-	},
-}
-
 // ChequeSigner signs cheque
 type ChequeSigner interface {
 	// Sign signs a cheque
@@ -59,35 +30,23 @@ type ChequeSigner interface {
 }
 
 type chequeSigner struct {
-	signer  crypto.Signer // the underlying signer used
-	chainID int64         // the chainID used for EIP712
+	signer crypto.Signer // the underlying signer used
 }
 
 // NewChequeSigner creates a new cheque signer for the given chainID.
-func NewChequeSigner(signer crypto.Signer, chainID int64) ChequeSigner {
+func NewChequeSigner(signer crypto.Signer) ChequeSigner {
 	return &chequeSigner{
-		signer:  signer,
-		chainID: chainID,
-	}
-}
-
-// eip712DataForCheque converts a cheque into the correct TypedData structure.
-func eip712DataForCheque(cheque *Cheque, chainID int64) *eip712.TypedData {
-	return &eip712.TypedData{
-		Domain: chequeDomain(chainID),
-		Types:  ChequeTypes,
-		Message: eip712.TypedDataMessage{
-			"recipient":        cheque.Recipient.Hex(),
-			"beneficiary":      cheque.Beneficiary.Hex(),
-			"cumulativePayout": cheque.CumulativePayout.String(),
-		},
-		PrimaryType: "Cheque",
+		signer: signer,
 	}
 }
 
 // Sign signs a cheque.
 func (s *chequeSigner) Sign(cheque *Cheque) ([]byte, error) {
-	return s.signer.SignTypedData(eip712DataForCheque(cheque, s.chainID))
+	sign, err := json.Marshal(cheque)
+	if err != nil {
+		return nil, err
+	}
+	return s.signer.Sign(sign)
 }
 
 func (cheque *Cheque) String() string {

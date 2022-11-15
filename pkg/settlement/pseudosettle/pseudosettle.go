@@ -16,7 +16,7 @@ import (
 	"github.com/FavorLabs/favorX/pkg/settlement/traffic"
 	chequePkg "github.com/FavorLabs/favorX/pkg/settlement/traffic/cheque"
 	"github.com/FavorLabs/favorX/pkg/storage"
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/centrifuge/go-substrate-rpc-client/v4/types"
 )
 
 var (
@@ -37,14 +37,14 @@ type Service struct {
 	metrics           metrics
 	trafficMu         sync.RWMutex
 	trafficInfo       sync.Map
-	address           common.Address
+	address           types.AccountID
 }
 
 func (s *Service) API() rpc.API {
 	return rpc.API{}
 }
 
-func New(streamer p2p.Streamer, logger logging.Logger, store storage.StateStorer, address common.Address) *Service {
+func New(streamer p2p.Streamer, logger logging.Logger, store storage.StateStorer, address types.AccountID) *Service {
 	return &Service{
 		streamer: streamer,
 		logger:   logger,
@@ -305,8 +305,8 @@ func (s *Service) LastReceivedCheque(_ boson.Address) (*chequePkg.SignedCheque, 
 	return nil, nil
 }
 
-func (s *Service) CashCheque(_ context.Context, _ boson.Address) (common.Hash, error) {
-	return common.Hash{}, nil
+func (s *Service) CashCheque() (types.Hash, error) {
+	return types.Hash{}, nil
 }
 
 func (s *Service) TrafficCheques() ([]*traffic.TrafficCheque, error) {
@@ -314,7 +314,7 @@ func (s *Service) TrafficCheques() ([]*traffic.TrafficCheque, error) {
 	return trafficList, nil
 }
 
-func (s *Service) Address() common.Address {
+func (s *Service) Address() types.AccountID {
 	return s.address
 }
 

@@ -8,7 +8,6 @@ import (
 	"github.com/FavorLabs/favorX/pkg/boson"
 	"github.com/FavorLabs/favorX/pkg/chain"
 	"github.com/FavorLabs/favorX/pkg/logging"
-	cha "github.com/FavorLabs/favorX/pkg/settlement/chain"
 	"github.com/FavorLabs/favorX/pkg/subscribe"
 )
 
@@ -21,18 +20,16 @@ type Resolver interface {
 
 type ChainOracle struct {
 	sync.Mutex
-	logger        logging.Logger
-	chain         *chain.Client
-	subPub        subscribe.SubPub
-	commonService cha.Common
+	logger logging.Logger
+	chain  *chain.Client
+	subPub subscribe.SubPub
 }
 
-func NewServer(logger logging.Logger, backend *chain.Client, commonService cha.Common, subPub subscribe.SubPub) (Resolver, error) {
+func NewServer(logger logging.Logger, backend *chain.Client, subPub subscribe.SubPub) (Resolver, error) {
 	return &ChainOracle{
-		logger:        logger,
-		chain:         backend,
-		subPub:        subPub,
-		commonService: commonService,
+		logger: logger,
+		chain:  backend,
+		subPub: subPub,
 	}, nil
 }
 
