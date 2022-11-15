@@ -8,6 +8,7 @@ import (
 	"github.com/FavorLabs/favorX/pkg/boson"
 	"github.com/FavorLabs/favorX/pkg/chain"
 	"github.com/FavorLabs/favorX/pkg/chain/rpc/storage"
+	"github.com/FavorLabs/favorX/pkg/crypto"
 	"github.com/centrifuge/go-substrate-rpc-client/v4/signature"
 	"github.com/centrifuge/go-substrate-rpc-client/v4/types"
 	"github.com/stretchr/testify/assert"
@@ -68,4 +69,17 @@ func TestService_StorageFile(t *testing.T) {
 	ovs2, err := cli.Storage.GetNodesFromCid(ci2.Bytes())
 	assert.NoError(t, err)
 	assert.Equal(t, []types.AccountID{*ov2}, ovs2)
+}
+
+func Test_CheckOrder(t *testing.T) {
+	t.SkipNow()
+	cli, err := chain.NewClient(url, signature.TestKeyringPairAlice)
+	assert.NoError(t, err)
+	buyer, err := crypto.NewPublicKeyFromSs58("5G1FkjcvB1ct2dk7S8k4nUGjRooETh71UFyJiVFeyZk4tHvL")
+	assert.NoError(t, err)
+	mch, err := crypto.NewPublicKeyFromSs58("5EAPiyvna7EeeFXPEjvcHyKtqb7esErxCypRkcWTraWvm7ho")
+	assert.NoError(t, err)
+	fileHash := boson.MustParseHexAddress("3db47e7511eb12b3932a18e41fd4f8b7bd2cf2287c26ce328cd8cd1305f98117")
+	err = cli.Storage.CheckOrder(buyer.Encode(), fileHash.Bytes(), mch.Encode())
+	assert.NoError(t, err)
 }

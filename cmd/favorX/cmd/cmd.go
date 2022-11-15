@@ -33,7 +33,6 @@ const (
 	optionNameDebugAPIAddr          = "debug-api-addr"
 	optionNameBootnodes             = "bootnode"
 	optionNameChainEndpoint         = "chain-endpoint"
-	optionNameOracleContractAddr    = "oracle-contract-addr"
 	optionNameNetworkID             = "network-id"
 	optionWelcomeMessage            = "welcome-message"
 	optionCORSAllowedOrigins        = "cors-allowed-origins"
@@ -49,7 +48,6 @@ const (
 	optionNameBootnodeMode          = "bootnode-mode"
 	optionNameFullNode              = "full-node"
 	optionNameGatewayMode           = "gateway-mode"
-	optionNameTrafficContractAddr   = "traffic-contract-addr"
 	optionNameTrafficEnable         = "traffic-enable"
 	optionNameBinMaxPeers           = "bin-max-peers"
 	optionNameLightMaxPeers         = "light-max-peers"
@@ -215,7 +213,6 @@ func (c *command) setAllFlags(cmd *cobra.Command) {
 	cmd.Flags().Bool(optionNameP2PQUICEnable, false, "enable P2P QUIC transport")
 	cmd.Flags().StringSlice(optionNameBootnodes, []string{}, "initial nodes to connect to")
 	cmd.Flags().String(optionNameChainEndpoint, "", "link to chain endpoint")
-	cmd.Flags().String(optionNameOracleContractAddr, "", "link to oracle contract")
 	cmd.Flags().Bool(optionNameDebugAPIEnable, true, "enable debug HTTP API")
 	cmd.Flags().String(optionNameDebugAPIAddr, ":1635", "debug HTTP API listen address")
 	cmd.Flags().Uint64(optionNameNetworkID, 10, "ID of the favorX network")
@@ -232,7 +229,6 @@ func (c *command) setAllFlags(cmd *cobra.Command) {
 	cmd.Flags().StringSlice(optionNameResolverEndpoints, []string{}, "ENS compatible API endpoint for a TLD and with contract address, can be repeated,the default endpoint with chain-endpoint, format [tld:]contract-addr[@url]")
 	cmd.Flags().Bool(optionNameGatewayMode, false, "disable a set of sensitive features in the api")
 	cmd.Flags().Bool(optionNameBootnodeMode, false, "cause the node to always accept incoming connections")
-	cmd.Flags().String(optionNameTrafficContractAddr, "", "link to traffic contract")
 	cmd.Flags().Bool(optionNameTrafficEnable, false, "enable traffic")
 	cmd.Flags().Bool(optionNameFullNode, true, "full node")
 	cmd.Flags().Int(optionNameLightMaxPeers, 100, "connected light node max limit")

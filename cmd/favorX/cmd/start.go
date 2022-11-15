@@ -121,7 +121,6 @@ func (c *command) initStartCmd() (err error) {
 				WelcomeMessage:         c.config.GetString(optionWelcomeMessage),
 				Bootnodes:              c.config.GetStringSlice(optionNameBootnodes),
 				ChainEndpoint:          c.config.GetString(optionNameChainEndpoint),
-				OracleContractAddress:  c.config.GetString(optionNameOracleContractAddr),
 				CORSAllowedOrigins:     c.config.GetStringSlice(optionCORSAllowedOrigins),
 				Standalone:             c.config.GetBool(optionNameStandalone),
 				IsDev:                  c.config.GetBool(optionNameDevMode),
@@ -132,7 +131,6 @@ func (c *command) initStartCmd() (err error) {
 				ResolverConnectionCfgs: resolverCfgs,
 				GatewayMode:            c.config.GetBool(optionNameGatewayMode),
 				TrafficEnable:          c.config.GetBool(optionNameTrafficEnable),
-				TrafficContractAddr:    c.config.GetString(optionNameTrafficContractAddr),
 				KadBinMaxPeers:         c.config.GetInt(optionNameBinMaxPeers),
 				LightNodeMaxPeers:      c.config.GetInt(optionNameLightMaxPeers),
 				AllowPrivateCIDRs:      c.config.GetBool(optionNameAllowPrivateCIDRs),
@@ -312,7 +310,7 @@ func (c *command) configureSigner(cmd *cobra.Command, logger logging.Logger) (co
 		logger.Debugf("using existing libp2p key")
 	}
 
-	keyPair, err := signature.KeyringPairFromSecret(fmt.Sprintf("0x%x", kp.GetSeed()), 42)
+	keyPair, err := signature.KeyringPairFromSecret(fmt.Sprintf("0x%x", kp.GetSecretKey64()), 42)
 	if err != nil {
 		return nil, fmt.Errorf("subkey keyPair: %w", err)
 	}

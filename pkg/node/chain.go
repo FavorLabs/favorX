@@ -26,13 +26,10 @@ func InitChain(
 	ctx context.Context,
 	logger logging.Logger,
 	subClient *subChain.Client,
-	endpoint string,
-	oracleContractAddress string,
 	stateStore storage.StateStorer,
 	localStore storage.Storer,
 	signer crypto.Signer,
 	trafficEnable bool,
-	trafficContractAddr string,
 	p2pService *libp2p.Service,
 	subPub subscribe.SubPub,
 ) (oracle.Resolver, settlement.Interface, traffic.ApiInterface, error) {

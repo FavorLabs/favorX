@@ -1,147 +1,71 @@
-package subkey_test
+package subkey
 
-var PKCS8_HEADER = []byte{48, 83, 2, 1, 1, 48, 5, 6, 3, 43, 101, 112, 4, 34, 4, 32}
-var PKCS8_DIVIDER = []byte{161, 35, 3, 33, 0}
-var SEED_OFFSET = len(PKCS8_HEADER)
+import (
+	"bytes"
+	"testing"
 
-const (
-	PUB_LENGTH  = 32
-	SALT_LENGTH = 32
-	SEC_LENGTH  = 64
-	SEED_LENGTH = 32
+	"github.com/FavorLabs/favorX/pkg/crypto"
 )
 
-//
-// func TestNew(t *testing.T) {
-// 	secretKeyBytes, err := hex.DecodeString("6368616e676520746869732070617373776f726420746f206120736563726574")
-// 	if err != nil {
-// 		panic(err)
-// 	}
-//
-// 	var secretKey [32]byte
-// 	copy(secretKey[:], secretKeyBytes)
-//
-// 	// You must use a different nonce for each message you encrypt with the
-// 	// same key. Since the nonce here is 192 bits long, a random value
-// 	// provides a sufficiently small probability of repeats.
-// 	var nonce [24]byte
-// 	if _, err := io.ReadFull(rand.Reader, nonce[:]); err != nil {
-// 		panic(err)
-// 	}
-//
-// 	// This encrypts "hello world" and appends the result to the nonce.
-// 	encrypted := secretbox.Seal(nonce[:], []byte("hello world"), &nonce, &secretKey)
-//
-// 	// When you decrypt, you must use the same nonce and key you used to
-// 	// encrypt the message. One way to achieve this is to store the nonce
-// 	// alongside the encrypted message. Above, we stored the nonce in the first
-// 	// 24 bytes of the encrypted text.
-// 	var decryptNonce [24]byte
-// 	copy(decryptNonce[:], encrypted[:24])
-// 	decrypted, ok := secretbox.Open(nil, encrypted[24:], &decryptNonce, &secretKey)
-// 	if !ok {
-// 		panic("decryption error")
-// 	}
-//
-// 	fmt.Println(string(decrypted))
-// }
-//
-// func TestService_Exists(t *testing.T) {
-// 	// encrypted, nonce, secret
-//
-// }
-//
-// func decodePair(passphrase string, encrypted []byte) (secretKey []byte, publicKey []byte, err error) {
-// 	encType := []string{"scrypt", "xsalsa20-poly1305"}
-// 	decrypted := jsonDecryptData(encrypted, passphrase, encType)
-// 	if !bytes.Equal(decrypted[:len(PKCS8_HEADER)], PKCS8_HEADER) {
-// 		err = errors.New("invalid Pkcs8 header found in body")
-// 		return
-// 	}
-// 	divOffset := SEED_OFFSET + SEC_LENGTH
-// 	secretKey = decrypted[SEED_OFFSET:divOffset]
-// 	divider := decrypted[divOffset : divOffset+len(PKCS8_DIVIDER)]
-// 	// old-style, we have the seed here
-// 	if !bytes.Equal(divider, PKCS8_DIVIDER) {
-// 		divOffset = SEED_OFFSET + SEED_LENGTH
-// 		secretKey = decrypted[SEED_OFFSET:divOffset]
-// 		divider = decrypted[divOffset : divOffset+len(PKCS8_DIVIDER)]
-// 		if !bytes.Equal(divider, PKCS8_DIVIDER) {
-// 			err = errors.New("invalid Pkcs8 divider found in body")
-// 			return
-// 		}
-// 	}
-// 	pubOffset := divOffset + len(PKCS8_DIVIDER)
-// 	publicKey = decrypted[pubOffset : pubOffset+PUB_LENGTH]
-// 	return
-// }
-//
-// func jsonDecryptData(encrypted []byte, passphrase string) (encoded []byte, err error) {
-// 	var res Result
-// 	res, err = scryptFromBytes(encrypted)
-// 	if err != nil {
-// 		return
-// 	}
-// 	var password []byte
-// 	if res.salt != nil {
-// 		password, err := scrypt.Key([]byte(passphrase), res.salt, scryptN, scryptR, scryptP, scryptDKLen)
-// 		if err != nil {
-// 			return nil, err
-// 		}
-// 	}
-//
-// 	return PKCS8_DIVIDER
-// }
-//
-// type Params struct {
-// 	N int
-// 	P int
-// 	r int
-// }
-// type Result struct {
-// 	params Params
-// 	salt   []byte
-// }
-//
-// const (
-// 	scryptN     = 1 << 15
-// 	scryptP     = 1
-// 	scryptR     = 8
-// 	scryptDKLen = 32
-// )
-//
-// func scryptFromBytes(data []byte) (res Result, err error) {
-// 	salt := data[:32]
-// 	var N, P, r int
-// 	_ = binary.Read(bytes.NewBuffer(data[32+0:32+4]), binary.LittleEndian, &N)
-// 	_ = binary.Read(bytes.NewBuffer(data[32+4:32+8]), binary.LittleEndian, &P)
-// 	_ = binary.Read(bytes.NewBuffer(data[32+8:32+12]), binary.LittleEndian, &r)
-// 	// FIXME At this moment we assume these to be fixed params, this is not a great idea since we lose flexibility
-// 	// and updates for greater security. However we need some protection against carefully-crafted params that can
-// 	// eat up CPU since these are user inputs. So we need to get very clever here, but atm we only allow the defaults
-// 	// and if no match, bail out
-// 	if N != scryptN || P != scryptP || r != scryptR {
-// 		err = errors.New("invalid injected scrypt params found")
-// 		return
-// 	}
-// 	res = Result{
-// 		params: Params{
-// 			N: N,
-// 			P: P,
-// 			r: r,
-// 		},
-// 		salt: salt,
-// 	}
-// 	return
-// }
-//
-// var (
-// 	ENCODING      = []string{"scrypt", "xsalsa20-poly1305"}
-// 	ENCODING_NONE = []string{"none"}
-// )
-//
-// const (
-// 	ENCODING_VERSION = "3"
-// 	NONCE_LENGTH     = 24
-// 	SCRYPT_LENGTH    = 32 + (3 * 4)
-// )
+var node1 = "{\"encoded\":\"/iRHztPVc12bejWA/IdsxAYI9fTes0PC16bft8n+beAAgAAAAQAAAAgAAAC8thFAyVDvkz0ekTuuvEM5F8o+tGTeyzaDnZff4rS0hNvAsILd1E5xfgmvkfe3HcnG+rEI1+8yTGUasUgD8VdtRNWVNX2qcA96OSHs3VE3nvxH8C3SHT0Gnz9prKKZREUOSwGCEAhniAH8W6loWbgfv9a+FROvBxNGOb991s2LaQ+rznyWj328MPTdXHdGS3S2cilbzOLfIVpVuOhs\",\"encoding\":{\"content\":[\"pkcs8\",\"sr25519\"],\"type\":[\"scrypt\",\"xsalsa20-poly1305\"],\"version\":\"3\"},\"address\":\"5G1FkjcvB1ct2dk7S8k4nUGjRooETh71UFyJiVFeyZk4tHvL\",\"meta\":{\"isHardware\":false,\"name\":\"\",\"tags\":[],\"whenCreated\":1668478979}}"
+var node1Appjs = "{\"encoded\":\"F5sUho/1cSQBErJdzgyBxjeOuS0q445zkYs7kSMnOeEAgAAAAQAAAAgAAAABqXXZ8yEo7Ulco9fSuGR9RUd2qqhWvFMBqHhqwXX07KeP6Q5CfV8r5pOoyFav8e0+zffNQYdHke2M617srQCyp/joKLY/NIpCu/qs70QXPvCuPCv8s2RqCgCqCxXqurmFd0UPkq0J3VlmXd5DUV2FBBlbBQPL+0HbVmSLmZ/GcmPWQy9IJWKfJS6vHX1/nGl645u2J9VrbWHJFkNX\",\"encoding\":{\"content\":[\"pkcs8\",\"sr25519\"],\"type\":[\"scrypt\",\"xsalsa20-poly1305\"],\"version\":\"3\"},\"address\":\"5G1FkjcvB1ct2dk7S8k4nUGjRooETh71UFyJiVFeyZk4tHvL\",\"meta\":{\"isHardware\":false,\"name\":\"node1\",\"tags\":[],\"whenCreated\":1668422186388}}"
+
+func Test_EncodePair(t *testing.T) {
+	kp, err := crypto.NewKeypairFromMnemonic("nominee wet cruise supply distance orphan spider alert dream enact rather salmon")
+	if err != nil {
+		t.Fatal(err)
+	}
+	b, err := encryptKeyPair(kp, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	pair, err := decryptKeyPair(b, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if pair.GetExportPrivateKey() != kp.GetExportPrivateKey() {
+		t.Fatalf("mismatch scrypt key")
+	}
+}
+
+func Test_DecodePair(t *testing.T) {
+	kp, _ := crypto.NewKeypairFromMnemonic("nominee wet cruise supply distance orphan spider alert dream enact rather salmon")
+
+	pair1, err := decryptKeyPair([]byte(node1), "123456")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	pair, err := decryptKeyPair([]byte(node1Appjs), "123456")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if pair.GetExportPrivateKey() != pair1.GetExportPrivateKey() {
+		t.Fatalf("mismatch private key")
+	}
+	sign, err := kp.Sign([]byte("hello"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	verify, err := pair.Public().Verify([]byte("hello"), sign)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !verify {
+		t.Fatalf("verify failed")
+	}
+	sk := pair.GetExportPrivateKey()
+	key, err := crypto.NewKeypairFromExportPrivateKey(sk[:])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if key.Private().Hex() != pair.Private().Hex() || pair.Private().Hex() != kp.Private().Hex() {
+		t.Fatalf("mismatch private key")
+	}
+	if !bytes.Equal(key.GetSecretKey64(), pair.GetSecretKey64()) {
+		t.Fatalf("mismatch secret key")
+	}
+	if !bytes.Equal(kp.GetSecretKey64(), pair.GetSecretKey64()) {
+		t.Fatalf("mismatch secret key")
+	}
+}

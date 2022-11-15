@@ -328,7 +328,7 @@ func (w *Worker) storageFile(cid boson.Address) (err error) {
 	}()
 	w.manager.logger.Infof("worker %d oracle on chain start", w.id)
 
-	return w.manager.subClient.Storage.StorageFileWatch(w.ctx, w.task.Info.Source.Bytes(), cid.Bytes(), w.manager.options.Overlay.Bytes())
+	return w.manager.subClient.Storage.StorageFileWatch(w.ctx, w.task.Info.Buyer.Bytes(), cid.Bytes(), w.manager.options.Overlay.Bytes())
 }
 
 func (w *Worker) online() {

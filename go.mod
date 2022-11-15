@@ -46,6 +46,7 @@ require (
 	github.com/spf13/viper v1.12.0
 	github.com/stretchr/testify v1.8.1
 	github.com/syndtr/goleveldb v1.0.1-0.20220614013038-64ee5596c38a
+	github.com/twystd/tweetnacl-go v0.0.0-20210413205227-681aa97ec383
 	github.com/uber/jaeger-client-go v2.30.0+incompatible
 	github.com/vedhavyas/go-subkey v1.0.3
 	github.com/wealdtech/go-ens/v3 v3.5.1

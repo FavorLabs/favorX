@@ -131,6 +131,7 @@ type Options struct {
 	Restricted         bool
 	DebugApiAddr       string
 	RPCWSAddr          string
+	NetWorkID          uint64
 }
 type TransactionResponse struct {
 	Hash     types.Hash

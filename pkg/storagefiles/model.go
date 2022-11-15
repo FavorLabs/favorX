@@ -7,4 +7,5 @@ import (
 type UploadRequest struct {
 	Source boson.Address
 	Hash   boson.Address
+	Buyer  boson.Address
 }
