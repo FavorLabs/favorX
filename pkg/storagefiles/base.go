@@ -13,7 +13,7 @@ import (
 	"github.com/FavorLabs/favorX/pkg/crypto"
 	"github.com/FavorLabs/favorX/pkg/fileinfo"
 	"github.com/FavorLabs/favorX/pkg/logging"
-	"github.com/FavorLabs/favorX/pkg/settlement/chain/oracle"
+	"github.com/FavorLabs/favorX/pkg/oracle"
 	"github.com/FavorLabs/favorX/pkg/subscribe"
 )
 

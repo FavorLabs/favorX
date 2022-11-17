@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"math/big"
 	"mime"
 	"net/http"
 	"path"
@@ -641,38 +640,6 @@ func (s *server) fileRegister(w http.ResponseWriter, r *http.Request) {
 	nameOrHex := mux.Vars(r)["address"]
 	addr, err := s.resolveNameOrAddress(nameOrHex)
 	defer s.tranProcess.Delete(apiName + addr.String())
-	// var gasPrice, minGasPrice *big.Int
-	// price := r.URL.Query().Get("gasPrice")
-	// if price == "" {
-	// 	gasPrice = big.NewInt(0)
-	// } else {
-	// 	gas, err := strconv.ParseInt(price, 10, 64)
-	// 	if err != nil {
-	// 		logger.Errorf("gasPrice:%v to int64 error", price)
-	// 		jsonhttp.InternalServerError(w, fmt.Sprintf("incoming parameters gasPrice error"))
-	// 		return
-	// 	}
-	// 	gasPrice = big.NewInt(gas)
-	// }
-	//
-	// minPrice := r.URL.Query().Get("minGasPrice")
-	// if minPrice == "" {
-	// 	minGasPrice = big.NewInt(0)
-	// } else {
-	// 	gas, err := strconv.ParseInt(minPrice, 10, 64)
-	// 	if err != nil {
-	// 		logger.Errorf("minGasPrice:%v to int64 error", price)
-	// 		jsonhttp.InternalServerError(w, fmt.Sprintf("incoming parameters minGasPrice error"))
-	// 		return
-	// 	}
-	// 	minGasPrice = big.NewInt(gas)
-	// }
-	// if err != nil {
-	// 	logger.Debugf("file fileRegister: parse address %s: %v", nameOrHex, err)
-	// 	logger.Errorf("file fileRegister: parse address")
-	// 	jsonhttp.NotFound(w, nil)
-	// 	return
-	// }
 	if _, ok := s.tranProcess.Load(apiName + addr.String()); ok {
 		logger.Errorf("parse address %s under processing", nameOrHex)
 		jsonhttp.InternalServerError(w, fmt.Sprintf("parse address %s under processing", nameOrHex))
@@ -693,29 +660,17 @@ func (s *server) fileRegister(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	users, err := s.commonChain.Storage.PlaceOrderWatch(r.Context(), addr.Bytes(), uint64(info.Size), 2, 14400)
+	txn, err := s.commonChain.Storage.PlaceOrder(r.Context(), addr.Bytes(), uint64(info.Size), 1, 14400, func(mch types.AccountID) {
+		target, _ := crypto.NewOverlayAddress(mch.ToBytes(), s.NetWorkID)
+		s.logger.Debugf("order file %s notify to %s", addr, target)
+		go s.orderNotify.Notify(context.Background(), target, addr)
+	})
 	if err != nil {
 		jsonhttp.InternalServerError(w, err)
 		return
 	}
-	for _, v := range users {
-		target, _ := crypto.NewOverlayAddress(v.ToBytes(), s.NetWorkID)
-		go s.orderNotify.Notify(context.Background(), target, addr)
-	}
 
-	// err = s.oracleChain.RegisterCidAndNode(r.Context(), addr, s.overlay, gasPrice, minGasPrice)
-	// if err != nil {
-	// 	logger.Errorf("fileRegister failed: %v ", err)
-	// 	jsonhttp.InternalServerError(w, fmt.Sprintf("fileRegister failed: %v ", err))
-	// 	return
-	// }
-
-	err = s.fileInfo.RegisterFile(addr, true)
-	if err != nil {
-		logger.Errorf("fileRegister update info:%v", err)
-	}
-
-	jsonhttp.OK(w, nil)
+	jsonhttp.OK(w, RegisterResponse{Hash: txn})
 }
 
 func (s *server) fileRegisterRemove(w http.ResponseWriter, r *http.Request) {
@@ -729,39 +684,12 @@ func (s *server) fileRegisterRemove(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer s.tranProcess.Delete(apiName + addr.String())
-	var gasPrice, minGasPrice *big.Int
-	price := r.URL.Query().Get("gasPrice")
-	if price == "" {
-		gasPrice = big.NewInt(0)
-	} else {
-		gas, err := strconv.ParseInt(price, 10, 64)
-		if err != nil {
-			logger.Errorf("gasPrice:%v to int64 error", price)
-			jsonhttp.InternalServerError(w, fmt.Sprintf("incoming parameters gasPrice error"))
-			return
-		}
-		gasPrice = big.NewInt(gas)
-	}
-
-	minPrice := r.URL.Query().Get("minGasPrice")
-	if minPrice == "" {
-		minGasPrice = big.NewInt(0)
-	} else {
-		gas, err := strconv.ParseInt(minPrice, 10, 64)
-		if err != nil {
-			logger.Errorf("minGasPrice:%v to int64 error", price)
-			jsonhttp.InternalServerError(w, fmt.Sprintf("incoming parameters minGasPrice error"))
-			return
-		}
-		minGasPrice = big.NewInt(gas)
-	}
 	if _, ok := s.tranProcess.Load(apiName + addr.String()); ok {
 		logger.Errorf("parse address %s under processing", nameOrHex)
 		jsonhttp.InternalServerError(w, fmt.Sprintf("parse address %s under processing", nameOrHex))
 		return
 	}
 	s.tranProcess.Store(apiName+addr.String(), "-")
-
 	overlays := s.oracleChain.GetNodesFromCid(addr.Bytes())
 	isDel := false
 	for _, v := range overlays {
@@ -770,8 +698,10 @@ func (s *server) fileRegisterRemove(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 	}
+
+	var txn types.Hash
 	if isDel {
-		err = s.oracleChain.RemoveCidAndNode(r.Context(), addr, s.overlay, gasPrice, minGasPrice)
+		txn, err = s.oracleChain.Remove(r.Context(), addr, s.overlay)
 		if err != nil {
 			s.logger.Error("fileRegisterRemove failed: %v ", err)
 			jsonhttp.InternalServerError(w, fmt.Sprintf("fileRegisterRemove failed: %v ", err))
@@ -784,7 +714,7 @@ func (s *server) fileRegisterRemove(w http.ResponseWriter, r *http.Request) {
 		logger.Errorf("fileRegister update info:%v", err)
 	}
 
-	jsonhttp.OK(w, nil)
+	jsonhttp.OK(w, RegisterResponse{Hash: txn})
 }
 
 type ManifestAction struct {

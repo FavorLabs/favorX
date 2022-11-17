@@ -7,10 +7,11 @@ import (
 	subChain "github.com/FavorLabs/favorX/pkg/chain"
 	chainTraffic "github.com/FavorLabs/favorX/pkg/chain/rpc/traffic"
 	"github.com/FavorLabs/favorX/pkg/crypto"
+	"github.com/FavorLabs/favorX/pkg/fileinfo"
 	"github.com/FavorLabs/favorX/pkg/logging"
+	"github.com/FavorLabs/favorX/pkg/oracle"
 	"github.com/FavorLabs/favorX/pkg/p2p/libp2p"
 	"github.com/FavorLabs/favorX/pkg/settlement"
-	"github.com/FavorLabs/favorX/pkg/settlement/chain/oracle"
 	"github.com/FavorLabs/favorX/pkg/settlement/pseudosettle"
 	"github.com/FavorLabs/favorX/pkg/settlement/traffic"
 	chequePkg "github.com/FavorLabs/favorX/pkg/settlement/traffic/cheque"
@@ -32,11 +33,12 @@ func InitChain(
 	trafficEnable bool,
 	p2pService *libp2p.Service,
 	subPub subscribe.SubPub,
+	fileInfo fileinfo.Interface,
 ) (oracle.Resolver, settlement.Interface, traffic.ApiInterface, error) {
 
 	address := signer.Public().Encode()
 	accountId, _ := types.NewAccountID(address)
-	oracleServer, err := oracle.NewServer(logger, subClient, subPub)
+	oracleServer, err := oracle.NewServer(logger, subClient, subPub, fileInfo)
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("new oracle service: %w", err)
 	}

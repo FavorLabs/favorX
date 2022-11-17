@@ -257,6 +257,15 @@ func NewNode(nodeMode address.Model, p2pAddr string, networkID uint64, logger lo
 	}
 	b.localstoreCloser = storer
 
+	multiResolver := multiresolver.NewMultiResolver(
+		multiresolver.WithDefaultEndpoint(o.ChainEndpoint),
+		multiresolver.WithConnectionConfigs(o.ResolverConnectionCfgs),
+		multiresolver.WithLogger(o.Logger),
+	)
+	b.resolverCloser = multiResolver
+
+	fileInfo := fileinfo.New(signer.Overlay, storer, logger, multiResolver)
+
 	// apiInterface := client.Traffic
 	oracleChain, settlement, apiInterface, err := InitChain(
 		p2pCtx,
@@ -267,7 +276,8 @@ func NewNode(nodeMode address.Model, p2pAddr string, networkID uint64, logger lo
 		signer.Signer,
 		o.TrafficEnable,
 		p2ps,
-		subPub)
+		subPub,
+		fileInfo)
 	if err != nil {
 		return nil, err
 	}
@@ -376,14 +386,6 @@ func NewNode(nodeMode address.Model, p2pAddr string, networkID uint64, logger lo
 
 	pinningService := pinning.NewService(storer, stateStore, traversal.New(storer))
 
-	multiResolver := multiresolver.NewMultiResolver(
-		multiresolver.WithDefaultEndpoint(o.ChainEndpoint),
-		multiresolver.WithConnectionConfigs(o.ResolverConnectionCfgs),
-		multiresolver.WithLogger(o.Logger),
-	)
-	b.resolverCloser = multiResolver
-
-	fileInfo := fileinfo.New(signer.Overlay, storer, logger, multiResolver)
 	chunkInfo := chunkinfo.New(signer.Overlay, p2ps, logger, storer, route, oracleChain, fileInfo, subPub)
 
 	if err = p2ps.AddProtocol(chunkInfo.Protocol()); err != nil {
@@ -514,7 +516,7 @@ func NewNode(nodeMode address.Model, p2pAddr string, networkID uint64, logger lo
 		// HTTPModules: []string{"debug", "api"},
 		WSAddr:    o.WSAddr,
 		WSOrigins: o.CORSAllowedOrigins,
-		WSModules: []string{"group", "p2p", "chunkInfo", "traffic", "retrieval"},
+		WSModules: []string{"group", "p2p", "chunkInfo", "traffic", "retrieval", "oracle"},
 	})
 	if err != nil {
 		return nil, err
@@ -525,6 +527,7 @@ func NewNode(nodeMode address.Model, p2pAddr string, networkID uint64, logger lo
 		chunkInfo.API(),    // chunkInfo
 		apiInterface.API(), // traffic
 		retrieve.API(),     // retrieval
+		oracleChain.API(),  // oracle
 	})
 	if err = stack.Start(); err != nil {
 		return nil, err

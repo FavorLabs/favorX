@@ -268,11 +268,6 @@ func (s *server) newLoopbackRouter(router *mux.Router) {
 		router.Handle(path, handler)
 	}
 
-	handle("/placeOrder", web.ChainHandlers(
-		web.FinalHandler(jsonhttp.MethodHandler{
-			"POST": http.HandlerFunc(s.placeOrder),
-		})))
-
 	handle("/chain", web.ChainHandlers(
 		web.FinalHandler(jsonhttp.MethodHandler{
 			"POST": http.HandlerFunc(s.chainHandler),

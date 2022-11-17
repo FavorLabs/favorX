@@ -33,6 +33,7 @@ type service struct {
 	base.CheckExtrinsicInterface
 	client *base.SubstrateAPI
 	meta   *types.Metadata
+	submit chan<- *base.SubmitTrans
 }
 
 func (s *service) CheckExtrinsic(block types.Hash, txn types.Hash) (has bool, err error) {
@@ -77,11 +78,12 @@ func (s *service) CheckExtrinsic(block types.Hash, txn types.Hash) (has bool, er
 }
 
 // New creates a new service struct
-func New(c *base.SubstrateAPI) Interface {
+func New(c *base.SubstrateAPI, ch chan<- *base.SubmitTrans) Interface {
 	meta, _ := c.RPC.State.GetMetadataLatest()
 	return &service{
 		client: c,
 		meta:   meta,
+		submit: ch,
 	}
 }
 
@@ -91,7 +93,20 @@ func (s *service) SetNicknameWatch(ctx context.Context, name string) error {
 		return err
 	}
 
-	return s.client.SubmitExtrinsicAndWatch(ctx, c, s.CheckExtrinsic)
+	submit := &base.SubmitTrans{
+		Await:          true,
+		Call:           c,
+		CheckExtrinsic: s.CheckExtrinsic,
+		TxResult:       make(chan base.TxResult),
+	}
+	s.submit <- submit
+	select {
+	case res := <-submit.TxResult:
+		return res.Err
+	case <-ctx.Done():
+		submit.Cancel = true
+		return ctx.Err()
+	}
 }
 
 func (s *service) GetNickName(accountId []byte) (name string, err error) {
@@ -161,7 +176,21 @@ func (s *service) SetResolveWatch(ctx context.Context, uri string, cid []byte) (
 	if err != nil {
 		return
 	}
-	return s.client.SubmitExtrinsicAndWatch(ctx, c, s.CheckExtrinsic)
+
+	submit := &base.SubmitTrans{
+		Await:          true,
+		Call:           c,
+		CheckExtrinsic: s.CheckExtrinsic,
+		TxResult:       make(chan base.TxResult),
+	}
+	s.submit <- submit
+	select {
+	case res := <-submit.TxResult:
+		return res.Err
+	case <-ctx.Done():
+		submit.Cancel = true
+		return ctx.Err()
+	}
 }
 
 func (s *service) GetResolve(uri string) (cid []byte, err error) {

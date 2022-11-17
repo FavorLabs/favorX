@@ -105,5 +105,7 @@ func (s *StreamService) onNotify(ctx context.Context, peer p2p.Peer, stream p2p.
 		Hash:   cid,
 		Buyer:  boson.NewAddress(req.Buyer),
 	}
+	s.logger.Debugf("order file %s noNotify from %s", cid, peer.Address)
+
 	return s.sub.Publish("storagefiles", "order", "notify", data)
 }
