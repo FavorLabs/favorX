@@ -20,6 +20,7 @@ type CheckExtrinsicInterface interface {
 }
 
 type CheckExtrinsic func(block types.Hash, txn types.Hash) (has bool, err error)
+type Finalized func(block types.Hash, txn types.Hash)
 
 type Client interface {
 	// Call makes the call to RPC method with the provided args,
@@ -84,6 +85,25 @@ type SubstrateAPI struct {
 	RPC    *rpc.RPC
 	Client Client
 	Signer signature.KeyringPair
+}
+
+type TxResult struct {
+	TransHash types.Hash
+	Err       error
+}
+
+type SubmitTrans struct {
+	Cancel         bool
+	Await          bool
+	Call           types.Call
+	CheckExtrinsic CheckExtrinsic
+	Finalized      Finalized
+	TxResult       chan TxResult
+}
+
+type TransStatus struct {
+	Status types.ExtrinsicStatus
+	Err    error
 }
 
 func NewSubstrateAPI(url string, signer signature.KeyringPair) (*SubstrateAPI, error) {

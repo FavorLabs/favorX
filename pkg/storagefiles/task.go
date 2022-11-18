@@ -41,7 +41,9 @@ func (t *Task) SetOption(o Option) *Task {
 }
 
 func (t *Task) canRetry() bool {
-	return t.Option.Retry > t.Running.Retry
+	// return t.Option.Retry > t.Running.Retry
+	// Stored summary mode with unlimited retries until the order times out
+	return true
 }
 
 func (t *Task) tryAgain(async bool, fn func()) {

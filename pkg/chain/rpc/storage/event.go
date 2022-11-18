@@ -35,17 +35,18 @@ type EventStorageOrderMatchSuccess struct {
 	Topics   []types.Hash
 }
 
+type EventStorageOrderStorageSuccess struct {
+	Phase    types.Phase
+	Buyer    types.AccountID
+	FileHash types.Hash
+	Merchant types.AccountID
+	Topics   []types.Hash
+}
+
 type EventStorageOrderTimeout struct {
 	Phase  types.Phase
 	Buyer  types.AccountID
 	Cid    types.Hash
 	Reason types.Bytes
-	Topics []types.Hash
-}
-
-type EventStorageOrderStorageSuccess struct {
-	Phase  types.Phase
-	Buyer  types.AccountID
-	Cid    types.Hash
 	Topics []types.Hash
 }

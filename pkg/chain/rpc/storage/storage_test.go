@@ -1,6 +1,7 @@
 package storage_test
 
 import (
+	"bytes"
 	"context"
 	"sync"
 	"testing"
@@ -11,6 +12,7 @@ import (
 	"github.com/FavorLabs/favorX/pkg/crypto"
 	"github.com/centrifuge/go-substrate-rpc-client/v4/signature"
 	"github.com/centrifuge/go-substrate-rpc-client/v4/types"
+	"github.com/centrifuge/go-substrate-rpc-client/v4/types/codec"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -53,13 +55,13 @@ func TestService_StorageFile(t *testing.T) {
 
 	buyer := signature.TestKeyringPairAlice.PublicKey
 
-	err = cli.Storage.StorageFileWatch(ctx, buyer, cid.Bytes(), cid.Bytes())
+	err = cli.Storage.StorageFileWatch(ctx, buyer, cid.Bytes())
 	assert.NoError(t, err)
 
-	err = cli.Storage.StorageFileWatch(ctx, buyer, ci2.Bytes(), ci2.Bytes())
+	err = cli.Storage.StorageFileWatch(ctx, buyer, ci2.Bytes())
 	assert.NoError(t, err)
 
-	ov1, _ := types.NewAccountID(cid.Bytes())
+	ov1, _ := types.NewAccountID(signature.TestKeyringPairAlice.PublicKey)
 
 	ovs, err := cli.Storage.GetNodesFromCid(cid.Bytes())
 	assert.NoError(t, err)
@@ -79,7 +81,53 @@ func Test_CheckOrder(t *testing.T) {
 	assert.NoError(t, err)
 	mch, err := crypto.NewPublicKeyFromSs58("5EAPiyvna7EeeFXPEjvcHyKtqb7esErxCypRkcWTraWvm7ho")
 	assert.NoError(t, err)
-	fileHash := boson.MustParseHexAddress("3db47e7511eb12b3932a18e41fd4f8b7bd2cf2287c26ce328cd8cd1305f98117")
+	fileHash := boson.MustParseHexAddress("2b08759c571c60e372070b2651e03ae11937a2edce2cecdbb3afbf3633953f88")
 	err = cli.Storage.CheckOrder(buyer.Encode(), fileHash.Bytes(), mch.Encode())
 	assert.NoError(t, err)
+}
+
+func Test_BlockNumber(t *testing.T) {
+	str := "0x9a0700002b08759c571c60e372070b2651e03ae11937a2edce2cecdbb3afbf3633953f8890e70100000000000100000000000000da3f0000045ccee65a262c90b760b38ee7286eb38b51a8ba3af217c1f622fc787c0375924d0000000000000000"
+	bz, err := codec.HexDecodeString(str)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// ------
+	file, err := types.NewAccountIDFromHexString("0x2b08759c571c60e372070b2651e03ae11937a2edce2cecdbb3afbf3633953f88")
+	if err != nil {
+		t.Fatal(err)
+	}
+	mch, err := types.NewAccountIDFromHexString("0x5ccee65a262c90b760b38ee7286eb38b51a8ba3af217c1f622fc787c0375924d")
+	if err != nil {
+		t.Fatal(err)
+	}
+	en := storage.OrderInfo{
+		CreateAt:  1946,
+		FileHash:  *file,
+		FileSize:  124816,
+		FileCopy:  1,
+		ExpiredAt: 16346,
+		Merchants: []types.AccountID{*mch},
+		Price:     0,
+	}
+	bts, err := codec.Encode(en)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(bts, bz) {
+		t.Fatalf("mismatch encoded")
+	}
+	// -------
+	var res1 storage.OrderInfo
+
+	err = codec.Decode(bz, &res1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res1.CreateAt != en.CreateAt {
+		t.Fatalf("mismatch createAt")
+	}
+	if res1.ExpiredAt != en.ExpiredAt {
+		t.Fatalf("mismatch ExpiredAt")
+	}
 }

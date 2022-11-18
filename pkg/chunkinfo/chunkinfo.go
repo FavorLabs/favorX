@@ -9,12 +9,12 @@ import (
 	"github.com/FavorLabs/favorX/pkg/fileinfo"
 	"github.com/FavorLabs/favorX/pkg/localstore"
 	"github.com/FavorLabs/favorX/pkg/logging"
+	"github.com/FavorLabs/favorX/pkg/oracle"
 	"github.com/FavorLabs/favorX/pkg/p2p"
 	"github.com/FavorLabs/favorX/pkg/retrieval/aco"
 	"github.com/FavorLabs/favorX/pkg/routetab"
 	"github.com/FavorLabs/favorX/pkg/rpc"
 	"github.com/FavorLabs/favorX/pkg/sctx"
-	"github.com/FavorLabs/favorX/pkg/settlement/chain/oracle"
 	"github.com/FavorLabs/favorX/pkg/subscribe"
 	"resenje.org/singleflight"
 )

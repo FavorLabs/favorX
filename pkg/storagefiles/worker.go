@@ -13,9 +13,10 @@ import (
 
 	"github.com/FavorLabs/favorX/pkg/boson"
 	"github.com/FavorLabs/favorX/pkg/chain"
+	"github.com/FavorLabs/favorX/pkg/chain/rpc/storage"
 	"github.com/FavorLabs/favorX/pkg/fileinfo"
 	"github.com/FavorLabs/favorX/pkg/logging"
-	"github.com/FavorLabs/favorX/pkg/settlement/chain/oracle"
+	"github.com/FavorLabs/favorX/pkg/oracle"
 )
 
 type Manager struct {
@@ -200,6 +201,12 @@ func (w *Worker) Run() {
 }
 
 func (w *Worker) init() {
+	err := w.manager.subClient.Storage.CheckOrder(w.task.Info.Buyer.Bytes(), w.task.Info.Hash.Bytes(), w.manager.subClient.Default.Signer.PublicKey)
+	if err != nil {
+		w.manager.logger.Infof("worker %d, init check order err: %s", w.id, w.task.Info.Hash, w.task.Info.Source, err)
+		w.err <- err
+		return
+	}
 	size, err := GetSize(w.ctx, w.manager.options.ApiGateway, w.task.Info.Hash.String(), w.task.Info.Source.String())
 	if err != nil {
 		w.retryInitCh <- err
@@ -255,6 +262,12 @@ func (w *Worker) retryProgress() error {
 }
 
 func (w *Worker) progress() {
+	err := w.manager.subClient.Storage.CheckOrder(w.task.Info.Buyer.Bytes(), w.task.Info.Hash.Bytes(), w.manager.subClient.Default.Signer.PublicKey)
+	if err != nil {
+		w.manager.logger.Infof("worker %d, progress check order err: %s", w.id, w.task.Info.Hash, w.task.Info.Source, err)
+		w.err <- err
+		return
+	}
 	for !w.task.Complete() {
 		logicAvail, err := w.manager.disk.LogicAvail()
 		if err != nil {
@@ -313,7 +326,14 @@ func (w *Worker) pinOracle() {
 func (w *Worker) oracleRegister() (err error) {
 	err = w.storageFile(w.task.Info.Hash)
 	if err == nil {
-		return w.manager.fileInfo.RegisterFile(w.task.Info.Hash, true)
+		e := w.manager.oracle.Register(w.task.Info.Hash)
+		if e != nil {
+			w.manager.logger.Errorf("worker %d oracle local file register %s", w.id, e)
+		}
+		return
+	}
+	if errors.Is(err, storage.OrderNotFound) {
+		return nil
 	}
 	return err
 }
@@ -328,7 +348,7 @@ func (w *Worker) storageFile(cid boson.Address) (err error) {
 	}()
 	w.manager.logger.Infof("worker %d oracle on chain start", w.id)
 
-	return w.manager.subClient.Storage.StorageFileWatch(w.ctx, w.task.Info.Buyer.Bytes(), cid.Bytes(), w.manager.options.Overlay.Bytes())
+	return w.manager.subClient.Storage.StorageFileWatch(w.ctx, w.task.Info.Buyer.Bytes(), cid.Bytes())
 }
 
 func (w *Worker) online() {
