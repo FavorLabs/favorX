@@ -51,11 +51,7 @@ func (s *server) groupJoinHandler(w http.ResponseWriter, r *http.Request) {
 
 func (s *server) groupLeaveHandler(w http.ResponseWriter, r *http.Request) {
 	str := mux.Vars(r)["gid"]
-	gid, err := boson.ParseHexAddress(str)
-	if err != nil {
-		gid = multicast.GenerateGID(str)
-	}
-	err = s.multicast.RemoveGroup(gid, model.GTypeJoin)
+	err := s.multicast.RemoveGroup(str, model.GTypeJoin)
 	if err != nil {
 		s.logger.Errorf("multicast join group: %v", err)
 		jsonhttp.InternalServerError(w, err)
@@ -93,11 +89,7 @@ func (s *server) groupObserveHandler(w http.ResponseWriter, r *http.Request) {
 
 func (s *server) groupObserveCancelHandler(w http.ResponseWriter, r *http.Request) {
 	str := mux.Vars(r)["gid"]
-	gid, err := boson.ParseHexAddress(str)
-	if err != nil {
-		gid = multicast.GenerateGID(str)
-	}
-	err = s.multicast.RemoveGroup(gid, model.GTypeObserve)
+	err := s.multicast.RemoveGroup(str, model.GTypeObserve)
 	if err != nil {
 		s.logger.Errorf("multicast cancel observe group: %v", err)
 		jsonhttp.InternalServerError(w, err)
@@ -128,7 +120,7 @@ func (s *server) sendReceive(w http.ResponseWriter, r *http.Request) {
 		jsonhttp.BadRequest(w, fmt.Errorf("missing body"))
 		return
 	}
-	out, err := s.multicast.SendReceive(r.Context(), body, gid, target)
+	out, err := s.multicast.SendReceive(r.Context(), 30, body, gid, target)
 	if err != nil {
 		jsonhttp.InternalServerError(w, err)
 		return

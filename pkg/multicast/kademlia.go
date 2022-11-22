@@ -1,9 +1,7 @@
 package multicast
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"sync"
@@ -21,6 +19,7 @@ import (
 	"github.com/FavorLabs/favorX/pkg/rpc"
 	"github.com/FavorLabs/favorX/pkg/subscribe"
 	"github.com/FavorLabs/favorX/pkg/topology"
+	"github.com/FavorLabs/favorX/pkg/topology/lightnode"
 	topModel "github.com/FavorLabs/favorX/pkg/topology/model"
 	"github.com/FavorLabs/favorX/pkg/topology/pslice"
 	"github.com/gogf/gf/v2/util/gconv"
@@ -56,9 +55,11 @@ type Service struct {
 	stream         p2p.Streamer
 	logger         logging.Logger
 	kad            topology.Driver
+	lightNodes     lightnode.LightNodes
 	route          routetab.RouteTab
-	connectedPeers sync.Map // key=gid, slice is peer, all is neighbor
-	groups         sync.Map
+	connectedPeers sync.Map // key=gid, *pslice.PSlice is peer, all is neighbor
+	groups         sync.Map // key=gid, *Group
+	peerGidList    sync.Map // key=peer, [][]byte gid list with peer
 	msgSeq         uint64
 	close          chan struct{}
 	sessionStream  sync.Map // key= sessionID, value= *WsStream
@@ -120,6 +121,7 @@ func (s *Service) newGroup(gid boson.Address, o model.ConfigNodeGroup) *Group {
 		g.connectedPeers = conn.(*pslice.PSlice)
 	} else {
 		g.connectedPeers = pslice.New(1, s.self)
+		s.connectedPeers.Store(gid.String(), g.connectedPeers)
 	}
 	return g
 }
@@ -128,18 +130,20 @@ type Option struct {
 	Dev bool
 }
 
-func NewService(self boson.Address, nodeMode address.Model, service p2p.Service, streamer p2p.Streamer, kad topology.Driver, route routetab.RouteTab, logger logging.Logger, subPub subscribe.SubPub, o Option) *Service {
+func NewService(self boson.Address, nodeMode address.Model, service p2p.Service, streamer p2p.Streamer, kad topology.Driver, light lightnode.LightNodes,
+	route routetab.RouteTab, logger logging.Logger, subPub subscribe.SubPub, o Option) *Service {
 	srv := &Service{
-		o:        o,
-		nodeMode: nodeMode,
-		self:     self,
-		p2ps:     service,
-		stream:   streamer,
-		logger:   logger,
-		kad:      kad,
-		route:    route,
-		subPub:   subPub,
-		close:    make(chan struct{}, 1),
+		o:          o,
+		nodeMode:   nodeMode,
+		self:       self,
+		p2ps:       service,
+		stream:     streamer,
+		logger:     logger,
+		kad:        kad,
+		lightNodes: light,
+		route:      route,
+		subPub:     subPub,
+		close:      make(chan struct{}, 1),
 	}
 	return srv
 }
@@ -200,7 +204,7 @@ func (s *Service) Start() {
 						s.logger.Errorf("multicast handshake %s", err.Error())
 					}
 				case p2p.PeerStateDisconnect:
-					s.leaveConnectedAll(peer.Overlay)
+					s.onDisconnect(peer.Overlay)
 				}
 			case <-ticker.C:
 				wg := &sync.WaitGroup{}
@@ -214,7 +218,8 @@ func (s *Service) Start() {
 							if err != nil {
 								s.logger.Tracef("keep ping %s %s", address, err)
 								v.keepPeers.Remove(address)
-
+								v.notifyPeerState(PeerState{Overlay: address, Action: 1, Type: 1})
+								v.notifyGroupPeers()
 								if v.knownPeers.Length() >= maxKnownPeers {
 									p := RandomPeer(v.knownPeers.BinPeers(0))
 									v.knownPeers.Remove(p)
@@ -256,76 +261,144 @@ func (s *Service) refreshProtectPeers() {
 	s.kad.RefreshProtectPeer(list)
 }
 
-func (s *Service) connectedAddToGroup(gid boson.Address, peers ...boson.Address) {
+func (s *Service) addToGroup(gid boson.Address, peers ...boson.Address) {
 	var (
-		conn *pslice.PSlice
+		g      *Group
+		conn   *pslice.PSlice
+		notify bool
 	)
-	v, ok := s.connectedPeers.Load(gid.String())
-	if ok {
-		conn = v.(*pslice.PSlice)
-	} else {
-		value, has := s.groups.Load(gid.String())
-		if has {
-			conn = value.(*Group).connectedPeers
-		} else {
-			conn = pslice.New(1, s.self)
-		}
-		s.connectedPeers.Store(gid.String(), conn)
-	}
-
-	for _, p := range peers {
-		conn.Add(p)
-		s.groups.Range(func(_, value interface{}) bool {
-			gr := value.(*Group)
-			gr.keepPeers.Remove(p)
-			gr.knownPeers.Remove(p)
-			return true
-		})
-	}
-	s.notifyGroupPeers(gid)
-}
-
-func (s *Service) keepAddToGroup(gid boson.Address, peers ...boson.Address) {
 	v, ok := s.groups.Load(gid.String())
 	if ok {
-		g := v.(*Group)
-		for _, addr := range peers {
-			if !s.route.IsNeighbor(addr) {
-				g.keepPeers.Add(addr)
-				g.knownPeers.Remove(addr)
+		g = v.(*Group)
+		conn = g.connectedPeers
+	} else {
+		connV, has := s.connectedPeers.Load(gid.String())
+		if has {
+			conn = connV.(*pslice.PSlice)
+		} else {
+			conn = pslice.New(1, s.self)
+			s.connectedPeers.Store(gid.String(), conn)
+		}
+	}
+	if g != nil {
+		for _, p := range peers {
+			if s.route.IsNeighbor(p) {
+				// add to conn
+				if !conn.Exists(p) {
+					conn.Add(p)
+					g.notifyPeerState(PeerState{Overlay: p, Action: 0, Type: 0})
+					notify = true
+				}
+			} else {
+				if !g.keepPeers.Exists(p) {
+					g.keepPeers.Add(p)
+					g.notifyPeerState(PeerState{Overlay: p, Action: 0, Type: 1})
+					notify = true
+				}
 			}
 		}
-		s.notifyGroupPeers(gid)
+		if notify {
+			g.notifyGroupPeers()
+		}
+	} else {
+		for _, p := range peers {
+			if !conn.Exists(p) {
+				conn.Add(p)
+			}
+		}
 	}
 }
 
-func (s *Service) connectedRemoveFromGroup(gid boson.Address, peers ...boson.Address) {
-	v, ok := s.connectedPeers.Load(gid.String())
+func (s *Service) refreshGroup(peer boson.Address, nowGidList [][]byte) {
+	var nowGid []boson.Address
+	for _, v := range nowGidList {
+		gid := boson.NewAddress(v)
+		s.logger.Tracef("group: now peer %s add group %s", peer, gid)
+		nowGid = append(nowGid, gid)
+		s.addToGroup(gid, peer)
+	}
+	val, ok := s.peerGidList.Load(peer.String())
 	if ok {
-		conn := v.(*pslice.PSlice)
+		oldList := val.([][]byte)
+		for _, o := range oldList {
+			old := boson.NewAddress(o)
+			if !old.MemberOf(nowGid) {
+				s.logger.Tracef("group: now peer %s remove group %s", peer, old)
+				// remove from group
+				s.removeFromGroup(old, peer)
+			}
+		}
+	}
+	s.peerGidList.Store(peer.String(), nowGidList)
+}
+
+func (s *Service) removeFromGroup(gid boson.Address, peers ...boson.Address) {
+	value, ok := s.groups.Load(gid.String())
+	if ok {
+		g := value.(*Group)
+		var notify bool
 		for _, addr := range peers {
-			conn.Remove(addr)
+			g.knownPeers.Remove(addr)
+			if g.keepPeers.Exists(addr) {
+				g.keepPeers.Remove(addr)
+				g.notifyPeerState(PeerState{Overlay: addr, Action: 1, Type: 1})
+				notify = true
+			}
+			if g.connectedPeers.Exists(addr) {
+				g.connectedPeers.Remove(addr)
+				g.notifyPeerState(PeerState{Overlay: addr, Action: 1, Type: 0})
+				notify = true
+			}
 		}
-		if conn.Length() == 0 {
-			s.connectedPeers.Delete(gid.String())
+		if notify {
+			g.notifyGroupPeers()
 		}
-		s.notifyGroupPeers(gid)
+	} else {
+		val, has := s.connectedPeers.Load(gid.String())
+		if has {
+			conn := val.(*pslice.PSlice)
+			for _, addr := range peers {
+				conn.Remove(addr)
+			}
+			if conn.Length() == 0 {
+				s.connectedPeers.Delete(gid.String())
+			}
+		}
 	}
 }
 
-func (s *Service) leaveConnectedAll(peers ...boson.Address) {
+func (s *Service) onDisconnect(peers ...boson.Address) {
 	s.connectedPeers.Range(func(key, value interface{}) bool {
-		conn := value.(*pslice.PSlice)
-		for _, v := range peers {
-			conn.Remove(v)
-		}
-		if conn.Length() == 0 {
-			s.connectedPeers.Delete(key)
-		}
-		g, ok := s.groups.Load(gconv.String(key))
+		var g *Group
+		val, ok := s.groups.Load(gconv.String(key))
 		if ok {
-			gid := g.(*Group).gid
-			s.notifyGroupPeers(gid)
+			g = val.(*Group)
+		}
+		conn := value.(*pslice.PSlice)
+		if g != nil {
+			notify := false
+			for _, v := range peers {
+				if g.connectedPeers.Exists(v) {
+					g.connectedPeers.Remove(v)
+					g.notifyPeerState(PeerState{Overlay: v, Action: 1, Type: 0})
+					notify = true
+				}
+				if !g.keepPeers.Exists(v) {
+					g.keepPeers.Add(v)
+					g.notifyPeerState(PeerState{Overlay: v, Action: 0, Type: 1})
+					notify = true
+				}
+			}
+			if notify {
+				g.notifyGroupPeers()
+			}
+		} else {
+			for _, v := range peers {
+				conn.Remove(v)
+			}
+			if conn.Length() == 0 {
+				s.connectedPeers.Delete(key)
+			}
 		}
 		return true
 	})
@@ -503,13 +576,11 @@ func (s *Service) observeGroup(gid boson.Address, option model.ConfigNodeGroup) 
 		if addr.Equal(s.self) {
 			continue
 		}
-		if s.route.IsNeighbor(addr) {
-			g.connectedPeers.Add(addr)
-		} else {
-			g.knownPeers.Add(addr)
-		}
+		g.knownPeers.Add(addr)
 	}
+	go s.notify()
 	go s.discover(g)
+	s.logger.Infof("observe group success %s", gid)
 	return nil
 }
 
@@ -546,17 +617,10 @@ func (s *Service) joinGroup(gid boson.Address, option model.ConfigNodeGroup) err
 		if v.Equal(s.self) {
 			continue
 		}
-		if s.route.IsNeighbor(v) {
-			g.connectedPeers.Add(v)
-		} else {
-			g.knownPeers.Add(v)
-		}
+		g.knownPeers.Add(v)
 	}
 
-	go s.notify(&pb.Notify{
-		Status: int32(NotifyJoinGroup),
-		Gids:   [][]byte{gid.Bytes()},
-	})
+	go s.notify()
 	go s.discover(g)
 	s.logger.Infof("join group success %s", gid)
 	return nil
@@ -607,7 +671,11 @@ func (s *Service) AddGroup(groups []model.ConfigNodeGroup) error {
 	return nil
 }
 
-func (s *Service) RemoveGroup(gid boson.Address, gType model.GType) error {
+func (s *Service) RemoveGroup(group string, gType model.GType) error {
+	gid, err := boson.ParseHexAddress(group)
+	if err != nil {
+		gid = GenerateGID(group)
+	}
 	defer s.refreshProtectPeers()
 	switch gType {
 	case model.GTypeObserve:
@@ -638,24 +706,19 @@ func (s *Service) leaveGroup(gid boson.Address) error {
 	})
 	s.groups.Delete(gid.String())
 
-	go s.notify(&pb.Notify{
-		Status: int32(NotifyLeaveGroup),
-		Gids:   [][]byte{gid.Bytes()},
-	}, copyGroups...)
+	go s.notify(copyGroups...)
 
 	s.logger.Infof("leave group success %s", gid)
 	return nil
 }
 
-func (s *Service) notify(msg *pb.Notify, groups ...*Group) {
-	if s.nodeMode.IsBootNode() || !s.nodeMode.IsFull() {
-		return
-	}
+func (s *Service) notify(groups ...*Group) {
 	send := func(address boson.Address, u uint8) (stop, jumpToNext bool, err error) {
-		_ = s.sendData(context.Background(), address, streamNotify, msg)
+		_ = s.Handshake(context.Background(), address)
 		return false, false, nil
 	}
 	_ = s.kad.EachPeerRev(send, topology.Filter{Reachable: false})
+	_ = s.lightNodes.EachPeer(send)
 
 	if len(groups) == 0 {
 		s.groups.Range(func(_, value interface{}) bool {
@@ -670,6 +733,7 @@ func (s *Service) notify(msg *pb.Notify, groups ...*Group) {
 	}
 }
 
+// Deprecated
 func (s *Service) onNotify(ctx context.Context, peer p2p.Peer, stream p2p.Stream) (err error) {
 	defer func() {
 		if err != nil {
@@ -690,25 +754,14 @@ func (s *Service) onNotify(ctx context.Context, peer p2p.Peer, stream p2p.Stream
 	case NotifyJoinGroup: // join  group
 		for _, v := range msg.Gids {
 			gid := boson.NewAddress(v)
-			if s.route.IsNeighbor(peer.Address) {
-				s.connectedAddToGroup(gid, peer.Address)
-				s.logger.Tracef("onNotify connected %s with gid %s", peer.Address, gid)
-			} else {
-				s.keepAddToGroup(gid, peer.Address)
-				s.logger.Tracef("onNotify keep %s with gid %s", peer.Address, gid)
-			}
+			s.logger.Tracef("group: onNotify join peer %s with group %s", peer.Address, gid)
+			s.addToGroup(gid, peer.Address)
 		}
 	case NotifyLeaveGroup: // leave group
 		for _, v := range msg.Gids {
 			gid := boson.NewAddress(v)
-			s.connectedRemoveFromGroup(gid, peer.Address)
-			s.logger.Tracef("onNotify remove connected %s with gid %s", peer.Address, gid)
-			value, ok := s.groups.Load(gid.String())
-			if ok {
-				g := value.(*Group)
-				g.keepPeers.Remove(peer.Address)
-				g.knownPeers.Remove(peer.Address)
-			}
+			s.logger.Tracef("group: onNotify remove peer %s with group %s", peer.Address, gid)
+			s.removeFromGroup(gid, peer.Address)
 		}
 	default:
 		return errors.New("notify status invalid")
@@ -814,13 +867,8 @@ func (s *Service) GetGroupPeers(groupName string) (out *GroupPeers, err error) {
 	if !ok {
 		return nil, errors.New("group not found")
 	}
-	group := v.(*Group)
 
-	out = &GroupPeers{
-		Connected: s.getOptimumPeers(group.connectedPeers.BinPeers(0)),
-		Keep:      s.getOptimumPeers(group.keepPeers.BinPeers(0)),
-	}
-	return
+	return v.(*Group).peers(), nil
 }
 
 func (s *Service) GetOptimumPeer(groupName string) (peer boson.Address, err error) {
@@ -839,7 +887,7 @@ func (s *Service) GetOptimumPeer(groupName string) (peer boson.Address, err erro
 }
 
 func (s *Service) getStream(ctx context.Context, dest boson.Address, streamName string) (stream p2p.Stream, err error) {
-	if !s.route.IsNeighbor(dest) {
+	if !s.route.IsNeighborContainLightNode(dest) {
 		stream, err = s.stream.NewConnChainRelayStream(ctx, dest, nil, protocolName, protocolVersion, streamName)
 	} else {
 		stream, err = s.stream.NewStream(ctx, dest, nil, protocolName, protocolVersion, streamName)
@@ -886,7 +934,7 @@ func (s *Service) Send(ctx context.Context, data []byte, gid, dest boson.Address
 	return nil
 }
 
-func (s *Service) SendReceive(ctx context.Context, data []byte, gid, dest boson.Address) (result []byte, err error) {
+func (s *Service) SendReceive(ctx context.Context, timeout int64, data []byte, gid, dest boson.Address) (result []byte, err error) {
 	var stream p2p.Stream
 	stream, err = s.getStream(ctx, dest, streamMessage)
 	if err != nil {
@@ -900,9 +948,10 @@ func (s *Service) SendReceive(ctx context.Context, data []byte, gid, dest boson.
 		}
 	}()
 	req := &pb.GroupMsg{
-		Gid:  gid.Bytes(),
-		Data: data,
-		Type: int32(SendReceive),
+		Gid:     gid.Bytes(),
+		Data:    data,
+		Type:    int32(SendReceive),
+		Timeout: timeout,
 	}
 	w, r := protobuf.NewWriterAndReader(stream)
 	err = w.WriteMsgWithContext(ctx, req)
@@ -975,9 +1024,10 @@ func (s *Service) onMessage(ctx context.Context, peer p2p.Peer, stream p2p.Strea
 	}
 
 	msg := GroupMessage{
-		GID:  boson.NewAddress(info.Gid),
-		Data: info.Data,
-		From: peer.Address,
+		GID:     boson.NewAddress(info.Gid),
+		Data:    info.Data,
+		From:    peer.Address,
+		Timeout: info.Timeout,
 	}
 
 	st := &WsStream{
@@ -1085,7 +1135,7 @@ func (s *Service) notifyMessage(g *Group, msg GroupMessage, st *WsStream) (e err
 		go func() {
 			s.sessionStream.Store(msg.SessionID, st)
 			defer s.sessionStream.Delete(msg.SessionID)
-			timeout := time.Second * 30
+			timeout := time.Second * time.Duration(msg.Timeout)
 			select {
 			case <-time.After(timeout):
 				s.logger.Debugf("group: sessionID %s timeout %s when wait receive reply from websocket", msg.SessionID, timeout)
@@ -1131,56 +1181,11 @@ func (s *Service) ReplyGroupMessage(sessionID string, data []byte) (err error) {
 	})
 }
 
-func (s *Service) notifyGroupPeers(gid boson.Address) {
-	value, ok := s.groups.Load(gid.String())
-	if !ok {
-		return
-	}
-	g := value.(*Group)
-
-	// prevent other goroutine from continuing
-	select {
-	case g.groupPeersSending <- struct{}{}:
-	default:
-		return
-	}
-
-	defer func() {
-		<-g.groupPeersSending
-	}()
-
-	peers, err := s.GetGroupPeers(gid.String())
+func (s *Service) subscribeGroupPeers(n *rpc.Notifier, sub *rpc.Subscription, group string) (err error) {
+	gid, err := boson.ParseHexAddress(group)
 	if err != nil {
-		return
+		gid = GenerateGID(group)
 	}
-	key := "notifyGroupPeers"
-	b, _ := json.Marshal(peers)
-	has, _ := cache.Contains(cacheCtx, key)
-	if has {
-		v := cache.MustGet(cacheCtx, key)
-		if bytes.Equal(b, v.Bytes()) {
-			return
-		}
-	}
-	_ = cache.Set(cacheCtx, key, b, 0)
-
-	var minInterval = time.Millisecond * 500
-	ms := time.Since(g.groupPeersLastSend)
-	if ms >= minInterval {
-		_ = s.subPub.Publish("group", "groupPeers", gid.String(), peers)
-		g.groupPeersLastSend = time.Now()
-	} else {
-		<-time.After(minInterval - ms)
-		p, e := s.GetGroupPeers(g.gid.String())
-		if e != nil {
-			return
-		}
-		_ = s.subPub.Publish("group", "groupPeers", gid.String(), p)
-		g.groupPeersLastSend = time.Now()
-	}
-}
-
-func (s *Service) subscribeGroupPeers(n *rpc.Notifier, sub *rpc.Subscription, gid boson.Address) (err error) {
 	notifier := subscribe.NewNotifier(n, sub)
 	_, ok := s.groups.Load(gid.String())
 	if ok {
@@ -1199,4 +1204,25 @@ func (s *Service) subscribeGroupPeers(n *rpc.Notifier, sub *rpc.Subscription, gi
 
 func (s *Service) getOptimumPeers(list []boson.Address) (now []boson.Address) {
 	return s.kad.GetPeersWithLatencyEWMA(list)
+}
+
+func (s *Service) subscribePeerState(n *rpc.Notifier, sub *rpc.Subscription, group string) error {
+	gid, err := boson.ParseHexAddress(group)
+	if err != nil {
+		gid = GenerateGID(group)
+	}
+	notifier := subscribe.NewNotifier(n, sub)
+	_, ok := s.groups.Load(gid.String())
+	if ok {
+		_ = s.subPub.Subscribe(notifier, "group", "peerState", gid.String())
+		go func() {
+			peers, err := s.GetGroupPeers(gid.String())
+			if err != nil {
+				return
+			}
+			_ = n.Notify(sub.ID, peers)
+		}()
+		return nil
+	}
+	return errors.New("the group notfound")
 }

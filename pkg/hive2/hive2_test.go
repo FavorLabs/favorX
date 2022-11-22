@@ -121,7 +121,7 @@ func newTestNode(t *testing.T, peer boson.Address, po int, underlay string, allo
 		return 0, nil
 	})
 
-	kad, err := kademlia.New(base.Overlay, ab, Hive2, p2ps, ppm, nil, nil, metricsDB, noopLogger, subscribe.NewSubPub(), kademlia.Options{BinMaxPeers: 5, NodeMode: address.NewModel().SetMode(address.FullNode)}) // kademlia instance
+	kad, err := kademlia.New(signer, base.Overlay, ab, Hive2, p2ps, ppm, nil, nil, metricsDB, noopLogger, subscribe.NewSubPub(), kademlia.Options{BinMaxPeers: 5, NodeMode: address.NewModel().SetMode(address.FullNode)}) // kademlia instance
 	if err != nil {
 		t.Fatal(err)
 	}

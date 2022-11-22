@@ -13,7 +13,7 @@ import (
 type GroupInterface interface {
 	Multicast(info *pb.MulticastMsg, skip ...boson.Address) error
 	AddGroup(groups []model.ConfigNodeGroup) error
-	RemoveGroup(gid boson.Address, gType model.GType) error
+	RemoveGroup(group string, gType model.GType) error
 	Snapshot() *model.KadParams
 	StartDiscover()
 	SubscribeLogContent(n *rpc.Notifier, sub *rpc.Subscription)
@@ -21,7 +21,7 @@ type GroupInterface interface {
 	GetGroupPeers(groupName string) (out *GroupPeers, err error)
 	GetOptimumPeer(groupName string) (peer boson.Address, err error)
 	GetSendStream(ctx context.Context, gid, dest boson.Address) (out SendStreamCh, err error)
-	SendReceive(ctx context.Context, data []byte, gid, dest boson.Address) (result []byte, err error)
+	SendReceive(ctx context.Context, timeout int64, data []byte, gid, dest boson.Address) (result []byte, err error)
 	Send(ctx context.Context, data []byte, gid, dest boson.Address) (err error)
 }
 
@@ -46,6 +46,7 @@ type GroupMessage struct {
 	GID       boson.Address `json:"gid"`
 	Data      []byte        `json:"data"`
 	From      boson.Address `json:"from"`
+	Timeout   int64         `json:"timeout"`
 }
 
 type LogContent struct {
@@ -57,6 +58,15 @@ type LogContent struct {
 type GroupPeers struct {
 	Connected []boson.Address `json:"connected"`
 	Keep      []boson.Address `json:"keep"`
+}
+
+// PeerState
+// Action 0 add 1 remove,
+// Type   0 connected 1 kept,
+type PeerState struct {
+	Overlay boson.Address
+	Action  int // 0 add 1 remove
+	Type    int // 0 connected 1 kept
 }
 
 type SendOption int

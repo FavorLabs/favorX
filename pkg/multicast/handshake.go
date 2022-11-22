@@ -34,7 +34,7 @@ func (s *Service) Handshake(ctx context.Context, addr boson.Address) (err error)
 
 	GIDs := s.getGIDsByte()
 
-	s.logger.Tracef("group: send handshake syn")
+	s.logger.Tracef("group: handshake send syn to %s", addr)
 
 	err = w.WriteMsgWithContext(ctx, &pb.GIDs{Gid: GIDs})
 	if err != nil {
@@ -42,7 +42,7 @@ func (s *Service) Handshake(ctx context.Context, addr boson.Address) (err error)
 		return err
 	}
 
-	s.logger.Tracef("group: receive handshake ack")
+	s.logger.Tracef("group: handshake receive ack from %s", addr)
 
 	resp := &pb.GIDs{}
 	err = r.ReadMsgWithContext(ctx, resp)
@@ -55,17 +55,9 @@ func (s *Service) Handshake(ctx context.Context, addr boson.Address) (err error)
 
 	s.kad.RecordPeerLatency(addr, time.Since(start))
 
-	for _, v := range resp.Gid {
-		gid := boson.NewAddress(v)
-		s.logger.Tracef("group: exchange group info: %s", gid)
-		if s.route.IsNeighbor(addr) {
-			s.connectedAddToGroup(gid, addr)
-			s.logger.Tracef("group: handshake connected %s with gid %s", addr, gid)
-		} else {
-			s.keepAddToGroup(gid, addr)
-			s.logger.Tracef("group: handshake keep %s with gid %s", addr, gid)
-		}
-	}
+	s.logger.Tracef("group: Handshake receive gid list from %s", addr)
+	s.refreshGroup(addr, resp.Gid)
+	s.logger.Tracef("group: Handshake ok")
 	return nil
 }
 
@@ -80,7 +72,7 @@ func (s *Service) HandshakeIncoming(ctx context.Context, peer p2p.Peer, stream p
 	w, r := protobuf.NewWriterAndReader(stream)
 	resp := &pb.GIDs{}
 
-	s.logger.Tracef("group: receive handshake syn")
+	s.logger.Tracef("group: receive handshake syn from %s", peer.Address)
 
 	err = r.ReadMsgWithContext(ctx, resp)
 	if err != nil {
@@ -88,21 +80,12 @@ func (s *Service) HandshakeIncoming(ctx context.Context, peer p2p.Peer, stream p
 		return err
 	}
 
-	for _, v := range resp.Gid {
-		gid := boson.NewAddress(v)
-		s.logger.Tracef("group: exchange group info: %s", gid)
-		if s.route.IsNeighbor(peer.Address) {
-			s.connectedAddToGroup(gid, peer.Address)
-			s.logger.Tracef("HandshakeIncoming connected %s with gid %s", peer.Address, gid)
-		} else {
-			s.keepAddToGroup(gid, peer.Address)
-			s.logger.Tracef("HandshakeIncoming keep %s with gid %s", peer.Address, gid)
-		}
-	}
+	s.logger.Tracef("group: receive handshake gid list from %s", peer.Address)
+	go s.refreshGroup(peer.Address, resp.Gid)
 
 	GIDs := s.getGIDsByte()
 
-	s.logger.Tracef("group: send back handshake ack")
+	s.logger.Tracef("group: send back handshake ack to %s", peer.Address)
 
 	err = w.WriteMsgWithContext(ctx, &pb.GIDs{Gid: GIDs})
 	if err != nil {
@@ -110,7 +93,7 @@ func (s *Service) HandshakeIncoming(ctx context.Context, peer p2p.Peer, stream p
 		return err
 	}
 
-	s.logger.Tracef("group: handshake ok")
+	s.logger.Tracef("group: HandshakeIncoming ok")
 
 	return nil
 }

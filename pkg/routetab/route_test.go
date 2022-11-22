@@ -111,7 +111,7 @@ func newTestNode(t *testing.T) *Node {
 	ab := addressbook.New(mockstate.NewStateStore()) // address book
 	p2ps := p2pMock(ab, base.Overlay, signer)
 	disc := mock.NewDiscovery()
-	kad, err := kademlia.New(base.Overlay, ab, disc, p2ps, nil, nil, nil, metricsDB, noopLogger, subscribe.NewSubPub(), kademlia.Options{BinMaxPeers: 10, NodeMode: address.NewModel().SetMode(address.FullNode)}) // kademlia instance
+	kad, err := kademlia.New(signer, base.Overlay, ab, disc, p2ps, nil, nil, nil, metricsDB, noopLogger, subscribe.NewSubPub(), kademlia.Options{BinMaxPeers: 10, NodeMode: address.NewModel().SetMode(address.FullNode)}) // kademlia instance
 	if err != nil {
 		t.Fatal(err)
 	}

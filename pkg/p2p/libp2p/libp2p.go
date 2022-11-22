@@ -92,6 +92,7 @@ type Service struct {
 	nodeMode          address.Model
 	reacher           p2p.Reacher
 	networkStatus     atomic.Int32
+	privateKey        crypto2.PrivKey
 }
 
 type Options struct {
@@ -276,6 +277,7 @@ func New(ctx context.Context, signer crypto.Signer, networkID uint64, overlay bo
 		bootNodes:         bootNodes,
 		lightNodes:        lightNodes,
 		lightNodeLimit:    o.LightNodeLimit,
+		privateKey:        o.PrivateKey,
 	}
 
 	peerRegistry.setDisconnecter(s)
@@ -908,6 +910,10 @@ func (s *Service) Peers() []p2p.Peer {
 
 func (s *Service) PeerID(overlay boson.Address) (id libp2ppeer.ID, found bool) {
 	return s.peers.peerID(overlay)
+}
+
+func (s *Service) PrivateKey() crypto2.PrivKey {
+	return s.privateKey
 }
 
 func (s *Service) ResourceManager() network.ResourceManager {

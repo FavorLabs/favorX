@@ -119,7 +119,7 @@ func (s *Service) doFindGroup(wg *sync.WaitGroup, group *Group) {
 				return false, false, nil
 			}
 			s.logger.Tracef("doFindGroup got %d node in group %s from connected %s", len(finds), group.gid, address)
-			s.keepAddToGroup(group.gid, finds...)
+			s.addToGroup(group.gid, finds...)
 			return false, false, nil
 		})
 		if limit() <= 0 {
@@ -144,7 +144,7 @@ func (s *Service) doFindGroup(wg *sync.WaitGroup, group *Group) {
 					continue
 				}
 				s.logger.Tracef("doFindGroup got %d node in group %s from keep %s", len(finds), group.gid, v)
-				s.keepAddToGroup(group.gid, finds...)
+				s.addToGroup(group.gid, finds...)
 			}
 		}
 		var list []boson.Address
@@ -222,7 +222,7 @@ func (s *Service) doFindGroup(wg *sync.WaitGroup, group *Group) {
 		// 		continue
 		// 	}
 		// 	s.logger.Tracef("doFindGroup got %d node in group %s from forward %s", len(finds), group.gid, addr)
-		// 	s.keepAddToGroup(group.gid, finds...)
+		// 	s.addToGroup(group.gid, finds...)
 		// }
 	}
 

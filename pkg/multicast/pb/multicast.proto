@@ -36,5 +36,6 @@ message GroupMsg {
   bytes gid = 1;
   bytes data = 2;
   int32 type = 3;
-  string err = 4;
+  int64 timeout = 4;
+  string err = 5;
 }

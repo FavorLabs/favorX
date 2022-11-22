@@ -2,8 +2,10 @@ package kademlia
 
 import (
 	"context"
+
 	"github.com/FavorLabs/favorX/pkg/rpc"
 	"github.com/FavorLabs/favorX/pkg/subscribe"
+	"github.com/libp2p/go-libp2p-core/peer"
 )
 
 func (k *Kad) API() rpc.API {
@@ -54,4 +56,19 @@ func (a *apiService) PeerState(ctx context.Context) (*rpc.Subscription, error) {
 	iNotifier := subscribe.NewNotifier(notifier, sub)
 	a.kad.SubscribePeerState(iNotifier)
 	return sub, nil
+}
+
+type AddressInfo struct {
+	PeerID    peer.ID
+	PublicKey string
+	Overlay   string
+}
+
+func (a *apiService) Address() AddressInfo {
+	peerID, _ := peer.IDFromPrivateKey(a.kad.p2p.PrivateKey())
+	return AddressInfo{
+		PeerID:    peerID,
+		PublicKey: a.kad.signer.Public().Hex(),
+		Overlay:   a.kad.base.String(),
+	}
 }

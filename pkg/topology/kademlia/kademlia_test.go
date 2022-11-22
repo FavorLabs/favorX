@@ -1082,7 +1082,7 @@ func TestClosestPeer(t *testing.T) {
 		return 0, nil
 	})
 
-	kad, err := kademlia.New(base, ab, disc, p2pMock(ab, nil, nil, nil), ppm, nil, nil, metricsDB, logger, subPub, kademlia.Options{})
+	kad, err := kademlia.New(nil, base, ab, disc, p2pMock(ab, nil, nil, nil), ppm, nil, nil, metricsDB, logger, subPub, kademlia.Options{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1518,7 +1518,7 @@ func TestLatency(t *testing.T) {
 		}
 	})
 
-	kad, err := kademlia.New(base, ab, disc, p2pMock(ab, nil, nil, nil), ppm, nil, nil, metricsDB, logger, subscribe.NewSubPub(), kademlia.Options{NodeMode: address.NewModel()})
+	kad, err := kademlia.New(nil, base, ab, disc, p2pMock(ab, nil, nil, nil), ppm, nil, nil, metricsDB, logger, subscribe.NewSubPub(), kademlia.Options{NodeMode: address.NewModel()})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1863,7 +1863,7 @@ func newTestKademliaWithAddrDiscovery(
 	if kadOpts.NodeMode.Bv == nil {
 		kadOpts.NodeMode = address.NewModel().SetMode(address.FullNode)
 	}
-	kad, err := kademlia.New(base, ab, disc, p2ps, ppm, nil, nil, metricsDB, logger, subscribe.NewSubPub(), kadOpts)
+	kad, err := kademlia.New(nil, base, ab, disc, p2ps, ppm, nil, nil, metricsDB, logger, subscribe.NewSubPub(), kadOpts)
 	if err != nil {
 		t.Fatal(err)
 	}
