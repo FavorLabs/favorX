@@ -80,6 +80,8 @@ components:
     TopologyGroup:
       type: object
       properties:
+        baseAddr:
+          $ref: "#/components/schemas/BosonAddress"
         connected:
           type: integer
         timestamp:

@@ -10,7 +10,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 )
 
-const delimitedReaderMaxSize = 1024 * 1024 // max message size
+const delimitedReaderMaxSize = 32 * 1024 * 1024 // max message size
 
 var ErrTimeout = errors.New("timeout")
 

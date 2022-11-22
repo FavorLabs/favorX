@@ -11,6 +11,7 @@ import (
 	mockRoute "github.com/FavorLabs/favorX/pkg/routetab/mock"
 	"github.com/FavorLabs/favorX/pkg/subscribe"
 	"github.com/FavorLabs/favorX/pkg/topology/kademlia/mock"
+	"github.com/FavorLabs/favorX/pkg/topology/lightnode"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/sirupsen/logrus"
 )
@@ -46,7 +47,8 @@ func TestService_ObserveGroup(t *testing.T) {
 	gid := GenerateGID("gid1")
 	route := mockRoute.NewMockRouteTable()
 	kad := mock.NewMockKademlia()
-	s := NewService(test.RandomAddress(), address.NewModel(), nil, nil, kad, nil, &route, logger, subscribe.NewSubPub(), Option{Dev: true})
+	light := lightnode.NewContainer(test.RandomAddress())
+	s := NewService(test.RandomAddress(), address.NewModel(), nil, nil, kad, light, &route, logger, subscribe.NewSubPub(), Option{Dev: true})
 	err := s.observeGroup(gid, model.ConfigNodeGroup{})
 	if err != nil {
 		t.Fatal(err)

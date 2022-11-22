@@ -2,12 +2,14 @@ package multicast
 
 import (
 	"context"
+	"errors"
 
 	"github.com/FavorLabs/favorX/pkg/boson"
 	"github.com/FavorLabs/favorX/pkg/multicast/model"
 	"github.com/FavorLabs/favorX/pkg/multicast/pb"
 	"github.com/FavorLabs/favorX/pkg/rpc"
 	"github.com/FavorLabs/favorX/pkg/subscribe"
+	topModel "github.com/FavorLabs/favorX/pkg/topology/model"
 )
 
 type GroupInterface interface {
@@ -18,8 +20,7 @@ type GroupInterface interface {
 	StartDiscover()
 	SubscribeLogContent(n *rpc.Notifier, sub *rpc.Subscription)
 	SubscribeMulticastMsg(n *rpc.Notifier, sub *rpc.Subscription, gid boson.Address) (err error)
-	GetGroupPeers(groupName string) (out *GroupPeers, err error)
-	GetOptimumPeer(groupName string) (peer boson.Address, err error)
+	GetGroup(groupName string) (out *Group, err error)
 	GetSendStream(ctx context.Context, gid, dest boson.Address) (out SendStreamCh, err error)
 	SendReceive(ctx context.Context, timeout int64, data []byte, gid, dest boson.Address) (result []byte, err error)
 	Send(ctx context.Context, data []byte, gid, dest boson.Address) (err error)
@@ -33,12 +34,12 @@ type GroupStorageFiles interface {
 
 // Message multicast message
 type Message struct {
-	ID         uint64
-	CreateTime int64
-	GID        boson.Address
-	Origin     boson.Address
-	Data       []byte
-	From       boson.Address
+	ID         uint64        `json:"id"`
+	CreateTime int64         `json:"createTime"`
+	GID        boson.Address `json:"gid"`
+	Origin     boson.Address `json:"origin"`
+	Data       []byte        `json:"data"`
+	From       boson.Address `json:"from"`
 }
 
 type GroupMessage struct {
@@ -60,13 +61,24 @@ type GroupPeers struct {
 	Keep      []boson.Address `json:"keep"`
 }
 
+type GroupPeersInfo struct {
+	Directed  []PeerInfo `json:"directed"`
+	Virtually []PeerInfo `json:"virtually"`
+}
+
+type PeerInfo struct {
+	Overlay   boson.Address                    `json:"overlay"`
+	Direction topModel.PeerConnectionDirection `json:"direction"`
+}
+
 // PeerState
 // Action 0 add 1 remove,
 // Type   0 connected 1 kept,
 type PeerState struct {
-	Overlay boson.Address
-	Action  int // 0 add 1 remove
-	Type    int // 0 connected 1 kept
+	Overlay   boson.Address                    `json:"overlay"`
+	Action    int                              `json:"action"` // 0 add 1 remove
+	Type      int                              `json:"type"`   // 0 connected 1 kept
+	Direction topModel.PeerConnectionDirection `json:"direction"`
 }
 
 type SendOption int
@@ -97,3 +109,7 @@ type SendStreamCh struct {
 	WriteErr chan error
 	Close    chan struct{}
 }
+
+var (
+	ErrorGroupNotFound = errors.New("the group notfound")
+)

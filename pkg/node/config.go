@@ -55,15 +55,19 @@ func checkModuleAvailability(modules []string, apis []rpc.API) (bad, available [
 // CheckTimeouts ensures that timeout values are meaningful
 func CheckTimeouts(timeouts *rpc.HTTPTimeouts, log logging.Logger) {
 	if timeouts.ReadTimeout < time.Second {
-		log.Warning("Sanitizing invalid HTTP read timeout", "provided", timeouts.ReadTimeout, "updated", rpc.DefaultHTTPTimeouts.ReadTimeout)
+		log.Warningf("Sanitizing invalid HTTP read timeout %s %s %s %s", "provided", timeouts.ReadTimeout, "updated", rpc.DefaultHTTPTimeouts.ReadTimeout)
 		timeouts.ReadTimeout = rpc.DefaultHTTPTimeouts.ReadTimeout
 	}
+	if timeouts.ReadHeaderTimeout < time.Second {
+		log.Warningf("Sanitizing invalid HTTP read header timeout %s %s %s %s", "provided", timeouts.ReadHeaderTimeout, "updated", rpc.DefaultHTTPTimeouts.ReadHeaderTimeout)
+		timeouts.ReadHeaderTimeout = rpc.DefaultHTTPTimeouts.ReadHeaderTimeout
+	}
 	if timeouts.WriteTimeout < time.Second {
-		log.Warning("Sanitizing invalid HTTP write timeout", "provided", timeouts.WriteTimeout, "updated", rpc.DefaultHTTPTimeouts.WriteTimeout)
+		log.Warningf("Sanitizing invalid HTTP write timeout %s %s %s %s", "provided", timeouts.WriteTimeout, "updated", rpc.DefaultHTTPTimeouts.WriteTimeout)
 		timeouts.WriteTimeout = rpc.DefaultHTTPTimeouts.WriteTimeout
 	}
 	if timeouts.IdleTimeout < time.Second {
-		log.Warning("Sanitizing invalid HTTP idle timeout", "provided", timeouts.IdleTimeout, "updated", rpc.DefaultHTTPTimeouts.IdleTimeout)
+		log.Warningf("Sanitizing invalid HTTP idle timeout %s %s %s %s", "provided", timeouts.IdleTimeout, "updated", rpc.DefaultHTTPTimeouts.IdleTimeout)
 		timeouts.IdleTimeout = rpc.DefaultHTTPTimeouts.IdleTimeout
 	}
 }

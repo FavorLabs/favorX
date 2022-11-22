@@ -4,8 +4,8 @@ import (
 	"bufio"
 	"bytes"
 	"io"
-	"io/ioutil"
 	"net"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -29,14 +29,14 @@ func TestServerRegisterName(t *testing.T) {
 		t.Fatalf("Expected service calc to be registered")
 	}
 
-	wantCallbacks := 10
+	wantCallbacks := 12
 	if len(svc.callbacks) != wantCallbacks {
 		t.Errorf("Expected %d callbacks for service 'service', got %d", wantCallbacks, len(svc.callbacks))
 	}
 }
 
 func TestServer(t *testing.T) {
-	files, err := ioutil.ReadDir("testdata")
+	files, err := os.ReadDir("testdata")
 	if err != nil {
 		t.Fatal("where'd my testdata go?")
 	}
@@ -54,7 +54,7 @@ func TestServer(t *testing.T) {
 
 func runTestScript(t *testing.T, file string) {
 	server := newTestServer()
-	content, err := ioutil.ReadFile(file)
+	content, err := os.ReadFile(file)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -72,7 +72,7 @@ func runTestScript(t *testing.T, file string) {
 		case strings.HasPrefix(line, "--> "):
 			t.Log(line)
 			// write to connection
-			_ = clientConn.SetWriteDeadline(time.Now().Add(5 * time.Second))
+			clientConn.SetWriteDeadline(time.Now().Add(5 * time.Second))
 			if _, err := io.WriteString(clientConn, line[4:]+"\n"); err != nil {
 				t.Fatalf("write error: %v", err)
 			}
@@ -80,7 +80,7 @@ func runTestScript(t *testing.T, file string) {
 			t.Log(line)
 			want := line[4:]
 			// read line from connection and compare text
-			_ = clientConn.SetReadDeadline(time.Now().Add(5 * time.Second))
+			clientConn.SetReadDeadline(time.Now().Add(5 * time.Second))
 			sent, err := readbuf.ReadString('\n')
 			if err != nil {
 				t.Fatalf("read error: %v", err)
@@ -105,12 +105,8 @@ func TestServerShortLivedConn(t *testing.T) {
 	if err != nil {
 		t.Fatal("can't listen:", err)
 	}
-	defer func() {
-		_ = listener.Close()
-	}()
-	go func() {
-		_ = server.ServeListener(listener)
-	}()
+	defer listener.Close()
+	go server.ServeListener(listener)
 
 	var (
 		request  = `{"jsonrpc":"2.0","id":1,"method":"rpc_modules"}` + "\n"
@@ -122,14 +118,16 @@ func TestServerShortLivedConn(t *testing.T) {
 		if err != nil {
 			t.Fatal("can't dial:", err)
 		}
-		_ = conn.SetDeadline(deadline)
+
+		conn.SetDeadline(deadline)
 		// Write the request, then half-close the connection so the server stops reading.
-		_, _ = conn.Write([]byte(request))
-		_ = conn.(*net.TCPConn).CloseWrite()
+		conn.Write([]byte(request))
+		conn.(*net.TCPConn).CloseWrite()
 		// Now try to get the response.
 		buf := make([]byte, 2000)
 		n, err := conn.Read(buf)
-		_ = conn.Close()
+		conn.Close()
+
 		if err != nil {
 			t.Fatal("read error:", err)
 		}

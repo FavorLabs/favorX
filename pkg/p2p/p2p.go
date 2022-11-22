@@ -174,15 +174,7 @@ type Stream interface {
 	Headers() Headers
 	FullClose() error
 	Reset() error
-}
-
-type VirtualStream interface {
-	Stream
-	UpdateStatRealStreamClosed()
-	Reader() *ReaderChan
-	Writer() *WriterChan
-	Done() chan struct{}
-	RealStream() Stream
+	IsVirtual() bool
 }
 
 // ProtocolSpec defines a collection of Stream specifications with handlers.

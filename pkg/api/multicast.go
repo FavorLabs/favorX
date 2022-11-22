@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 
@@ -16,7 +17,7 @@ import (
 
 func (s *server) addGroup(w http.ResponseWriter, r *http.Request, gType model.GType) {
 	gid := mux.Vars(r)["gid"]
-	body, err := ioutil.ReadAll(r.Body)
+	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		jsonhttp.InternalServerError(w, err)
 		return
@@ -67,7 +68,7 @@ func (s *server) multicastMsg(w http.ResponseWriter, r *http.Request) {
 		gid = multicast.GenerateGID(str)
 	}
 
-	body, err := ioutil.ReadAll(r.Body)
+	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		jsonhttp.InternalServerError(w, err)
 		return
@@ -111,7 +112,7 @@ func (s *server) sendReceive(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	body, err := ioutil.ReadAll(r.Body)
+	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		jsonhttp.InternalServerError(w, err)
 		return
@@ -162,10 +163,10 @@ func (s *server) notify(w http.ResponseWriter, r *http.Request) {
 
 func (s *server) peers(w http.ResponseWriter, r *http.Request) {
 	groupName := mux.Vars(r)["gid"]
-	peers, err := s.multicast.GetGroupPeers(groupName)
+	g, err := s.multicast.GetGroup(groupName)
 	if err != nil {
 		jsonhttp.InternalServerError(w, err)
 		return
 	}
-	jsonhttp.OK(w, peers)
+	jsonhttp.OK(w, g.Peers())
 }

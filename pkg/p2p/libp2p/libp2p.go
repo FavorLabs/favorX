@@ -536,6 +536,9 @@ func (s *Service) AddProtocol(p p2p.ProtocolSpec) (err error) {
 			}
 
 			stream := newStream(streamlibp2p)
+			if ss.Name == routetab.StreamOnRelay || ss.Name == routetab.StreamOnRelayConnChain {
+				stream.isVirtual = true
+			}
 
 			// exchange headers
 			if err := handleHeaders(ss.Headler, stream, overlay); err != nil {
@@ -1003,7 +1006,7 @@ func (s *Service) NewConnChainRelayStream(ctx context.Context, target boson.Addr
 		return nil, fmt.Errorf("new stream for peerid: %w", err)
 	}
 
-	st, err := s.exchangeHeaders(ctx, streamlibp2p, headers)
+	st, err := s.exchangeHeaders(ctx, true, streamlibp2p, headers)
 	if err != nil {
 		return nil, err
 	}
@@ -1086,7 +1089,7 @@ func (s *Service) NewRelayStream(ctx context.Context, target boson.Address, head
 		return nil, fmt.Errorf("new stream for peerid: %w", err)
 	}
 
-	st, err := s.exchangeHeaders(ctx, streamlibp2p, headers)
+	st, err := s.exchangeHeaders(ctx, true, streamlibp2p, headers)
 	if err != nil {
 		return nil, err
 	}
@@ -1119,12 +1122,12 @@ func (s *Service) NewStream(ctx context.Context, overlay boson.Address, headers 
 		return nil, fmt.Errorf("new stream for peerid: %w", err)
 	}
 
-	return s.exchangeHeaders(ctx, streamlibp2p, headers)
+	return s.exchangeHeaders(ctx, false, streamlibp2p, headers)
 }
 
-func (s *Service) exchangeHeaders(ctx context.Context, streamlibp2p network.Stream, headers p2p.Headers) (p2p.Stream, error) {
+func (s *Service) exchangeHeaders(ctx context.Context, virtual bool, streamlibp2p network.Stream, headers p2p.Headers) (p2p.Stream, error) {
 	st := newStream(streamlibp2p)
-
+	st.isVirtual = virtual
 	// tracing: add span context header
 	if headers == nil {
 		headers = make(p2p.Headers)

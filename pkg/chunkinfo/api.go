@@ -14,9 +14,7 @@ import (
 func (ci *ChunkInfo) API() rpc.API {
 	return rpc.API{
 		Namespace: "chunkInfo",
-		Version:   "1.0",
 		Service:   &apiService{ci: ci},
-		Public:    true,
 	}
 }
 

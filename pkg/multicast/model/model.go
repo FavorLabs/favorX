@@ -16,19 +16,32 @@ type MetricSnapshotView struct {
 	SessionConnectionDirection string  `json:"sessionConnectionDirection"`
 }
 
+type SnapshotView struct {
+	Timeout                    int64                      `json:"timeout"`
+	LastSeenTimestamp          int64                      `json:"lastSeenTimestamp"`
+	SessionConnectionDirection md.PeerConnectionDirection `json:"sessionConnectionDirection"`
+	LatencyEWMA                int64                      `json:"latencyEWMA"`
+}
+
 type ConnectedInfo struct {
 	GroupID        boson.Address  `json:"gid"`
 	Connected      int            `json:"connected"`
 	ConnectedPeers []*md.PeerInfo `json:"connectedPeers"`
 }
 
+type VirtualConnectedInfo struct {
+	Address boson.Address `json:"address"`
+	Metrics SnapshotView  `json:"metrics,omitempty"`
+}
+
 type GroupInfo struct {
-	GroupID   boson.Address   `json:"gid"`
-	Option    ConfigNodeGroup `json:"option"`
-	KeepPeers []boson.Address `json:"keepPeers"`
-	KnowPeers []boson.Address `json:"knowPeers"`
+	GroupID   boson.Address          `json:"gid"`
+	Option    ConfigNodeGroup        `json:"option"`
+	KeepPeers []VirtualConnectedInfo `json:"keepPeers"`
+	KnowPeers []VirtualConnectedInfo `json:"knowPeers"`
 }
 type KadParams struct {
+	BaseAddr      boson.Address    `json:"baseAddr"`
 	Connected     int              `json:"connected"`     // connected count
 	Timestamp     time.Time        `json:"timestamp"`     // now
 	Groups        []*GroupInfo     `json:"groups"`        // known

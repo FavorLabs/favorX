@@ -11,9 +11,7 @@ import (
 func (k *Kad) API() rpc.API {
 	return rpc.API{
 		Namespace: "p2p",
-		Version:   "1.0",
 		Service:   &apiService{kad: k},
-		Public:    true,
 	}
 }
 
@@ -59,9 +57,9 @@ func (a *apiService) PeerState(ctx context.Context) (*rpc.Subscription, error) {
 }
 
 type AddressInfo struct {
-	PeerID    peer.ID
-	PublicKey string
-	Overlay   string
+	PeerID    peer.ID `json:"peerID"`
+	PublicKey string  `json:"publicKey"`
+	Overlay   string  `json:"overlay"`
 }
 
 func (a *apiService) Address() AddressInfo {

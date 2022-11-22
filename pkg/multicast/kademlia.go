@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sort"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -13,6 +14,7 @@ import (
 	"github.com/FavorLabs/favorX/pkg/logging"
 	"github.com/FavorLabs/favorX/pkg/multicast/model"
 	"github.com/FavorLabs/favorX/pkg/multicast/pb"
+	"github.com/FavorLabs/favorX/pkg/multicast/peerset"
 	"github.com/FavorLabs/favorX/pkg/p2p"
 	"github.com/FavorLabs/favorX/pkg/p2p/protobuf"
 	"github.com/FavorLabs/favorX/pkg/routetab"
@@ -21,30 +23,21 @@ import (
 	"github.com/FavorLabs/favorX/pkg/topology"
 	"github.com/FavorLabs/favorX/pkg/topology/lightnode"
 	topModel "github.com/FavorLabs/favorX/pkg/topology/model"
-	"github.com/FavorLabs/favorX/pkg/topology/pslice"
 	"github.com/gogf/gf/v2/util/gconv"
 )
 
 const (
 	protocolName    = "multicast"
-	protocolVersion = "1.2.0"
+	protocolVersion = "2.0.0"
 	streamHandshake = "handshake"
 	streamFindGroup = "findGroup"
 	streamMulticast = "multicast"
 	streamMessage   = "message"
-	streamNotify    = "notify"
 
 	handshakeTimeout = time.Second * 15
 	keepPingInterval = time.Second * 30
 
 	multicastMsgCache = time.Minute * 1 // According to the message of the whole network arrival time to determine
-)
-
-type NotifyStatus int
-
-const (
-	NotifyJoinGroup NotifyStatus = iota + 1
-	NotifyLeaveGroup
 )
 
 type Service struct {
@@ -57,15 +50,15 @@ type Service struct {
 	kad            topology.Driver
 	lightNodes     lightnode.LightNodes
 	route          routetab.RouteTab
-	connectedPeers sync.Map // key=gid, *pslice.PSlice is peer, all is neighbor
+	connectedPeers sync.Map // key=gid, *peerset.PeersManager is peer, all is neighbor
 	groups         sync.Map // key=gid, *Group
 	peerGidList    sync.Map // key=peer, [][]byte gid list with peer
 	msgSeq         uint64
 	close          chan struct{}
 	sessionStream  sync.Map // key= sessionID, value= *WsStream
+	virtualConn    *peerset.VirtualManager
 
-	// logSig    []chan LogContent
-	// logSigMtx sync.Mutex
+	chanNotifyFunc chan func()
 
 	subPub subscribe.SubPub
 }
@@ -84,21 +77,6 @@ type PeersSubClient struct {
 	lastPushTime time.Time
 }
 
-type Group struct {
-	gid            boson.Address
-	connectedPeers *pslice.PSlice
-	keepPeers      *pslice.PSlice // Need to maintain the connection with ping
-	knownPeers     *pslice.PSlice
-	srv            *Service
-	option         model.ConfigNodeGroup
-
-	multicastSub bool
-	groupMsgSub  bool
-
-	groupPeersLastSend time.Time     // groupPeersMsg last send time
-	groupPeersSending  chan struct{} // whether a goroutine is sending msg. This chan needs to be declared whit "make(chan struct{}, 1)"
-}
-
 func (s *Service) newGroup(gid boson.Address, o model.ConfigNodeGroup) *Group {
 	if o.KeepConnectedPeers < 0 {
 		o.KeepConnectedPeers = 0
@@ -107,22 +85,27 @@ func (s *Service) newGroup(gid boson.Address, o model.ConfigNodeGroup) *Group {
 		o.KeepPingPeers = 0
 	}
 	g := &Group{
-		gid:        gid,
-		keepPeers:  pslice.New(1, s.self),
-		knownPeers: pslice.New(1, s.self),
-		srv:        s,
-		option:     o,
-
+		gid:                gid,
+		keepPeers:          peerset.New(s.chanNotifyFunc),
+		knownPeers:         peerset.New(s.chanNotifyFunc),
+		keptInPeers:        peerset.New(s.chanNotifyFunc),
+		srv:                s,
+		option:             o,
 		groupPeersLastSend: time.Now(),
 		groupPeersSending:  make(chan struct{}, 1),
+		quit:               make(chan struct{}),
+		chanCheckKept:      make(chan eventCheckKept, 100),
+		chanEvent:          make(chan eventPeerAction, 100),
+		chanNotifyFunc:     s.chanNotifyFunc,
 	}
 	conn, ok := s.connectedPeers.Load(gid.String())
 	if ok {
-		g.connectedPeers = conn.(*pslice.PSlice)
+		g.connectedPeers = conn.(*peerset.PeersManager)
 	} else {
-		g.connectedPeers = pslice.New(1, s.self)
+		g.connectedPeers = peerset.New(s.chanNotifyFunc)
 		s.connectedPeers.Store(gid.String(), g.connectedPeers)
 	}
+	go g.manage()
 	return g
 }
 
@@ -133,17 +116,19 @@ type Option struct {
 func NewService(self boson.Address, nodeMode address.Model, service p2p.Service, streamer p2p.Streamer, kad topology.Driver, light lightnode.LightNodes,
 	route routetab.RouteTab, logger logging.Logger, subPub subscribe.SubPub, o Option) *Service {
 	srv := &Service{
-		o:          o,
-		nodeMode:   nodeMode,
-		self:       self,
-		p2ps:       service,
-		stream:     streamer,
-		logger:     logger,
-		kad:        kad,
-		lightNodes: light,
-		route:      route,
-		subPub:     subPub,
-		close:      make(chan struct{}, 1),
+		o:              o,
+		nodeMode:       nodeMode,
+		self:           self,
+		p2ps:           service,
+		stream:         streamer,
+		logger:         logger,
+		kad:            kad,
+		lightNodes:     light,
+		route:          route,
+		subPub:         subPub,
+		close:          make(chan struct{}, 1),
+		virtualConn:    peerset.NewVirtual(),
+		chanNotifyFunc: make(chan func(), 100),
 	}
 	return srv
 }
@@ -164,10 +149,6 @@ func (s *Service) Protocol() p2p.ProtocolSpec {
 			{
 				Name:    streamMulticast,
 				Handler: s.onMulticast,
-			},
-			{
-				Name:    streamNotify,
-				Handler: s.onNotify,
 			},
 			{
 				Name:    streamMessage,
@@ -208,28 +189,26 @@ func (s *Service) Start() {
 				}
 			case <-ticker.C:
 				wg := &sync.WaitGroup{}
+				doHandshake := func(g *Group, address boson.Address) {
+					defer wg.Done()
+					var err error
+					for i := 0; i < 2; i++ {
+						err = s.Handshake(context.Background(), address)
+						if err == nil {
+							break
+						}
+						s.logger.Tracef("keep ping %s %s", address, err)
+					}
+				}
 				s.groups.Range(func(_, value interface{}) bool {
-					v := value.(*Group)
-					_ = v.keepPeers.EachBin(func(address boson.Address, u uint8) (stop, jumpToNext bool, err error) {
-						wg.Add(1)
-						go func() {
-							defer wg.Done()
-							err = s.Handshake(context.Background(), address)
-							if err != nil {
-								s.logger.Tracef("keep ping %s %s", address, err)
-								v.keepPeers.Remove(address)
-								v.notifyPeerState(PeerState{Overlay: address, Action: 1, Type: 1})
-								v.notifyGroupPeers()
-								if v.knownPeers.Length() >= maxKnownPeers {
-									p := RandomPeer(v.knownPeers.BinPeers(0))
-									v.knownPeers.Remove(p)
-								}
-
-								v.knownPeers.Add(address)
-							}
-						}()
-						return false, false, nil
-					})
+					g := value.(*Group)
+					for _, v := range g.keepPeers.Peers() {
+						info := s.virtualConn.GetInfo(v)
+						if info != nil && info.Direction == topModel.PeerConnectionDirectionOutbound {
+							wg.Add(1)
+							go doHandshake(g, v)
+						}
+					}
 					return true
 				})
 				wg.Wait()
@@ -254,18 +233,17 @@ func (s *Service) refreshProtectPeers() {
 	var list []boson.Address
 	s.groups.Range(func(key, value interface{}) bool {
 		g := value.(*Group)
-		list = append(list, g.connectedPeers.BinPeers(0)...)
-		list = append(list, g.keepPeers.BinPeers(0)...)
+		list = append(list, g.connectedPeers.Peers()...)
+		list = append(list, g.keepPeers.Peers()...)
 		return true
 	})
 	s.kad.RefreshProtectPeer(list)
 }
 
-func (s *Service) addToGroup(gid boson.Address, peers ...boson.Address) {
+func (s *Service) addToGroup(gid, p boson.Address) {
 	var (
-		g      *Group
-		conn   *pslice.PSlice
-		notify bool
+		g    *Group
+		conn *peerset.PeersManager
 	)
 	v, ok := s.groups.Load(gid.String())
 	if ok {
@@ -274,37 +252,25 @@ func (s *Service) addToGroup(gid boson.Address, peers ...boson.Address) {
 	} else {
 		connV, has := s.connectedPeers.Load(gid.String())
 		if has {
-			conn = connV.(*pslice.PSlice)
+			conn = connV.(*peerset.PeersManager)
 		} else {
-			conn = pslice.New(1, s.self)
+			conn = peerset.New(s.chanNotifyFunc)
 			s.connectedPeers.Store(gid.String(), conn)
 		}
 	}
-	if g != nil {
-		for _, p := range peers {
-			if s.route.IsNeighbor(p) {
-				// add to conn
-				if !conn.Exists(p) {
-					conn.Add(p)
-					g.notifyPeerState(PeerState{Overlay: p, Action: 0, Type: 0})
-					notify = true
-				}
-			} else {
-				if !g.keepPeers.Exists(p) {
-					g.keepPeers.Add(p)
-					g.notifyPeerState(PeerState{Overlay: p, Action: 0, Type: 1})
-					notify = true
-				}
+	if s.route.IsNeighbor(p) {
+		if g != nil {
+			g.chanEvent <- eventPeerAction{
+				addr:  p,
+				event: EventAddConn,
 			}
+		} else if !conn.Exists(p) {
+			conn.Add(p)
 		}
-		if notify {
-			g.notifyGroupPeers()
-		}
-	} else {
-		for _, p := range peers {
-			if !conn.Exists(p) {
-				conn.Add(p)
-			}
+	} else if g != nil {
+		g.chanEvent <- eventPeerAction{
+			addr:  p,
+			event: EventAddKept,
 		}
 	}
 }
@@ -332,34 +298,19 @@ func (s *Service) refreshGroup(peer boson.Address, nowGidList [][]byte) {
 	s.peerGidList.Store(peer.String(), nowGidList)
 }
 
-func (s *Service) removeFromGroup(gid boson.Address, peers ...boson.Address) {
+func (s *Service) removeFromGroup(gid boson.Address, addr boson.Address) {
 	value, ok := s.groups.Load(gid.String())
 	if ok {
 		g := value.(*Group)
-		var notify bool
-		for _, addr := range peers {
-			g.knownPeers.Remove(addr)
-			if g.keepPeers.Exists(addr) {
-				g.keepPeers.Remove(addr)
-				g.notifyPeerState(PeerState{Overlay: addr, Action: 1, Type: 1})
-				notify = true
-			}
-			if g.connectedPeers.Exists(addr) {
-				g.connectedPeers.Remove(addr)
-				g.notifyPeerState(PeerState{Overlay: addr, Action: 1, Type: 0})
-				notify = true
-			}
-		}
-		if notify {
-			g.notifyGroupPeers()
+		g.chanEvent <- eventPeerAction{
+			addr:  addr,
+			event: EventRemove,
 		}
 	} else {
 		val, has := s.connectedPeers.Load(gid.String())
 		if has {
-			conn := val.(*pslice.PSlice)
-			for _, addr := range peers {
-				conn.Remove(addr)
-			}
+			conn := val.(*peerset.PeersManager)
+			conn.Remove(addr)
 			if conn.Length() == 0 {
 				s.connectedPeers.Delete(gid.String())
 			}
@@ -367,35 +318,21 @@ func (s *Service) removeFromGroup(gid boson.Address, peers ...boson.Address) {
 	}
 }
 
-func (s *Service) onDisconnect(peers ...boson.Address) {
+func (s *Service) onDisconnect(v boson.Address) {
 	s.connectedPeers.Range(func(key, value interface{}) bool {
 		var g *Group
 		val, ok := s.groups.Load(gconv.String(key))
 		if ok {
 			g = val.(*Group)
 		}
-		conn := value.(*pslice.PSlice)
+		conn := value.(*peerset.PeersManager)
 		if g != nil {
-			notify := false
-			for _, v := range peers {
-				if g.connectedPeers.Exists(v) {
-					g.connectedPeers.Remove(v)
-					g.notifyPeerState(PeerState{Overlay: v, Action: 1, Type: 0})
-					notify = true
-				}
-				if !g.keepPeers.Exists(v) {
-					g.keepPeers.Add(v)
-					g.notifyPeerState(PeerState{Overlay: v, Action: 0, Type: 1})
-					notify = true
-				}
-			}
-			if notify {
-				g.notifyGroupPeers()
+			g.chanEvent <- eventPeerAction{
+				addr:  v,
+				event: EventDisconnect,
 			}
 		} else {
-			for _, v := range peers {
-				conn.Remove(v)
-			}
+			conn.Remove(v)
 			if conn.Length() == 0 {
 				s.connectedPeers.Delete(key)
 			}
@@ -462,14 +399,13 @@ func (s *Service) Multicast(info *pb.MulticastMsg, skip ...boson.Address) error 
 			return nil
 		}
 		// An isolated node within the group
-		send := func(address boson.Address, u uint8) (stop, jumpToNext bool, err error) {
+		send := func(address boson.Address) {
 			if !address.MemberOf(skip) {
 				_ = s.sendData(context.Background(), address, streamMulticast, info)
 			}
-			return false, false, nil
 		}
-		_ = v.connectedPeers.EachBin(send)
-		_ = v.keepPeers.EachBin(send)
+		v.connectedPeers.Iter(send)
+		v.keepPeers.Iter(send)
 		return nil
 	}
 
@@ -641,7 +577,7 @@ func (s *Service) SubscribeMulticastMsg(n *rpc.Notifier, sub *rpc.Subscription, 
 			return errors.New("multicast message subscription already exists")
 		}
 	}
-	return errors.New("the group notfound")
+	return ErrorGroupNotFound
 }
 
 func (s *Service) AddGroup(groups []model.ConfigNodeGroup) error {
@@ -706,6 +642,7 @@ func (s *Service) leaveGroup(gid boson.Address) error {
 	})
 	s.groups.Delete(gid.String())
 
+	g.Close()
 	go s.notify(copyGroups...)
 
 	s.logger.Infof("leave group success %s", gid)
@@ -731,42 +668,6 @@ func (s *Service) notify(groups ...*Group) {
 			_ = v.keepPeers.EachBin(send)
 		}
 	}
-}
-
-// Deprecated
-func (s *Service) onNotify(ctx context.Context, peer p2p.Peer, stream p2p.Stream) (err error) {
-	defer func() {
-		if err != nil {
-			_ = stream.Reset()
-		} else {
-			go stream.FullClose()
-		}
-	}()
-
-	r := protobuf.NewReader(stream)
-	var msg pb.Notify
-	err = r.ReadMsgWithContext(ctx, &msg)
-	if err != nil {
-		return err
-	}
-
-	switch NotifyStatus(msg.Status) {
-	case NotifyJoinGroup: // join  group
-		for _, v := range msg.Gids {
-			gid := boson.NewAddress(v)
-			s.logger.Tracef("group: onNotify join peer %s with group %s", peer.Address, gid)
-			s.addToGroup(gid, peer.Address)
-		}
-	case NotifyLeaveGroup: // leave group
-		for _, v := range msg.Gids {
-			gid := boson.NewAddress(v)
-			s.logger.Tracef("group: onNotify remove peer %s with group %s", peer.Address, gid)
-			s.removeFromGroup(gid, peer.Address)
-		}
-	default:
-		return errors.New("notify status invalid")
-	}
-	return nil
 }
 
 func (s *Service) sendData(ctx context.Context, address boson.Address, streamName string, msg protobuf.Message) (err error) {
@@ -797,6 +698,7 @@ func (s *Service) Snapshot() *model.KadParams {
 	connected, ss := s.kad.SnapshotConnected()
 
 	return &model.KadParams{
+		BaseAddr:      s.self,
 		Connected:     connected,
 		Timestamp:     time.Now(),
 		Groups:        s.getModelGroupInfo(),
@@ -804,22 +706,16 @@ func (s *Service) Snapshot() *model.KadParams {
 	}
 }
 
-func (s *Service) getModelGroupInfo() (out []*model.GroupInfo) {
-	peersFunc := func(ps *pslice.PSlice) (res []boson.Address) {
-		_ = ps.EachBin(func(address boson.Address, u uint8) (stop, jumpToNext bool, err error) {
-			res = append(res, address)
-			return false, false, err
-		})
-		return
-	}
-
+func (s *Service) getModelGroupInfo() []*model.GroupInfo {
+	ss := s.virtualConn.SnapshotNow()
+	out := make([]*model.GroupInfo, 0)
 	s.groups.Range(func(_, value interface{}) bool {
 		v := value.(*Group)
 		out = append(out, &model.GroupInfo{
 			GroupID:   v.gid,
 			Option:    v.option,
-			KeepPeers: s.getOptimumPeers(peersFunc(v.keepPeers)),
-			KnowPeers: s.getOptimumPeers(peersFunc(v.knownPeers)),
+			KeepPeers: s.getVirtualConnectedInfo(ss, v.keepPeers.Peers()),
+			KnowPeers: s.getVirtualConnectedInfo(ss, v.knownPeers.Peers()),
 		})
 		return true
 	})
@@ -828,22 +724,40 @@ func (s *Service) getModelGroupInfo() (out []*model.GroupInfo) {
 
 func (s *Service) getConnectedInfo(ss map[string]*topModel.PeerInfo) (out []*model.ConnectedInfo) {
 	peerInfoFunc := func(list []boson.Address) (infos []*topModel.PeerInfo) {
+		infos = make([]*topModel.PeerInfo, 0)
 		for _, v := range list {
-			infos = append(infos, ss[v.String()])
+			val, ok := ss[v.String()]
+			if ok {
+				infos = append(infos, val)
+			} else {
+				infos = append(infos, &topModel.PeerInfo{
+					Address: v,
+					Metrics: &topModel.MetricSnapshotView{},
+				})
+			}
 		}
 		return infos
 	}
+	out = make([]*model.ConnectedInfo, 0)
 	s.connectedPeers.Range(func(key, value interface{}) bool {
 		gid := boson.MustParseHexAddress(gconv.String(key))
-		v := value.(*pslice.PSlice)
+		v := value.(*peerset.PeersManager)
 		out = append(out, &model.ConnectedInfo{
 			GroupID:        gid,
 			Connected:      v.Length(),
-			ConnectedPeers: peerInfoFunc(v.BinPeers(0)),
+			ConnectedPeers: peerInfoFunc(v.Peers()),
 		})
 		return true
 	})
 	return out
+}
+
+func (s *Service) getVirtualConnectedInfo(ss map[string]model.SnapshotView, list []boson.Address) (now []model.VirtualConnectedInfo) {
+	now = make([]model.VirtualConnectedInfo, 0)
+	for _, v := range list {
+		now = append(now, model.VirtualConnectedInfo{Address: v, Metrics: ss[v.ByteString()]})
+	}
+	return now
 }
 
 func (s *Service) SubscribeLogContent(n *rpc.Notifier, sub *rpc.Subscription) {
@@ -856,8 +770,7 @@ func (s *Service) notifyLogContent(data LogContent) {
 	_ = s.subPub.Publish("group", "logContent", "", data)
 }
 
-// GetGroupPeers the peers order by EWMA optimal
-func (s *Service) GetGroupPeers(groupName string) (out *GroupPeers, err error) {
+func (s *Service) GetGroup(groupName string) (out *Group, err error) {
 	gid, err := boson.ParseHexAddress(groupName)
 	if err != nil {
 		gid = GenerateGID(groupName)
@@ -867,23 +780,7 @@ func (s *Service) GetGroupPeers(groupName string) (out *GroupPeers, err error) {
 	if !ok {
 		return nil, errors.New("group not found")
 	}
-
-	return v.(*Group).peers(), nil
-}
-
-func (s *Service) GetOptimumPeer(groupName string) (peer boson.Address, err error) {
-	v, err := s.GetGroupPeers(groupName)
-	if err != nil {
-		return boson.ZeroAddress, err
-	}
-
-	if len(v.Connected) > 0 {
-		return v.Connected[0], nil
-	}
-	if len(v.Keep) > 0 {
-		return v.Keep[0], nil
-	}
-	return boson.ZeroAddress, nil
+	return v.(*Group), nil
 }
 
 func (s *Service) getStream(ctx context.Context, dest boson.Address, streamName string) (stream p2p.Stream, err error) {
@@ -1047,7 +944,7 @@ func (s *Service) onMessage(ctx context.Context, peer p2p.Peer, stream p2p.Strea
 		if g.gid.Equal(msg.GID) && g.option.GType == model.GTypeJoin {
 			haveNotify = true
 			if g.groupMsgSub == false {
-				notifyErr = fmt.Errorf("target not subscribe the group message")
+				notifyErr = fmt.Errorf("target group no subscribe msg")
 				return false
 			}
 			_ = s.notifyMessage(g, msg, st)
@@ -1085,7 +982,7 @@ func (s *Service) SubscribeGroupMessage(n *rpc.Notifier, sub *rpc.Subscription, 
 			return nil
 		}
 	}
-	return errors.New("the joined group notfound")
+	return ErrorGroupNotFound
 }
 
 func (s *Service) SubscribeGroupMessageWithChan(notifier *subscribe.NotifierWithMsgChan, gid boson.Address) (err error) {
@@ -1098,7 +995,7 @@ func (s *Service) SubscribeGroupMessageWithChan(notifier *subscribe.NotifierWith
 			return nil
 		}
 	}
-	return errors.New("the joined group notfound")
+	return ErrorGroupNotFound
 }
 
 func (s *Service) notifyMessage(g *Group, msg GroupMessage, st *WsStream) (e error) {
@@ -1187,23 +1084,43 @@ func (s *Service) subscribeGroupPeers(n *rpc.Notifier, sub *rpc.Subscription, gr
 		gid = GenerateGID(group)
 	}
 	notifier := subscribe.NewNotifier(n, sub)
-	_, ok := s.groups.Load(gid.String())
+	val, ok := s.groups.Load(gid.String())
 	if ok {
+		g := val.(*Group)
 		_ = s.subPub.Subscribe(notifier, "group", "groupPeers", gid.String())
 		go func() {
-			peers, err := s.GetGroupPeers(gid.String())
-			if err != nil {
-				return
-			}
+			peers := g.Peers()
 			_ = n.Notify(sub.ID, peers)
 		}()
 		return nil
 	}
-	return errors.New("the group notfound")
+	return ErrorGroupNotFound
 }
 
 func (s *Service) getOptimumPeers(list []boson.Address) (now []boson.Address) {
 	return s.kad.GetPeersWithLatencyEWMA(list)
+}
+
+func (s *Service) getOptimumPeersVirtual(list []boson.Address) (now []boson.Address) {
+	sortIdx := make([][]int64, len(list))
+	for i, v := range list {
+		ss := s.virtualConn.SnapshotAddr(v)
+		t := ss.LatencyEWMA
+		sortIdx[i] = []int64{int64(i), t}
+	}
+
+	sort.Slice(sortIdx, func(i, j int) bool {
+		if sortIdx[i][1] != sortIdx[j][1] {
+			return sortIdx[i][1] < sortIdx[j][1]
+		} else {
+			return sortIdx[i][0] < sortIdx[j][0]
+		}
+	})
+
+	for _, v := range sortIdx {
+		now = append(now, list[v[0]])
+	}
+	return now
 }
 
 func (s *Service) subscribePeerState(n *rpc.Notifier, sub *rpc.Subscription, group string) error {
@@ -1212,17 +1129,15 @@ func (s *Service) subscribePeerState(n *rpc.Notifier, sub *rpc.Subscription, gro
 		gid = GenerateGID(group)
 	}
 	notifier := subscribe.NewNotifier(n, sub)
-	_, ok := s.groups.Load(gid.String())
+	val, ok := s.groups.Load(gid.String())
 	if ok {
+		g := val.(*Group)
 		_ = s.subPub.Subscribe(notifier, "group", "peerState", gid.String())
 		go func() {
-			peers, err := s.GetGroupPeers(gid.String())
-			if err != nil {
-				return
-			}
+			peers := g.PeersInfo()
 			_ = n.Notify(sub.ID, peers)
 		}()
 		return nil
 	}
-	return errors.New("the group notfound")
+	return ErrorGroupNotFound
 }

@@ -13,9 +13,7 @@ import (
 func (s *Service) API() rpc.API {
 	return rpc.API{
 		Namespace: "group",
-		Version:   "1.0",
 		Service:   &apiService{s: s},
-		Public:    true,
 	}
 }
 
@@ -80,41 +78,20 @@ func (a *apiService) Reply(sessionID string, data []byte) error {
 	return a.s.ReplyGroupMessage(sessionID, data)
 }
 
-type GroupRequest struct {
-	Name         string
-	DirectPeers  int
-	VirtualPeers int
-	BootNodes    []boson.Address
-}
-
-func (a *apiService) Join(req GroupRequest) error {
-	return a.s.AddGroup([]model.ConfigNodeGroup{{
-		Name:               req.Name,
-		GType:              model.GTypeJoin,
-		KeepConnectedPeers: req.DirectPeers,
-		KeepPingPeers:      req.VirtualPeers,
-		Nodes:              req.BootNodes,
-	}})
+func (a *apiService) Join(req model.ConfigNodeGroup) error {
+	return a.s.AddGroup([]model.ConfigNodeGroup{req})
 }
 
 func (a *apiService) Leave(group string) error {
 	return a.s.RemoveGroup(group, model.GTypeJoin)
 }
 
-type GroupPeerList struct {
-	Directed  []boson.Address
-	Virtually []boson.Address
-}
-
-func (a *apiService) PeerList(group string) (GroupPeerList, error) {
-	list, err := a.s.GetGroupPeers(group)
+func (a *apiService) PeersInfo(group string) (*GroupPeersInfo, error) {
+	g, err := a.s.GetGroup(group)
 	if err != nil {
-		return GroupPeerList{}, err
+		return &GroupPeersInfo{}, err
 	}
-	return GroupPeerList{
-		Directed:  list.Connected,
-		Virtually: list.Keep,
-	}, nil
+	return g.PeersInfo(), nil
 }
 
 func (a *apiService) Broadcast(group string, msg []byte) error {

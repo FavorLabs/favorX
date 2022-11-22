@@ -19,10 +19,10 @@ package rpc
 import (
 	"context"
 	"io"
+	"sync"
 	"sync/atomic"
 
 	"github.com/FavorLabs/favorX/pkg/logging"
-	mapset "github.com/deckarep/golang-set"
 )
 
 const MetadataApi = "rpc"
@@ -31,23 +31,29 @@ const MetadataApi = "rpc"
 type Server struct {
 	services serviceRegistry
 	idgen    func() ID
-	run      int32
-	codecs   mapset.Set
+
+	mutex  sync.Mutex
+	codecs map[ServerCodec]struct{}
+	run    int32
 }
 
 // NewServer creates a new server instance with no registered handlers.
 func NewServer() *Server {
-	server := &Server{idgen: randomIDGenerator(), codecs: mapset.NewSet(), run: 1}
+	server := &Server{
+		idgen:  randomIDGenerator(),
+		codecs: make(map[ServerCodec]struct{}),
+		run:    1,
+	}
 	// Register the default service providing meta information about the RPC service such
 	// as the services and methods it offers.
 	rpcService := &RPCService{server}
-	_ = server.RegisterName(MetadataApi, rpcService)
+	server.RegisterName(MetadataApi, rpcService)
 	return server
 }
 
 // RegisterName creates a service for the given receiver type under the given name. When no
 // methods on the given receiver match the criteria to be either a RPC method or a
-// subscription an error is returned. Otherwise a new service is created and added to the
+// subscription an error is returned. Otherwise, a new service is created and added to the
 // service collection this server provides to clients.
 func (s *Server) RegisterName(name string, receiver interface{}) error {
 	return s.services.registerName(name, receiver)
@@ -59,18 +65,32 @@ func (s *Server) RegisterName(name string, receiver interface{}) error {
 func (s *Server) ServeCodec(codec ServerCodec) {
 	defer codec.close()
 
-	// Don't serve if server is stopped.
-	if atomic.LoadInt32(&s.run) == 0 {
+	if !s.trackCodec(codec) {
 		return
 	}
-
-	// Add the codec to the set so it can be closed by Stop.
-	s.codecs.Add(codec)
-	defer s.codecs.Remove(codec)
+	defer s.untrackCodec(codec)
 
 	c := initClient(codec, s.idgen, &s.services)
 	<-codec.closed()
 	c.Close()
+}
+
+func (s *Server) trackCodec(codec ServerCodec) bool {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	if atomic.LoadInt32(&s.run) == 0 {
+		return false // Don't serve if server is stopped.
+	}
+	s.codecs[codec] = struct{}{}
+	return true
+}
+
+func (s *Server) untrackCodec(codec ServerCodec) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	delete(s.codecs, codec)
 }
 
 // serveSingleRequest reads and processes a single RPC request from the given codec. This
@@ -89,7 +109,7 @@ func (s *Server) serveSingleRequest(ctx context.Context, codec ServerCodec) {
 	reqs, batch, err := codec.readBatch()
 	if err != nil {
 		if err != io.EOF {
-			_ = codec.writeJSON(ctx, errorMessage(&invalidMessageError{"parse error"}))
+			codec.writeJSON(ctx, errorMessage(&invalidMessageError{"parse error"}))
 		}
 		return
 	}
@@ -104,12 +124,14 @@ func (s *Server) serveSingleRequest(ctx context.Context, codec ServerCodec) {
 // requests to finish, then closes all codecs which will cancel pending requests and
 // subscriptions.
 func (s *Server) Stop() {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
 	if atomic.CompareAndSwapInt32(&s.run, 1, 0) {
 		logging.Debug("RPC server shutting down")
-		s.codecs.Each(func(c interface{}) bool {
-			c.(ServerCodec).close()
-			return true
-		})
+		for codec := range s.codecs {
+			codec.close()
+		}
 	}
 }
 
@@ -144,7 +166,7 @@ type PeerInfo struct {
 	// Address of client. This will usually contain the IP address and port.
 	RemoteAddr string
 
-	// Addditional information for HTTP and WebSocket connections.
+	// Additional information for HTTP and WebSocket connections.
 	HTTP struct {
 		// Protocol version, i.e. "HTTP/1.1". This is not set for WebSocket.
 		Version string

@@ -10,9 +10,7 @@ import (
 func (ora *ChainOracle) API() rpc.API {
 	return rpc.API{
 		Namespace: "oracle",
-		Version:   "1.0",
 		Service:   &apiService{ora: ora},
-		Public:    true,
 	}
 }
 

@@ -3,6 +3,10 @@ package netrelay
 import (
 	"bufio"
 	"fmt"
+	"io"
+	"net/http"
+	"strings"
+
 	"github.com/FavorLabs/favorX/pkg/address"
 	"github.com/FavorLabs/favorX/pkg/boson"
 	"github.com/FavorLabs/favorX/pkg/jsonhttp"
@@ -11,9 +15,6 @@ import (
 	"github.com/FavorLabs/favorX/pkg/multicast/model"
 	"github.com/FavorLabs/favorX/pkg/p2p"
 	"github.com/FavorLabs/favorX/pkg/routetab"
-	"io"
-	"net/http"
-	"strings"
 )
 
 type NetRelay interface {
@@ -38,12 +39,12 @@ func (s *Service) RelayHttpDo(w http.ResponseWriter, r *http.Request, addr boson
 	if boson.ZeroAddress.Equal(addr) {
 		urls := strings.Split(url, "/")
 		group := urls[1]
-		nodes, err1 := s.multicast.GetGroupPeers(group)
+		g, err1 := s.multicast.GetGroup(group)
 		if err1 != nil {
 			jsonhttp.InternalServerError(w, err1)
 			return
 		}
-
+		nodes := g.Peers()
 		if len(nodes.Connected) == 0 && len(nodes.Keep) == 0 {
 			jsonhttp.InternalServerError(w, fmt.Sprintf("No corresponding node found of group:%s", group))
 			return

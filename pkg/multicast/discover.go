@@ -10,15 +10,15 @@ import (
 
 	"github.com/FavorLabs/favorX/pkg/boson"
 	"github.com/FavorLabs/favorX/pkg/multicast/pb"
+	"github.com/FavorLabs/favorX/pkg/multicast/peerset"
 	"github.com/FavorLabs/favorX/pkg/p2p"
 	"github.com/FavorLabs/favorX/pkg/p2p/protobuf"
 	"github.com/FavorLabs/favorX/pkg/topology"
-	"github.com/FavorLabs/favorX/pkg/topology/pslice"
 	"github.com/gogf/gf/v2/util/gconv"
 )
 
 const (
-	maxKnownPeers    = 20
+	maxKnownPeers    = 100
 	maxTTL           = 10
 	forwardLimit     = 2
 	discoverInterval = time.Second * 30
@@ -103,7 +103,7 @@ func (s *Service) doFindGroup(wg *sync.WaitGroup, group *Group) {
 	switch {
 	case group.connectedPeers.Length() > 0:
 		s.logger.Tracef("doFindGroup connectedPeers %s got %d nodes", group.gid, group.connectedPeers.Length())
-		_ = group.connectedPeers.EachBinRev(func(address boson.Address, u uint8) (stop, jumpToNext bool, err error) {
+		_ = group.connectedPeers.EachBin(func(address boson.Address, u uint8) (stop, jumpToNext bool, err error) {
 			lim := limit()
 			if lim <= 0 {
 				return true, false, nil
@@ -119,7 +119,7 @@ func (s *Service) doFindGroup(wg *sync.WaitGroup, group *Group) {
 				return false, false, nil
 			}
 			s.logger.Tracef("doFindGroup got %d node in group %s from connected %s", len(finds), group.gid, address)
-			s.addToGroup(group.gid, finds...)
+			group.addFoundPeers(finds)
 			return false, false, nil
 		})
 		if limit() <= 0 {
@@ -144,12 +144,12 @@ func (s *Service) doFindGroup(wg *sync.WaitGroup, group *Group) {
 					continue
 				}
 				s.logger.Tracef("doFindGroup got %d node in group %s from keep %s", len(finds), group.gid, v)
-				s.addToGroup(group.gid, finds...)
+				group.addFoundPeers(finds)
 			}
 		}
 		var list []boson.Address
 		getList := func() {
-			_ = group.keepPeers.EachBinRev(func(address boson.Address, u uint8) (stop, jumpToNext bool, err error) {
+			_ = group.keepPeers.EachBin(func(address boson.Address, u uint8) (stop, jumpToNext bool, err error) {
 				// needs to skip without the first round
 				if _, ok := skip[address.String()]; !ok {
 					skip[address.String()] = 1
@@ -176,7 +176,7 @@ func (s *Service) doFindGroup(wg *sync.WaitGroup, group *Group) {
 	case group.knownPeers.Length() > 0:
 		s.logger.Tracef("doFindGroup knownPeers %s got %d nodes", group.gid, group.knownPeers.Length())
 		var knowWg sync.WaitGroup
-		_ = group.knownPeers.EachBinRev(func(address boson.Address, u uint8) (stop, jumpToNext bool, err error) {
+		_ = group.knownPeers.EachBin(func(address boson.Address, u uint8) (stop, jumpToNext bool, err error) {
 			lim := limit()
 			if lim <= 0 {
 				return true, false, nil
@@ -199,31 +199,6 @@ func (s *Service) doFindGroup(wg *sync.WaitGroup, group *Group) {
 		}
 		fallthrough
 	default:
-		// skipPeers := make([]boson.Address, 0)
-		// for addr := range skip {
-		// 	skipPeers = append(skipPeers, boson.MustParseHexAddress(addr))
-		// }
-		// nodes := s.getForwardNodes(group.gid, skipPeers...)
-		//
-		// s.logger.Tracef("doFindGroup default %s got %d nodes", group.gid, len(nodes))
-		//
-		// for _, addr := range nodes {
-		// 	lim := limit()
-		// 	if lim <= 0 {
-		// 		return
-		// 	}
-		// 	finds, err := s.getGroupNode(context.Background(), addr, &pb.FindGroupReq{
-		// 		Gid:   group.gid.Bytes(),
-		// 		Limit: int32(lim),
-		// 		Ttl:   0,
-		// 		Paths: s.getSkipInGroupPeers(group.gid),
-		// 	})
-		// 	if err != nil || len(finds) == 0 {
-		// 		continue
-		// 	}
-		// 	s.logger.Tracef("doFindGroup got %d node in group %s from forward %s", len(finds), group.gid, addr)
-		// 	s.addToGroup(group.gid, finds...)
-		// }
 	}
 
 }
@@ -246,11 +221,11 @@ func (s *Service) getForwardNodes(gid boson.Address, skip ...boson.Address) (nod
 	return
 }
 
-func (s *Service) getCloserKnownGID(gid boson.Address) (p *pslice.PSlice) {
+func (s *Service) getCloserKnownGID(gid boson.Address) (p *peerset.PeersManager) {
 	closer := boson.ZeroAddress
 	s.connectedPeers.Range(func(key, value interface{}) bool {
 		v := boson.MustParseHexAddress(gconv.String(key))
-		conn := value.(*pslice.PSlice)
+		conn := value.(*peerset.PeersManager)
 		_, ok := s.groups.Load(key)
 		if !ok && conn.Length() > 0 {
 			if closer.IsZero() {
@@ -452,7 +427,7 @@ func (s *Service) onFindGroup(ctx context.Context, peer p2p.Peer, stream p2p.Str
 	// connected
 	value, ok := s.connectedPeers.Load(gid.String())
 	if ok {
-		conn := value.(*pslice.PSlice)
+		conn := value.(*peerset.PeersManager)
 		if conn.Length() > 0 {
 			_ = conn.EachBin(peerFunc)
 			if len(resp.Addresses) >= int(req.Limit) {
