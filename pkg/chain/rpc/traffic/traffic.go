@@ -37,8 +37,7 @@ func (s *service) TransferredAddress(address types.AccountID) (accountIds []type
 }
 
 func (s *service) BalanceOf(account types.AccountID) (*big.Int, error) {
-	// TODO implement me AccountStore
-	key, err := types.CreateStorageKey(s.meta, "System", "Account", account.ToBytes())
+	key, err := types.CreateStorageKey(s.meta, "System", "Account", account.ToBytes(), nil)
 	if err != nil {
 		return nil, err
 	}

@@ -33,8 +33,6 @@ type Traffic interface {
 	Handshake(peer boson.Address, beneficiary types.AccountID, cheque cheque.SignedCheque) error
 
 	LastReceivedCheque(peer boson.Address) (*cheque.SignedCheque, error)
-
-	UpdatePeerBalance(peer boson.Address) error
 }
 
 type Service struct {

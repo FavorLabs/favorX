@@ -1,15 +1,20 @@
 package api
 
 import (
+	"fmt"
 	"github.com/FavorLabs/favorX/pkg/boson"
 	"github.com/FavorLabs/favorX/pkg/cac"
+	"github.com/FavorLabs/favorX/pkg/file/joiner"
 	"github.com/FavorLabs/favorX/pkg/jsonhttp"
 	"github.com/FavorLabs/favorX/pkg/sctx"
 	"github.com/FavorLabs/favorX/pkg/storage"
 	"github.com/FavorLabs/favorX/pkg/tracing"
+	"github.com/ethersphere/langos"
 	"github.com/gorilla/mux"
 	"io"
 	"net/http"
+	"strings"
+	"time"
 )
 
 func (s *server) bufferUploadHandler(w http.ResponseWriter, r *http.Request) {
@@ -90,5 +95,40 @@ func (s *server) bufferGetHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	jsonhttp.Created(w, ch.Data()[boson.SpanSize:])
+	j := ch.Data()[boson.SpanSize:]
+	w.Write(j)
+	w.WriteHeader(200)
+	return
+}
+
+func (s *server) downloadChainHandler(w http.ResponseWriter, r *http.Request, rootCid boson.Address, additionalHeaders http.Header) {
+	targets := r.URL.Query().Get("targets")
+	if targets != "" {
+		r = r.WithContext(sctx.SetTargets(r.Context(), targets))
+	}
+	r = r.WithContext(sctx.SetRootLen(r.Context(), 1))
+	reader, l, err := joiner.New(r.Context(), s.storer, storage.ModeGetChain, rootCid, 0)
+	if err != nil {
+		s.logger.Debugf("buffer upload: chunk read error: %v", err)
+		s.logger.Error("buffer upload: chunk read error")
+		jsonhttp.BadRequest(w, "chunk read error")
+		jsonhttp.NotFound(w, err)
+		return
+	}
+
+	// include additional headers
+	for name, values := range additionalHeaders {
+		w.Header().Set(name, strings.Join(values, "; "))
+	}
+
+	// http cache policy
+	w.Header().Set("Cache-Control", "no-store")
+
+	w.Header().Set("Content-Length", fmt.Sprintf("%d", l))
+	w.Header().Set("Decompressed-Content-Length", fmt.Sprintf("%d", l))
+	w.Header().Set("Access-Control-Expose-Headers", "Content-Disposition")
+	if targets != "" {
+		w.Header().Set(TargetsRecoveryHeader, targets)
+	}
+	http.ServeContent(w, r, "", time.Now(), langos.NewBufferedLangos(reader, lookaheadBufferSize(l)))
 }

@@ -186,12 +186,9 @@ func (s *server) setupRouting() {
 		})),
 	)
 
-	handle("/traffic/cash/{address}", web.ChainHandlers(
-		s.gatewayModeForbidEndpointHandler,
-		web.FinalHandler(jsonhttp.MethodHandler{
-			"POST": http.HandlerFunc(s.cashCheque),
-		})),
-	)
+	handle("/traffic/cash", jsonhttp.MethodHandler{
+		"POST": http.HandlerFunc(s.cashCheque),
+	})
 
 	handle("/fileRegister/{address}", jsonhttp.MethodHandler{
 		"POST": web.ChainHandlers(

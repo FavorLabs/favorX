@@ -22,7 +22,6 @@ import (
 	"github.com/FavorLabs/favorX/pkg/p2p/protobuf"
 	"github.com/FavorLabs/favorX/pkg/p2p/streamtest"
 	rmock "github.com/FavorLabs/favorX/pkg/routetab/mock"
-	omock "github.com/FavorLabs/favorX/pkg/settlement/chain/oracle/mock"
 	smock "github.com/FavorLabs/favorX/pkg/statestore/mock"
 	"github.com/FavorLabs/favorX/pkg/storage"
 	"github.com/FavorLabs/favorX/pkg/storage/mock"

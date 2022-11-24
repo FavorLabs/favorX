@@ -2,16 +2,16 @@ package cheque
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/FavorLabs/favorX/pkg/crypto"
 	"math/big"
 	"strings"
 	"sync"
 
+	"github.com/FavorLabs/favorX/pkg/crypto"
 	"github.com/FavorLabs/favorX/pkg/storage"
 	"github.com/centrifuge/go-substrate-rpc-client/v4/types"
+	"github.com/centrifuge/go-substrate-rpc-client/v4/types/codec"
 )
 
 var (
@@ -198,12 +198,10 @@ func (s *chequeStore) PutSendCheque(ctx context.Context, cheque *Cheque, chainAd
 // RecoverCheque recovers the issuer ethereum address from a signed cheque
 func RecoverCheque(signedCheque *SignedCheque) (types.AccountID, error) {
 	publicly, err := crypto.NewPublicKey(signedCheque.Beneficiary.ToBytes())
-	cheque := Cheque{
-		Recipient:        signedCheque.Recipient,
+	ec := &EncodeCheque{Recipient: signedCheque.Recipient,
 		Beneficiary:      signedCheque.Beneficiary,
-		CumulativePayout: signedCheque.CumulativePayout,
-	}
-	c, err := json.Marshal(cheque)
+		CumulativePayout: types.NewU128(*signedCheque.CumulativePayout)}
+	c, err := codec.Encode(ec)
 	if err != nil {
 		return types.AccountID{}, err
 	}

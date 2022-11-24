@@ -305,7 +305,7 @@ func (s *Service) LastReceivedCheque(_ boson.Address) (*chequePkg.SignedCheque, 
 	return nil, nil
 }
 
-func (s *Service) CashCheque() (types.Hash, error) {
+func (s *Service) CashCheque(_ boson.Address) (types.Hash, error) {
 	return types.Hash{}, nil
 }
 
