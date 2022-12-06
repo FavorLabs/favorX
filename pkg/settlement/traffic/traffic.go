@@ -101,7 +101,7 @@ type ApiInterface interface {
 
 const (
 	trafficChainRefreshDuration = 24 * time.Hour
-	chequesCount                = 100
+	chequesCount                = 1024
 )
 
 type Service struct {

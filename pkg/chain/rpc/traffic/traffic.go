@@ -7,6 +7,7 @@ import (
 	"github.com/FavorLabs/favorX/pkg/boson"
 	"github.com/FavorLabs/favorX/pkg/chain/rpc/base"
 	"github.com/centrifuge/go-substrate-rpc-client/v4/types"
+	"github.com/centrifuge/go-substrate-rpc-client/v4/types/codec"
 )
 
 type Interface interface {
@@ -36,17 +37,24 @@ func (s *service) TransferredAddress(address types.AccountID) (accountIds []type
 	return
 }
 
+type AccountInfo struct {
+	Free     types.U128
+	Reserved types.U128
+	Frozen   types.U128
+}
+
 func (s *service) BalanceOf(account types.AccountID) (*big.Int, error) {
-	key, err := types.CreateStorageKey(s.meta, "System", "Account", account.ToBytes(), nil)
+	currencyId, _ := codec.Encode(types.U32(1))
+	key, err := types.CreateStorageKey(s.meta, "Tokens", "Accounts", account.ToBytes(), currencyId)
 	if err != nil {
 		return nil, err
 	}
-	var accountInfo types.AccountInfo
+	var accountInfo AccountInfo
 	ok, err := s.client.RPC.State.GetStorageLatest(key, &accountInfo)
 	if !ok || err != nil {
 		return big.NewInt(0), err
 	}
-	return accountInfo.Data.Free.Int, nil
+	return accountInfo.Free.Int, nil
 }
 
 func (s *service) TransferredTotal(address types.AccountID) (*big.Int, error) {
