@@ -62,6 +62,10 @@ const (
 	optionNameEnableApiTls          = "enable-api-tls"
 	optionNameTlsCRT                = "tls-crt-file"
 	optionNameTlsKey                = "tls-key-file"
+	optionNameProxyEnable           = "proxy-enable"
+	optionNameProxyAddr             = "proxy-addr"
+	optionNameProxyNATAddr          = "proxy-nat-addr"
+	optionNameProxyGroup            = "proxy-group"
 )
 
 func init() {
@@ -238,6 +242,10 @@ func (c *command) setAllFlags(cmd *cobra.Command) {
 	cmd.Flags().Bool(optionNameEnableApiTls, false, "enable https to api/debug api")
 	cmd.Flags().String(optionNameTlsKey, "", "https private key file path")
 	cmd.Flags().String(optionNameTlsCRT, "", "https certificate file path")
+	cmd.Flags().Bool(optionNameProxyEnable, false, "proxy of http(s)/socks5")
+	cmd.Flags().String(optionNameProxyAddr, "127.0.0.1:1080", "listening address of http(s)/socks5 proxy")
+	cmd.Flags().String(optionNameProxyNATAddr, "", "listening address of http(s)/socks5 proxy with udp protocol")
+	cmd.Flags().String(optionNameProxyGroup, "", "group name of http(s)/socks5 proxy")
 }
 
 func newLogger(cmd *cobra.Command, verbosity string) (logging.Logger, error) {

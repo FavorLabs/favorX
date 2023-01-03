@@ -145,6 +145,10 @@ func (c *command) initStartCmd() (err error) {
 				EnableApiTLS:           c.config.GetBool(optionNameEnableApiTls),
 				TlsCrtFile:             c.config.GetString(optionNameTlsCRT),
 				TlsKeyFile:             c.config.GetString(optionNameTlsKey),
+				ProxyEnable:            c.config.GetBool(optionNameProxyEnable),
+				ProxyAddr:              c.config.GetString(optionNameProxyAddr),
+				ProxyNATAddr:           c.config.GetString(optionNameProxyNATAddr),
+				ProxyGroup:             c.config.GetString(optionNameProxyGroup),
 			})
 			if err != nil {
 				return err

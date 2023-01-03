@@ -106,6 +106,10 @@ type Options struct {
 	EnableApiTLS           bool
 	TlsCrtFile             string
 	TlsKeyFile             string
+	ProxyEnable            bool
+	ProxyAddr              string
+	ProxyNATAddr           string
+	ProxyGroup             string
 }
 
 func NewNode(nodeMode address.Model, addr string, bosonAddress boson.Address, publicKey ecdsa.PublicKey, signer crypto.Signer, networkID uint64, logger logging.Logger, libp2pPrivateKey crypto2.PrivKey, o Options) (b *Favor, err error) {
@@ -405,6 +409,13 @@ func NewNode(nodeMode address.Model, addr string, bosonAddress boson.Address, pu
 	err = p2ps.AddProtocol(relay.Protocol())
 	if err != nil {
 		return nil, err
+	}
+	if o.ProxyEnable && o.ProxyGroup != "" {
+		_, err = group.GetGroupPeers(o.ProxyGroup)
+		if err != nil {
+			return nil, fmt.Errorf("proxy group %s notfound", o.ProxyGroup)
+		}
+		go relay.StartProxy(o.ProxyAddr, o.ProxyNATAddr, o.ProxyGroup)
 	}
 
 	var apiService api.Service
