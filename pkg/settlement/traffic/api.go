@@ -2,6 +2,7 @@ package traffic
 
 import (
 	"context"
+
 	"github.com/FavorLabs/favorX/pkg/boson"
 	"github.com/FavorLabs/favorX/pkg/rpc"
 	"github.com/centrifuge/go-substrate-rpc-client/v4/types"
@@ -10,9 +11,7 @@ import (
 func (s *Service) API() rpc.API {
 	return rpc.API{
 		Namespace: "traffic",
-		Version:   "1.0",
 		Service:   &apiService{s: s},
-		Public:    true,
 	}
 }
 

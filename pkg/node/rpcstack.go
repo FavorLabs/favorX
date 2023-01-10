@@ -117,6 +117,7 @@ func (h *httpServer) start() error {
 	if h.timeouts != (rpc.HTTPTimeouts{}) {
 		CheckTimeouts(&h.timeouts, h.log)
 		h.server.ReadTimeout = h.timeouts.ReadTimeout
+		h.server.ReadHeaderTimeout = h.timeouts.ReadHeaderTimeout
 		h.server.WriteTimeout = h.timeouts.WriteTimeout
 		h.server.IdleTimeout = h.timeouts.IdleTimeout
 	}
@@ -125,7 +126,7 @@ func (h *httpServer) start() error {
 	listener, err := net.Listen("tcp", h.endpoint)
 	if err != nil {
 		// If the server fails to start, we need to clear out the RPC and WS
-		// configuration so they can be configured another time.
+		// configuration, so they can be configured another time.
 		h.disableRPC()
 		h.disableWS()
 		return err
@@ -263,18 +264,18 @@ func (h *httpServer) doStop() {
 	h.server, h.listener = nil, nil
 }
 
-func (h *httpServer) registerApis(apis []rpc.API, modules []string, srv *rpc.Server, exposeAll bool) error {
+func (h *httpServer) registerApis(apis []rpc.API, modules []string, srv *rpc.Server) error {
 	if bad, available := checkModuleAvailability(modules, apis); len(bad) > 0 {
 		h.log.Errorf("Unavailable modules in HTTP API list unavailable %v available %v", bad, available)
 	}
-	// Generate the allow list based on the allowed modules
+	// Generate to allow list based on the allowed modules
 	allowList := make(map[string]bool)
 	for _, module := range modules {
 		allowList[module] = true
 	}
 	// Register all the APIs exposed by the services
 	for _, api := range apis {
-		if exposeAll || allowList[api.Namespace] || (len(allowList) == 0 && api.Public) {
+		if allowList[api.Namespace] || len(allowList) == 0 {
 			if err := srv.RegisterName(api.Namespace, api.Service); err != nil {
 				return err
 			}
@@ -294,7 +295,7 @@ func (h *httpServer) enableRPC(apis []rpc.API, config httpConfig) error {
 
 	// Create RPC server and handler.
 	srv := rpc.NewServer()
-	if err := h.registerApis(apis, config.Modules, srv, false); err != nil {
+	if err := h.registerApis(apis, config.Modules, srv); err != nil {
 		return err
 	}
 	h.httpConfig = config
@@ -326,7 +327,7 @@ func (h *httpServer) enableWS(apis []rpc.API, config wsConfig) error {
 
 	// Create RPC server and handler.
 	srv := rpc.NewServer()
-	if err := h.registerApis(apis, config.Modules, srv, false); err != nil {
+	if err := h.registerApis(apis, config.Modules, srv); err != nil {
 		return err
 	}
 	h.wsConfig = config
@@ -357,9 +358,9 @@ func (h *httpServer) wsAllowed() bool {
 	return h.wsHandler.Load().(*rpcHandler) != nil
 }
 
-// isWebsocket checks the header of an http request for a websocket upgrade request.
+// isWebsocket checks the header of a http request for a websocket upgrade request.
 func isWebsocket(r *http.Request) bool {
-	return strings.ToLower(r.Header.Get("Upgrade")) == "websocket" &&
+	return strings.EqualFold(r.Header.Get("Upgrade"), "websocket") &&
 		strings.Contains(strings.ToLower(r.Header.Get("Connection")), "upgrade")
 }
 

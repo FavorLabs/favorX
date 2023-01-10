@@ -112,7 +112,7 @@ else
   fi
 
   sh autogen.sh
-  ./configure --enable-snappy --enable-tcmalloc --disable-dependency-tracking --disable-standalone-build --prefix="$INSTALL_DIR" CPPFLAGS="-I$INSTALL_DIR/include" CXXFLAGS="-I$INSTALL_DIR/include" LDFLAGS="-L$INSTALL_DIR/lib" LT_SYS_LIBRARY_PATH="$INSTALL_DIR"/lib
+  ./configure --enable-snappy --enable-tcmalloc --disable-dependency-tracking --disable-standalone-build --prefix="$INSTALL_DIR" CPPFLAGS="-I$INSTALL_DIR/include" CXXFLAGS="-I$INSTALL_DIR/include" LDFLAGS="-Wl,-rpath,$INSTALL_DIR/lib -L$INSTALL_DIR/lib" LT_SYS_LIBRARY_PATH="$INSTALL_DIR"/lib
   make
   make install
   make clean

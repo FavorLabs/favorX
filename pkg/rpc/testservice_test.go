@@ -70,6 +70,12 @@ func (testError) Error() string          { return "testError" }
 func (testError) ErrorCode() int         { return 444 }
 func (testError) ErrorData() interface{} { return "testError data" }
 
+type MarshalErrObj struct{}
+
+func (o *MarshalErrObj) MarshalText() ([]byte, error) {
+	return nil, errors.New("marshal error")
+}
+
 func (s *testService) NoArgsRets() {}
 
 func (s *testService) Echo(str string, i int, args *echoArgs) echoResult {
@@ -114,6 +120,14 @@ func (s *testService) ReturnError() error {
 	return testError{}
 }
 
+func (s *testService) MarshalError() *MarshalErrObj {
+	return &MarshalErrObj{}
+}
+
+func (s *testService) Panic() string {
+	panic("service panic")
+}
+
 func (s *testService) CallMeBack(ctx context.Context, method string, args []interface{}) (interface{}, error) {
 	c, ok := ClientFromContext(ctx)
 	if !ok {
@@ -132,7 +146,7 @@ func (s *testService) CallMeBackLater(ctx context.Context, method string, args [
 	go func() {
 		<-ctx.Done()
 		var result interface{}
-		_ = c.Call(&result, method, args...)
+		c.Call(&result, method, args...)
 	}()
 	return nil
 }
@@ -195,7 +209,7 @@ func (s *notificationTestService) HangSubscription(ctx context.Context, val int)
 	subscription := notifier.CreateSubscription()
 
 	go func() {
-		_ = notifier.Notify(subscription.ID, val)
+		notifier.Notify(subscription.ID, val)
 	}()
 	return subscription, nil
 }

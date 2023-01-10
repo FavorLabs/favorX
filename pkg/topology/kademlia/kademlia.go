@@ -16,6 +16,7 @@ import (
 	"github.com/FavorLabs/favorX/pkg/addressbook"
 	"github.com/FavorLabs/favorX/pkg/blocker"
 	"github.com/FavorLabs/favorX/pkg/boson"
+	"github.com/FavorLabs/favorX/pkg/crypto"
 	"github.com/FavorLabs/favorX/pkg/discovery"
 	"github.com/FavorLabs/favorX/pkg/logging"
 	"github.com/FavorLabs/favorX/pkg/p2p"
@@ -94,6 +95,7 @@ type Options struct {
 
 // Kad is the FavorX forwarding kademlia implementation.
 type Kad struct {
+	signer            crypto.Signer
 	base              boson.Address         // this node's overlay address
 	discovery         discovery.Driver      // the discovery driver
 	addressBook       addressbook.Interface // address book to get underlays
@@ -134,6 +136,7 @@ type Kad struct {
 
 // New returns a new Kademlia.
 func New(
+	signer crypto.Signer,
 	base boson.Address,
 	addressbook addressbook.Interface,
 	discovery discovery.Driver,
@@ -178,6 +181,7 @@ func New(
 	logger.Debugf("kademlia: NewCollector(...) took %v", time.Since(start))
 
 	k := &Kad{
+		signer:            signer,
 		base:              base,
 		discovery:         discovery,
 		addressBook:       addressbook,
@@ -1362,7 +1366,7 @@ func (k *Kad) IsWithinDepth(addr boson.Address) bool {
 	return boson.Proximity(k.base.Bytes(), addr.Bytes()) >= k.NeighborhoodDepth()
 }
 
-// EachNeighbor iterates from closest bin to farthest of the neighborhood peers.
+// EachNeighbor iterates from the closest bin to farthest of the neighborhood peers.
 func (k *Kad) EachNeighbor(f model.EachPeerFunc) error {
 	depth := k.NeighborhoodDepth()
 	fn := func(a boson.Address, po uint8) (bool, bool, error) {
@@ -1374,7 +1378,7 @@ func (k *Kad) EachNeighbor(f model.EachPeerFunc) error {
 	return k.connectedPeers.EachBin(fn)
 }
 
-// EachNeighborRev iterates from farthest bin to closest of the neighborhood peers.
+// EachNeighborRev iterates from the farthest bin to closest of the neighborhood peers.
 func (k *Kad) EachNeighborRev(f model.EachPeerFunc) error {
 	depth := k.NeighborhoodDepth()
 	fn := func(a boson.Address, po uint8) (bool, bool, error) {
@@ -1386,7 +1390,7 @@ func (k *Kad) EachNeighborRev(f model.EachPeerFunc) error {
 	return k.connectedPeers.EachBinRev(fn)
 }
 
-// EachPeer iterates from closest bin to farthest.
+// EachPeer iterates from the closest bin to farthest.
 func (k *Kad) EachPeer(f model.EachPeerFunc, filter topology.Filter) error {
 	return k.connectedPeers.EachBin(func(addr boson.Address, po uint8) (bool, bool, error) {
 		if filter.Reachable && k.peerFilter(addr) {
@@ -1396,7 +1400,7 @@ func (k *Kad) EachPeer(f model.EachPeerFunc, filter topology.Filter) error {
 	})
 }
 
-// EachPeerRev iterates from farthest bin to closest.
+// EachPeerRev iterates from the farthest bin to closest.
 func (k *Kad) EachPeerRev(f model.EachPeerFunc, filter topology.Filter) error {
 	return k.connectedPeers.EachBinRev(func(addr boson.Address, po uint8) (bool, bool, error) {
 		if filter.Reachable && k.peerFilter(addr) {
@@ -1430,12 +1434,12 @@ func (k *Kad) UpdateReachability(status p2p.ReachabilityStatus) {
 	k.metrics.ReachabilityStatus.WithLabelValues(status.String()).Set(0)
 }
 
-// EachKnownPeer iterates from closest bin to farthest.
+// EachKnownPeer iterates from the closest bin to farthest.
 func (k *Kad) EachKnownPeer(f model.EachPeerFunc) error {
 	return k.knownPeers.EachBin(f)
 }
 
-// EachKnownPeerRev iterates from farthest bin to closest.
+// EachKnownPeerRev iterates from the farthest bin to closest.
 func (k *Kad) EachKnownPeerRev(f model.EachPeerFunc) error {
 	return k.knownPeers.EachBinRev(f)
 }

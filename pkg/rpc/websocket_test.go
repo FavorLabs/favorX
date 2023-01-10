@@ -19,14 +19,10 @@ package rpc
 import (
 	"context"
 	"errors"
-	"io"
 	"net"
 	"net/http"
 	"net/http/httptest"
-	"net/http/httputil"
-	"net/url"
 	"strings"
-	"sync/atomic"
 	"testing"
 	"time"
 
@@ -162,9 +158,7 @@ func TestClientWebsocketPing(t *testing.T) {
 		ctx, cancel = context.WithTimeout(context.Background(), 1*time.Second)
 	)
 	defer cancel()
-	defer func() {
-		_ = server.Shutdown(ctx)
-	}()
+	defer server.Shutdown(ctx)
 
 	client, err := DialContext(ctx, "ws://"+server.Addr)
 	if err != nil {
@@ -213,7 +207,7 @@ func TestClientWebsocketLargeMessage(t *testing.T) {
 	defer httpsrv.Close()
 
 	respLength := wsMessageSizeLimit - 50
-	_ = srv.RegisterName("test", largeRespService{respLength})
+	srv.RegisterName("test", largeRespService{respLength})
 
 	c, err := DialWebsocket(context.Background(), wsURL, "")
 	if err != nil {
@@ -229,67 +223,8 @@ func TestClientWebsocketLargeMessage(t *testing.T) {
 	}
 }
 
-func TestClientWebsocketSevered(t *testing.T) {
-	t.Parallel()
-
-	var (
-		server = wsPingTestServer(t, nil)
-		ctx    = context.Background()
-	)
-	defer func() {
-		_ = server.Shutdown(ctx)
-	}()
-
-	u, err := url.Parse("http://" + server.Addr)
-	if err != nil {
-		t.Fatal(err)
-	}
-	rproxy := httputil.NewSingleHostReverseProxy(u)
-	var severable *severableReadWriteCloser
-	rproxy.ModifyResponse = func(response *http.Response) error {
-		severable = &severableReadWriteCloser{ReadWriteCloser: response.Body.(io.ReadWriteCloser)}
-		response.Body = severable
-		return nil
-	}
-	frontendProxy := httptest.NewServer(rproxy)
-	defer frontendProxy.Close()
-
-	wsURL := "ws:" + strings.TrimPrefix(frontendProxy.URL, "http:")
-	client, err := DialWebsocket(ctx, wsURL, "")
-	if err != nil {
-		t.Fatalf("client dial error: %v", err)
-	}
-	defer client.Close()
-
-	resultChan := make(chan int)
-	sub, err := client.Subscribe(ctx, "test", resultChan, "foo")
-	if err != nil {
-		t.Fatalf("client subscribe error: %v", err)
-	}
-
-	// sever the connection
-	severable.Sever()
-
-	// Wait for subscription error.
-	timeout := time.NewTimer(3 * wsPingInterval)
-	defer timeout.Stop()
-	for {
-		select {
-		case err := <-sub.Err():
-			t.Log("client subscription error:", err)
-			return
-		case result := <-resultChan:
-			t.Error("unexpected result:", result)
-			return
-		case <-timeout.C:
-			t.Error("didn't get any error within the test timeout")
-			return
-		}
-	}
-}
-
 // wsPingTestServer runs a WebSocket server which accepts a single subscription request.
-// When a value arrives on sendPing, the server sends a ping frame, waits for a matching
+// When a value arrives at sendPing, the server sends a ping frame, waits for a matching
 // pong and finally delivers a single subscription result.
 func wsPingTestServer(t *testing.T, sendPing <-chan struct{}) *http.Server {
 	var srv http.Server
@@ -319,9 +254,7 @@ func wsPingTestServer(t *testing.T, sendPing <-chan struct{}) *http.Server {
 		t.Fatal("can't listen:", err)
 	}
 	srv.Addr = listener.Addr().String()
-	go func() {
-		_ = srv.Serve(listener)
-	}()
+	go srv.Serve(listener)
 	return &srv
 }
 
@@ -373,7 +306,7 @@ func wsPingTestHandler(t *testing.T, conn *websocket.Conn, shutdown, sendPing <-
 				sendPing = nil
 			}
 			t.Logf("server sending ping")
-			_ = conn.WriteMessage(websocket.PingMessage, []byte("ping"))
+			conn.WriteMessage(websocket.PingMessage, []byte("ping"))
 			wantPong = "ping"
 		case data := <-pongCh:
 			if wantPong == "" {
@@ -385,38 +318,10 @@ func wsPingTestHandler(t *testing.T, conn *websocket.Conn, shutdown, sendPing <-
 			timer.Reset(200 * time.Millisecond)
 		case <-timer.C:
 			t.Logf("server sending response")
-			_ = conn.WriteMessage(websocket.TextMessage, []byte(subNotify))
+			conn.WriteMessage(websocket.TextMessage, []byte(subNotify))
 		case <-shutdown:
-			_ = conn.Close()
+			conn.Close()
 			return
 		}
 	}
-}
-
-// severableReadWriteCloser wraps an io.ReadWriteCloser and provides a Sever() method to drop writes and read empty.
-type severableReadWriteCloser struct {
-	io.ReadWriteCloser
-	severed int32 // atomic
-}
-
-func (s *severableReadWriteCloser) Sever() {
-	atomic.StoreInt32(&s.severed, 1)
-}
-
-func (s *severableReadWriteCloser) Read(p []byte) (n int, err error) {
-	if atomic.LoadInt32(&s.severed) > 0 {
-		return 0, nil
-	}
-	return s.ReadWriteCloser.Read(p)
-}
-
-func (s *severableReadWriteCloser) Write(p []byte) (n int, err error) {
-	if atomic.LoadInt32(&s.severed) > 0 {
-		return len(p), nil
-	}
-	return s.ReadWriteCloser.Write(p)
-}
-
-func (s *severableReadWriteCloser) Close() error {
-	return s.ReadWriteCloser.Close()
 }

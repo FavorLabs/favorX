@@ -15,6 +15,7 @@ type RouteTab interface {
 	Connect(ctx context.Context, dest boson.Address) error
 	GetTargetNeighbor(ctx context.Context, dest boson.Address, limit int) (addresses []boson.Address, err error)
 	IsNeighbor(dest boson.Address) (has bool)
+	IsNeighborContainLightNode(dest boson.Address) (has bool)
 	FindUnderlay(ctx context.Context, target boson.Address) (addr *address.Address, err error)
 }
 

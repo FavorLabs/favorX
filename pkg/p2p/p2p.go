@@ -11,6 +11,7 @@ import (
 	"github.com/FavorLabs/favorX/pkg/address"
 	"github.com/FavorLabs/favorX/pkg/boson"
 	"github.com/FavorLabs/favorX/pkg/routetab/pb"
+	crypto2 "github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/network"
 	libp2ppeer "github.com/libp2p/go-libp2p-core/peer"
 	ma "github.com/multiformats/go-multiaddr"
@@ -61,6 +62,7 @@ type Service interface {
 	Disconnecter
 	Peers() []Peer
 	PeerID(overlay boson.Address) (id libp2ppeer.ID, found bool)
+	PrivateKey() crypto2.PrivKey
 	ResourceManager() network.ResourceManager
 	BlocklistedPeers() ([]BlockPeers, error)
 	BlocklistRemove(overlay boson.Address) error
@@ -172,15 +174,7 @@ type Stream interface {
 	Headers() Headers
 	FullClose() error
 	Reset() error
-}
-
-type VirtualStream interface {
-	Stream
-	UpdateStatRealStreamClosed()
-	Reader() *ReaderChan
-	Writer() *WriterChan
-	Done() chan struct{}
-	RealStream() Stream
+	IsVirtual() bool
 }
 
 // ProtocolSpec defines a collection of Stream specifications with handlers.

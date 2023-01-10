@@ -19,6 +19,7 @@ type stream struct {
 	network.Stream
 	headers         map[string][]byte
 	responseHeaders map[string][]byte
+	isVirtual       bool
 }
 
 func NewStream(s network.Stream) p2p.Stream {
@@ -64,4 +65,8 @@ func (s *stream) FullClose() error {
 		return err
 	}
 	return nil
+}
+
+func (s *stream) IsVirtual() bool {
+	return s.isVirtual
 }

@@ -30,7 +30,7 @@ import (
 
 // ipcListen will create a Unix socket on the given endpoint.
 func ipcListen(endpoint string) (net.Listener, error) {
-	if len(endpoint) > int(max_path_size) { //nolint:unconvert
+	if len(endpoint) > int(max_path_size) {
 		logging.Warningf("The ipc endpoint is longer than %d characters. endpoint %s", max_path_size, endpoint)
 	}
 
@@ -38,12 +38,13 @@ func ipcListen(endpoint string) (net.Listener, error) {
 	if err := os.MkdirAll(filepath.Dir(endpoint), 0751); err != nil {
 		return nil, err
 	}
-	_ = os.Remove(endpoint)
+	os.Remove(endpoint)
 	l, err := net.Listen("unix", endpoint)
 	if err != nil {
 		return nil, err
 	}
-	return l, os.Chmod(endpoint, 0600)
+	os.Chmod(endpoint, 0600)
+	return l, nil
 }
 
 // newIPCConnection will connect to a Unix socket on the given endpoint.

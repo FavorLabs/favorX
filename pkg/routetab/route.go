@@ -450,6 +450,23 @@ func (s *Service) IsNeighbor(dest boson.Address) (has bool) {
 	return
 }
 
+func (s *Service) IsNeighborContainLightNode(dest boson.Address) (has bool) {
+	if s.IsNeighbor(dest) {
+		return true
+	}
+	err := s.lightNodes.EachPeer(func(address boson.Address, u uint8) (stop, jumpToNext bool, err error) {
+		if dest.Equal(address) {
+			has = true
+			return
+		}
+		return false, false, nil
+	})
+	if err != nil {
+		s.logger.Warningf("route: IsNeighborContainLightNode %s", err.Error())
+	}
+	return
+}
+
 func (s *Service) GetRoute(_ context.Context, dest boson.Address) ([]*Path, error) {
 	return s.routeTable.Get(dest)
 }

@@ -1,6 +1,9 @@
 package multicast
 
 import (
+	"io"
+	"testing"
+
 	"github.com/FavorLabs/favorX/pkg/address"
 	"github.com/FavorLabs/favorX/pkg/boson/test"
 	"github.com/FavorLabs/favorX/pkg/logging"
@@ -8,10 +11,9 @@ import (
 	mockRoute "github.com/FavorLabs/favorX/pkg/routetab/mock"
 	"github.com/FavorLabs/favorX/pkg/subscribe"
 	"github.com/FavorLabs/favorX/pkg/topology/kademlia/mock"
+	"github.com/FavorLabs/favorX/pkg/topology/lightnode"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/sirupsen/logrus"
-	"io"
-	"testing"
 )
 
 var (
@@ -45,12 +47,13 @@ func TestService_ObserveGroup(t *testing.T) {
 	gid := GenerateGID("gid1")
 	route := mockRoute.NewMockRouteTable()
 	kad := mock.NewMockKademlia()
-	s := NewService(test.RandomAddress(), address.NewModel(), nil, nil, kad, &route, logger, subscribe.NewSubPub(), Option{Dev: true})
+	light := lightnode.NewContainer(test.RandomAddress())
+	s := NewService(test.RandomAddress(), address.NewModel(), nil, nil, kad, light, &route, logger, subscribe.NewSubPub(), Option{Dev: true})
 	err := s.observeGroup(gid, model.ConfigNodeGroup{})
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = s.RemoveGroup(gid, model.GTypeObserve)
+	err = s.RemoveGroup("gid1", model.GTypeObserve)
 	if err != nil {
 		t.Fatal(err)
 	}

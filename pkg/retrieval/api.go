@@ -13,9 +13,7 @@ import (
 func (s *Service) API() rpc.API {
 	return rpc.API{
 		Namespace: "retrieval",
-		Version:   "1.0",
 		Service:   &apiService{s: s},
-		Public:    true,
 	}
 }
 

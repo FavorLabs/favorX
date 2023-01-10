@@ -43,7 +43,7 @@ all: check-version lint vet test-race binary
 .PHONY: binary-ldb
 binary-ldb: dist
 binary-ldb:
-	$(GO) env -w CGO_ENABLED=0
+	$(GO) env -w CGO_ENABLED=1
 	$(GO) build -tags leveldb -trimpath -ldflags "$(LDFLAGS)" -o dist/$(BINARY_NAME) ./cmd/favorX
 	$(GO) env -w CGO_ENABLED=$(CGO_ENABLED)
 

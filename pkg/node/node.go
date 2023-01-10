@@ -344,7 +344,7 @@ func NewNode(nodeMode address.Model, p2pAddr string, networkID uint64, logger lo
 		return nil, fmt.Errorf("hive service: %w", err)
 	}
 
-	kad, err := kademlia.New(signer.Overlay, addressBook, hiveObj, p2ps, pingPong, lightNodes, bootNodes, metricsDB, logger, subPub, kademlia.Options{
+	kad, err := kademlia.New(signer.Signer, signer.Overlay, addressBook, hiveObj, p2ps, pingPong, lightNodes, bootNodes, metricsDB, logger, subPub, kademlia.Options{
 		Bootnodes:   bootnodes,
 		NodeMode:    nodeMode,
 		BinMaxPeers: o.KadBinMaxPeers,
@@ -394,7 +394,7 @@ func NewNode(nodeMode address.Model, p2pAddr string, networkID uint64, logger lo
 	ns.SetChunkInfo(chunkInfo)
 	retrieve.Config(chunkInfo)
 
-	group := multicast.NewService(signer.Overlay, nodeMode, p2ps, p2ps, kad, route, logger, subPub, multicast.Option{Dev: o.IsDev})
+	group := multicast.NewService(signer.Overlay, nodeMode, p2ps, p2ps, kad, lightNodes, route, logger, subPub, multicast.Option{Dev: o.IsDev})
 	group.Start()
 	b.groupCloser = group
 	err = p2ps.AddProtocol(group.Protocol())

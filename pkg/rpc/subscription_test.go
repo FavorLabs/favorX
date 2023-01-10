@@ -48,7 +48,7 @@ func TestNewID(t *testing.T) {
 
 func TestSubscriptions(t *testing.T) {
 	var (
-		namespaces        = []string{"eth", "shh", "bzz"}
+		namespaces        = []string{"eth", "bzz"}
 		service           = &notificationTestService{}
 		subCount          = len(namespaces)
 		notificationCount = 3
@@ -79,7 +79,7 @@ func TestSubscriptions(t *testing.T) {
 		request := map[string]interface{}{
 			"id":      i,
 			"method":  fmt.Sprintf("%s_subscribe", namespace),
-			"version": "2.0",
+			"jsonrpc": "2.0",
 			"params":  []interface{}{"someSubscription", notificationCount, i},
 		}
 		if err := out.Encode(&request); err != nil {
@@ -126,19 +126,17 @@ func TestSubscriptions(t *testing.T) {
 // This test checks that unsubscribing works.
 func TestServerUnsubscribe(t *testing.T) {
 	p1, p2 := net.Pipe()
-	defer func() {
-		_ = p2.Close()
-	}()
+	defer p2.Close()
 
 	// Start the server.
 	server := newTestServer()
 	service := &notificationTestService{unsubscribed: make(chan string, 1)}
-	_ = server.RegisterName("nftest2", service)
+	server.RegisterName("nftest2", service)
 	go server.ServeCodec(NewCodec(p1))
 
 	// Subscribe.
-	_ = p2.SetDeadline(time.Now().Add(10 * time.Second))
-	_, _ = p2.Write([]byte(`{"jsonrpc":"2.0","id":1,"method":"nftest2_subscribe","params":["someSubscription",0,10]}`))
+	p2.SetDeadline(time.Now().Add(10 * time.Second))
+	p2.Write([]byte(`{"jsonrpc":"2.0","id":1,"method":"nftest2_subscribe","params":["someSubscription",0,10]}`))
 
 	// Handle received messages.
 	var (
@@ -157,7 +155,7 @@ func TestServerUnsubscribe(t *testing.T) {
 	}
 
 	// Unsubscribe and check that it is handled on the server side.
-	_, _ = p2.Write([]byte(`{"jsonrpc":"2.0","method":"nftest2_unsubscribe","params":["` + sub.subid + `"]}`))
+	p2.Write([]byte(`{"jsonrpc":"2.0","method":"nftest2_unsubscribe","params":["` + sub.subid + `"]}`))
 	for {
 		select {
 		case id := <-service.unsubscribed:
@@ -213,7 +211,7 @@ func readAndValidateMessage(in *json.Decoder) (*subConfirmation, *subscriptionRe
 		} else if err := json.Unmarshal(msg.Result, &c.subid); err != nil {
 			return nil, nil, fmt.Errorf("invalid response: %v", err)
 		} else {
-			_ = json.Unmarshal(msg.ID, &c.reqid)
+			json.Unmarshal(msg.ID, &c.reqid)
 			return &c, nil, nil
 		}
 	default:

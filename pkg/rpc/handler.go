@@ -47,7 +47,7 @@ import (
 // Now send the request, then wait for the reply to be delivered through handleMsg:
 //
 //	if err := op.wait(...); err != nil {
-//	    h.removeRequestOp(op) // timeout, etc.
+//		h.removeRequestOp(op) // timeout, etc.
 //	}
 type handler struct {
 	reg            *serviceRegistry
@@ -97,7 +97,7 @@ func (h *handler) handleBatch(msgs []*jsonrpcMessage) {
 	// Emit error response for empty batches:
 	if len(msgs) == 0 {
 		h.startCallProc(func(cp *callProc) {
-			_ = h.conn.writeJSON(cp.ctx, errorMessage(&invalidRequestError{"empty batch"}))
+			h.conn.writeJSON(cp.ctx, errorMessage(&invalidRequestError{"empty batch"}))
 		})
 		return
 	}
@@ -122,10 +122,10 @@ func (h *handler) handleBatch(msgs []*jsonrpcMessage) {
 		}
 		h.addSubscriptions(cp.notifiers)
 		if len(answers) > 0 {
-			_ = h.conn.writeJSON(cp.ctx, answers)
+			h.conn.writeJSON(cp.ctx, answers)
 		}
 		for _, n := range cp.notifiers {
-			_ = n.activate()
+			n.activate()
 		}
 	})
 }
@@ -139,10 +139,10 @@ func (h *handler) handleMsg(msg *jsonrpcMessage) {
 		answer := h.handleCallMsg(cp, msg)
 		h.addSubscriptions(cp.notifiers)
 		if answer != nil {
-			_ = h.conn.writeJSON(cp.ctx, answer)
+			h.conn.writeJSON(cp.ctx, answer)
 		}
 		for _, n := range cp.notifiers {
-			_ = n.activate()
+			n.activate()
 		}
 	})
 }
@@ -347,7 +347,7 @@ func (h *handler) handleCall(cp *callProc, msg *jsonrpcMessage) *jsonrpcMessage 
 			successfulRequestGauge.Inc(1)
 		}
 		rpcServingTimer.UpdateSince(start)
-		newRPCServingTimer(msg.Method, answer.Error == nil).UpdateSince(start)
+		updateServeTimeHistogram(msg.Method, answer.Error == nil, time.Since(start))
 	}
 	return answer
 }
@@ -355,7 +355,10 @@ func (h *handler) handleCall(cp *callProc, msg *jsonrpcMessage) *jsonrpcMessage 
 // handleSubscribe processes *_subscribe method calls.
 func (h *handler) handleSubscribe(cp *callProc, msg *jsonrpcMessage) *jsonrpcMessage {
 	if !h.allowSubscribe {
-		return msg.errorResponse(ErrNotificationsUnsupported)
+		return msg.errorResponse(&internalServerError{
+			code:    errcodeNotificationsUnsupported,
+			message: ErrNotificationsUnsupported.Error(),
+		})
 	}
 
 	// Subscription method name is first argument.
