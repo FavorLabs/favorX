@@ -228,10 +228,19 @@ func NewNode(nodeMode address.Model, p2pAddr string, networkID uint64, logger lo
 		return nil, fmt.Errorf("p2p service: %w", err)
 	}
 
-	client, err := chain.NewClient(o.ChainEndpoint, signer.SubKey)
-	if err != nil {
-		return nil, err
-	}
+	var client *chain.Client
+	go func() {
+		for {
+			client, err = chain.NewClient(o.ChainEndpoint, signer.SubKey)
+			if err != nil {
+				logger.Error(err)
+				<-time.After(time.Second * 5)
+				continue
+			}
+			logger.Infof("chain client start successful")
+			break
+		}
+	}()
 
 	var path string
 
@@ -547,6 +556,10 @@ func NewNode(nodeMode address.Model, p2pAddr string, networkID uint64, logger lo
 	} else {
 		go func() {
 			for {
+				if client == nil {
+					<-time.After(time.Second * 2)
+					continue
+				}
 				err = storagefiles.CheckAndUnRegisterMerchant(signer.Signer, client)
 				if err != nil {
 					logger.Error(err)
