@@ -23,12 +23,12 @@ type Resolver interface {
 type ChainOracle struct {
 	sync.Mutex
 	logger   logging.Logger
-	chain    *chain.Client
+	chain    *chain.MainClient
 	subPub   subscribe.SubPub
 	fileInfo fileinfo.Interface
 }
 
-func NewServer(logger logging.Logger, backend *chain.Client, subPub subscribe.SubPub, fileInfo fileinfo.Interface) (Resolver, error) {
+func NewServer(logger logging.Logger, backend *chain.MainClient, subPub subscribe.SubPub, fileInfo fileinfo.Interface) (Resolver, error) {
 	return &ChainOracle{
 		logger:   logger,
 		chain:    backend,
@@ -38,7 +38,7 @@ func NewServer(logger logging.Logger, backend *chain.Client, subPub subscribe.Su
 }
 
 func (ora *ChainOracle) GetNodesFromCid(cid []byte) (res []boson.Address) {
-	list, err := ora.chain.Storage.GetNodesFromCid(cid)
+	list, err := ora.chain.Acl.GetNodesFromCid(cid)
 	if err == nil {
 		for k := range list {
 			addr := boson.NewAddress(list[k].ToBytes())
@@ -62,7 +62,7 @@ func (ora *ChainOracle) Remove(ctx context.Context, rootCid boson.Address, addre
 	ora.Lock()
 	defer ora.Unlock()
 
-	return ora.chain.Storage.RemoveCidAndNode(ctx, rootCid.Bytes(), address.Bytes(), func(block types.Hash, txn types.Hash) {
+	return ora.chain.Acl.RemoveCidAndNode(ctx, rootCid.Bytes(), address.Bytes(), func(block types.Hash, txn types.Hash) {
 		ora.PublishRegisterStatus(rootCid, false)
 	})
 }

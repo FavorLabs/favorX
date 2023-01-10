@@ -20,6 +20,9 @@ type Interface interface {
 	GetAccountID(nickname string) (accountID types.AccountID, err error)
 	SetResolveWatch(ctx context.Context, uri string, cid []byte) error
 	GetResolve(uri string) (cid []byte, err error)
+	GetNodesFromCid(cid []byte) ([]types.AccountID, error)
+	// Deprecated
+	RemoveCidAndNode(ctx context.Context, rootCid []byte, address []byte, fn base.Finalized) (hash types.Hash, err error)
 }
 
 type ChainResult struct {
@@ -241,4 +244,55 @@ func (s *service) parseUri(uri string) (accountId, path []byte, err error) {
 	}
 
 	return accountId, buf.Bytes(), nil
+}
+
+func (s *service) GetNodesFromCid(cid []byte) (overlays []types.AccountID, err error) {
+	key, err := types.CreateStorageKey(s.meta, "Acl", "Oracles", cid)
+	if err != nil {
+		return
+	}
+	ok, err := s.client.RPC.State.GetStorageLatest(key, &overlays)
+	if err != nil {
+		logging.Warningf("gsrpc err: %w", err)
+		return
+	}
+	if !ok {
+		err = base.KeyEmptyError
+		return
+	}
+	return
+}
+
+// RemoveCidAndNode Deprecated
+func (s *service) RemoveCidAndNode(ctx context.Context, rootCid []byte, address []byte, fn base.Finalized) (hash types.Hash, err error) {
+	accountID, err := types.NewAccountID(rootCid)
+	if err != nil {
+		return
+	}
+	overlay, err := types.NewAccountID(address)
+	if err != nil {
+		return
+	}
+	c, err := types.NewCall(s.meta, "Acl.oracle_remove", accountID, overlay)
+	if err != nil {
+		return
+	}
+
+	submit := &base.SubmitTrans{
+		Await:          false,
+		Call:           c,
+		CheckExtrinsic: s.CheckExtrinsic,
+		TxResult:       make(chan base.TxResult),
+		Finalized:      fn,
+	}
+	s.submit <- submit
+	select {
+	case res := <-submit.TxResult:
+		hash = res.TransHash
+		err = res.Err
+	case <-ctx.Done():
+		submit.Cancel = true
+		err = ctx.Err()
+	}
+	return
 }

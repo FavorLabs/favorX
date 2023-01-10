@@ -29,6 +29,7 @@ import (
 	"github.com/FavorLabs/favorX/pkg/multicast/model"
 	"github.com/FavorLabs/favorX/pkg/netrelay"
 	"github.com/FavorLabs/favorX/pkg/netstore"
+	"github.com/FavorLabs/favorX/pkg/oracle"
 	"github.com/FavorLabs/favorX/pkg/p2p/libp2p"
 	"github.com/FavorLabs/favorX/pkg/pingpong"
 	"github.com/FavorLabs/favorX/pkg/pinning"
@@ -83,6 +84,7 @@ type Options struct {
 	WelcomeMessage         string
 	Bootnodes              []string
 	ChainEndpoint          string
+	SubChainEndpoint       string
 	CORSAllowedOrigins     []string
 	Logger                 logging.Logger
 	Standalone             bool
@@ -228,10 +230,23 @@ func NewNode(nodeMode address.Model, p2pAddr string, networkID uint64, logger lo
 		return nil, fmt.Errorf("p2p service: %w", err)
 	}
 
-	var client *chain.Client
+	var clientSubChain *chain.SubChainClient
 	go func() {
 		for {
-			client, err = chain.NewClient(o.ChainEndpoint, signer.SubKey)
+			clientSubChain, err = chain.NewSubChainClient(o.SubChainEndpoint, signer.SubKey)
+			if err != nil {
+				logger.Error(err)
+				<-time.After(time.Second * 5)
+				continue
+			}
+			logger.Infof("subchain client start successful")
+			break
+		}
+	}()
+	var clientChain *chain.MainClient
+	go func() {
+		for {
+			clientChain, err = chain.NewClient(o.ChainEndpoint, signer.SubKey)
 			if err != nil {
 				logger.Error(err)
 				<-time.After(time.Second * 5)
@@ -275,18 +290,22 @@ func NewNode(nodeMode address.Model, p2pAddr string, networkID uint64, logger lo
 
 	fileInfo := fileinfo.New(signer.Overlay, storer, logger, multiResolver)
 
+	oracleChain, err := oracle.NewServer(logger, clientChain, subPub, fileInfo)
+	if err != nil {
+		return nil, err
+	}
 	// apiInterface := client.Traffic
-	oracleChain, settlement, apiInterface, err := InitChain(
+	settlement, apiInterface, err := InitChain(
 		p2pCtx,
 		logger,
-		client,
+		clientSubChain,
 		stateStore,
 		storer,
 		signer.Signer,
 		o.TrafficEnable,
 		p2ps,
 		subPub,
-		fileInfo)
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -439,7 +458,7 @@ func NewNode(nodeMode address.Model, p2pAddr string, networkID uint64, logger lo
 	if o.APIAddr != "" {
 		// API server
 		apiService = api.New(ns, multiResolver, signer.Overlay, chunkInfo, fileInfo, traversal.New(ns), pinningService,
-			authenticator, logger, kad, tracer, apiInterface, client, oracleChain, relay, group, route, notify,
+			authenticator, logger, kad, tracer, apiInterface, clientSubChain, oracleChain, relay, group, route, notify,
 			api.Options{
 				CORSAllowedOrigins: o.CORSAllowedOrigins,
 				GatewayMode:        o.GatewayMode,
@@ -547,7 +566,7 @@ func NewNode(nodeMode address.Model, p2pAddr string, networkID uint64, logger lo
 	}
 
 	if o.StorageFilesEnable {
-		services, err := storagefiles.NewServices(o.StorageFilesConfig, signer.Signer, logger, subPub, client, chunkInfo, fileInfo, oracleChain)
+		services, err := storagefiles.NewServices(o.StorageFilesConfig, signer.Signer, logger, subPub, clientSubChain, chunkInfo, fileInfo, oracleChain)
 		if err != nil {
 			return nil, err
 		}
@@ -556,11 +575,11 @@ func NewNode(nodeMode address.Model, p2pAddr string, networkID uint64, logger lo
 	} else {
 		go func() {
 			for {
-				if client == nil {
+				if clientSubChain == nil {
 					<-time.After(time.Second * 2)
 					continue
 				}
-				err = storagefiles.CheckAndUnRegisterMerchant(signer.Signer, client)
+				err = storagefiles.CheckAndUnRegisterMerchant(signer.Signer, clientSubChain)
 				if err != nil {
 					logger.Error(err)
 					<-time.After(time.Second * 5)

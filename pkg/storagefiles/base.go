@@ -21,7 +21,7 @@ type Services struct {
 	panel *Panel
 }
 
-func CheckAndUnRegisterMerchant(signer crypto.Signer, subClient *chain.Client) error {
+func CheckAndUnRegisterMerchant(signer crypto.Signer, subClient *chain.SubChainClient) error {
 	info, err := subClient.Storage.GetMerchantInfo(signer.Public().Encode())
 	if err != nil && !errors.Is(err, base.KeyEmptyError) {
 		return fmt.Errorf("merchant info check err %s", err)
@@ -35,7 +35,7 @@ func CheckAndUnRegisterMerchant(signer crypto.Signer, subClient *chain.Client) e
 	return nil
 }
 
-func NewServices(cfg Config, signer crypto.Signer, logger logging.Logger, subPub subscribe.SubPub, subClient *chain.Client,
+func NewServices(cfg Config, signer crypto.Signer, logger logging.Logger, subPub subscribe.SubPub, subClient *chain.SubChainClient,
 	chunkInfo chunkinfo.Interface, fileInfo fileinfo.Interface, oracle oracle.Resolver) (*Services, error) {
 
 	if cfg.CacheDir == "" {

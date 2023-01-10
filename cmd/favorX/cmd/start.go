@@ -121,6 +121,7 @@ func (c *command) initStartCmd() (err error) {
 				WelcomeMessage:         c.config.GetString(optionWelcomeMessage),
 				Bootnodes:              c.config.GetStringSlice(optionNameBootnodes),
 				ChainEndpoint:          c.config.GetString(optionNameChainEndpoint),
+				SubChainEndpoint:       c.config.GetString(optionNameSubChainEndpoint),
 				CORSAllowedOrigins:     c.config.GetStringSlice(optionCORSAllowedOrigins),
 				Standalone:             c.config.GetBool(optionNameStandalone),
 				IsDev:                  c.config.GetBool(optionNameDevMode),

@@ -12,10 +12,15 @@ import (
 
 type Interface interface {
 	base.CheckExtrinsicInterface
+	// Deprecated
 	GetNodesFromCid(cid []byte) ([]types.AccountID, error)
+	// Deprecated
 	RegisterCidAndNode(ctx context.Context, rootCid []byte, address []byte, fn base.Finalized) (hash types.Hash, err error)
+	// Deprecated
 	RegisterCidAndNodeWatch(ctx context.Context, cid []byte, overlay []byte) (err error)
+	// Deprecated
 	RemoveCidAndNode(ctx context.Context, rootCid []byte, address []byte, fn base.Finalized) (hash types.Hash, err error)
+	// Deprecated
 	RemoveCidAndNodeWatch(ctx context.Context, cid []byte, overlay []byte) (err error)
 	StorageFileWatch(ctx context.Context, buyer []byte, cid []byte) (err error)
 	PlaceOrder(ctx context.Context, cid []byte, fileSize, fileCopy uint64, expire uint32, fn OrderMatchSuccess) (txn types.Hash, err error)

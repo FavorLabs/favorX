@@ -14,16 +14,22 @@ import (
 	"github.com/decred/dcrd/crypto/blake256"
 )
 
-type Client struct {
+type MainClient struct {
 	Default         *base.SubstrateAPI
-	Acl             acl.Interface
-	Traffic         traffic.Interface
 	Proxy           proxy.Interface
-	Storage         storage.Interface
 	SubmitTransChan chan *base.SubmitTrans
+	Acl             acl.Interface
 }
 
-func NewClient(url string, signer signature.KeyringPair) (*Client, error) {
+type SubChainClient struct {
+	Default         *base.SubstrateAPI
+	Proxy           proxy.Interface
+	SubmitTransChan chan *base.SubmitTrans
+	Traffic         traffic.Interface
+	Storage         storage.Interface
+}
+
+func NewSubChainClient(url string, signer signature.KeyringPair) (*SubChainClient, error) {
 	api, err := base.NewSubstrateAPI(url, signer)
 	if err != nil {
 		return nil, err
@@ -31,13 +37,28 @@ func NewClient(url string, signer signature.KeyringPair) (*Client, error) {
 	ch := make(chan *base.SubmitTrans, 10)
 	go start(ch, api, signer)
 
-	return &Client{
+	return &SubChainClient{
 		SubmitTransChan: ch,
 		Default:         api,
-		Acl:             acl.New(api, ch),
-		Traffic:         traffic.New(api),
 		Proxy:           proxy.New(api),
+		Traffic:         traffic.New(api),
 		Storage:         storage.New(api, ch),
+	}, nil
+}
+
+func NewClient(url string, signer signature.KeyringPair) (*MainClient, error) {
+	api, err := base.NewSubstrateAPI(url, signer)
+	if err != nil {
+		return nil, err
+	}
+	ch := make(chan *base.SubmitTrans, 10)
+	go start(ch, api, signer)
+
+	return &MainClient{
+		SubmitTransChan: ch,
+		Default:         api,
+		Proxy:           proxy.New(api),
+		Acl:             acl.New(api, ch),
 	}, nil
 }
 
