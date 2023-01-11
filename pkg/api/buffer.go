@@ -53,8 +53,8 @@ func (s *server) bufferUploadHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if has {
-		s.logger.Error("buffer upload: chunk already exists")
-		jsonhttp.Conflict(w, "chunk already exists")
+		w.Write(ch.Address().Bytes())
+		w.WriteHeader(200)
 		return
 	}
 	_, err = s.storer.Put(ctx, storage.ModePutChain, ch)
@@ -65,9 +65,9 @@ func (s *server) bufferUploadHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	jsonhttp.Created(w, bytesPostResponse{
-		Reference: ch.Address(),
-	})
+	w.Write(ch.Address().Bytes())
+	w.WriteHeader(200)
+	return
 }
 
 func (s *server) bufferGetHandler(w http.ResponseWriter, r *http.Request) {

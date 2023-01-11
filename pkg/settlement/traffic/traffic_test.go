@@ -440,7 +440,7 @@ func TestSignCheque(t *testing.T) {
 	signer := signermock.New(
 		signermock.WithSignTypedDataFunc(func(data *eip712.TypedData) ([]byte, error) {
 
-			if data.Message["beneficiary"].(string) != beneficiaryAddress.Hex() {
+			if data.Message["beneficiary"].(string) != beneficiaryAddress {
 				t.Fatal("signing cheque with wrong beneficiary")
 			}
 
@@ -456,7 +456,7 @@ func TestSignCheque(t *testing.T) {
 		}),
 	)
 
-	chequeSigner := chequePkg.NewChequeSigner(signer, chainId)
+	chequeSigner := chequePkg.NewChequeSigner(signer)
 
 	result, err := chequeSigner.Sign(cheque)
 	if err != nil {
