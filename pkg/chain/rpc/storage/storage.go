@@ -97,7 +97,7 @@ func (s *service) GetNodesFromCid(cid []byte) (overlays []types.AccountID, err e
 	}
 	ok, err := s.client.RPC.State.GetStorageLatest(key, &overlays)
 	if err != nil {
-		logging.Warningf("gsrpc err: %w", err)
+		logging.Warningf("gsrpc err: %s", err)
 		return
 	}
 	if !ok {
@@ -479,7 +479,7 @@ func (s *service) GetMerchantInfo(mch []byte) (*MerchantInfo, error) {
 	var info MerchantInfo
 	ok, err := s.client.RPC.State.GetStorageLatest(key, &info)
 	if err != nil {
-		logging.Warningf("gsrpc err: %w", err)
+		logging.Warningf("gsrpc err: %s", err)
 		return nil, err
 	}
 	if !ok {

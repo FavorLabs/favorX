@@ -230,32 +230,8 @@ func NewNode(nodeMode address.Model, p2pAddr string, networkID uint64, logger lo
 		return nil, fmt.Errorf("p2p service: %w", err)
 	}
 
-	var clientSubChain *chain.SubChainClient
-	go func() {
-		for {
-			clientSubChain, err = chain.NewSubChainClient(o.SubChainEndpoint, signer.SubKey)
-			if err != nil {
-				logger.Error(err)
-				<-time.After(time.Second * 5)
-				continue
-			}
-			logger.Infof("subchain client start successful")
-			break
-		}
-	}()
-	var clientChain *chain.MainClient
-	go func() {
-		for {
-			clientChain, err = chain.NewClient(o.ChainEndpoint, signer.SubKey)
-			if err != nil {
-				logger.Error(err)
-				<-time.After(time.Second * 5)
-				continue
-			}
-			logger.Infof("chain client start successful")
-			break
-		}
-	}()
+	clientSubChain := &chain.SubChainClient{}
+	clientChain := &chain.MainClient{}
 
 	var path string
 
@@ -565,20 +541,19 @@ func NewNode(nodeMode address.Model, p2pAddr string, networkID uint64, logger lo
 		return nil, err
 	}
 
+	var needChainFunc = func() {}
 	if o.StorageFilesEnable {
 		services, err := storagefiles.NewServices(o.StorageFilesConfig, signer.Signer, logger, subPub, clientSubChain, chunkInfo, fileInfo, oracleChain)
 		if err != nil {
 			return nil, err
 		}
 		b.storagefilesCloser = services
-		services.Start()
+		needChainFunc = func() {
+			go services.Start()
+		}
 	} else {
-		go func() {
+		needChainFunc = func() {
 			for {
-				if clientSubChain == nil {
-					<-time.After(time.Second * 2)
-					continue
-				}
 				err = storagefiles.CheckAndUnRegisterMerchant(signer.Signer, clientSubChain)
 				if err != nil {
 					logger.Error(err)
@@ -588,10 +563,46 @@ func NewNode(nodeMode address.Model, p2pAddr string, networkID uint64, logger lo
 				logger.Infof("merchant unregister successful")
 				break
 			}
-		}()
+		}
 	}
+	go b.connectChain(clientChain, logger, signer, o)
+	go b.connectSubChain(clientSubChain, logger, signer, o, needChainFunc)
 
 	return b, nil
+}
+
+func (b *Favor) connectChain(client *chain.MainClient, logger logging.Logger, signer *crypto.SignerConfig, o Options, call ...func()) {
+	for {
+		c, err := chain.NewClient(o.SubChainEndpoint, signer.SubKey)
+		if err != nil {
+			logger.Errorf("chain %s", err)
+			<-time.After(time.Second * 5)
+			continue
+		}
+		c.CloneTo(client)
+		logger.Infof("chain client start successful")
+		break
+	}
+	for _, v := range call {
+		v()
+	}
+}
+
+func (b *Favor) connectSubChain(client *chain.SubChainClient, logger logging.Logger, signer *crypto.SignerConfig, o Options, call ...func()) {
+	for {
+		c, err := chain.NewSubChainClient(o.ChainEndpoint, signer.SubKey)
+		if err != nil {
+			logger.Errorf("subchain %s", err)
+			<-time.After(time.Second * 5)
+			continue
+		}
+		c.CloneTo(client)
+		logger.Infof("subchain client start successful")
+		break
+	}
+	for _, v := range call {
+		v()
+	}
 }
 
 func (b *Favor) Shutdown(ctx context.Context) error {

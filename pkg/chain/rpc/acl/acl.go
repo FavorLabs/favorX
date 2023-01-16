@@ -119,7 +119,7 @@ func (s *service) GetNickName(accountId []byte) (name string, err error) {
 	}
 	ok, err := s.client.RPC.State.GetStorageLatest(key, &name)
 	if err != nil {
-		logging.Warningf("gsrpc err: %w", err)
+		logging.Warningf("gsrpc err: %s", err)
 		return
 	}
 	if !ok {
@@ -143,7 +143,7 @@ func (s *service) GetAccountID(nickname string) (accountID types.AccountID, err 
 	}
 	ok, err := s.client.RPC.State.GetStorageLatest(key, &accountID)
 	if err != nil {
-		logging.Warningf("gsrpc err: %w", err)
+		logging.Warningf("gsrpc err: %s", err)
 		return
 	}
 	if !ok {
@@ -160,7 +160,7 @@ func (s *service) SelfNickname() (name string, err error) {
 	}
 	ok, err := s.client.RPC.State.GetStorageLatest(key, &name)
 	if err != nil {
-		logging.Warningf("gsrpc err: %w", err)
+		logging.Warningf("gsrpc err: %s", err)
 		return
 	}
 	if !ok {
@@ -208,7 +208,7 @@ func (s *service) GetResolve(uri string) (cid []byte, err error) {
 	res := &types.AccountID{}
 	ok, err := s.client.RPC.State.GetStorageLatest(key, &res)
 	if err != nil {
-		logging.Warningf("gsrpc err: %w", err)
+		logging.Warningf("gsrpc err: %s", err)
 		return
 	}
 	if !ok {
@@ -253,7 +253,7 @@ func (s *service) GetNodesFromCid(cid []byte) (overlays []types.AccountID, err e
 	}
 	ok, err := s.client.RPC.State.GetStorageLatest(key, &overlays)
 	if err != nil {
-		logging.Warningf("gsrpc err: %w", err)
+		logging.Warningf("gsrpc err: %s", err)
 		return
 	}
 	if !ok {

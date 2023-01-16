@@ -29,6 +29,21 @@ type SubChainClient struct {
 	Storage         storage.Interface
 }
 
+func (s *SubChainClient) CloneTo(p *SubChainClient) {
+	p.Traffic = s.Traffic
+	p.Proxy = s.Proxy
+	p.SubmitTransChan = s.SubmitTransChan
+	p.Default = s.Default
+	p.Storage = s.Storage
+}
+
+func (s *MainClient) CloneTo(p *MainClient) {
+	p.Proxy = s.Proxy
+	p.SubmitTransChan = s.SubmitTransChan
+	p.Default = s.Default
+	p.Acl = s.Acl
+}
+
 func NewSubChainClient(url string, signer signature.KeyringPair) (*SubChainClient, error) {
 	api, err := base.NewSubstrateAPI(url, signer)
 	if err != nil {

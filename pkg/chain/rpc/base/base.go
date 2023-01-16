@@ -173,7 +173,7 @@ func (s *SubstrateAPI) GetExtrinsicIndex(blockHash types.Hash, txn types.Hash) (
 	index = -1
 	block, err := s.RPC.Chain.GetBlock(blockHash)
 	if err != nil {
-		logging.Warningf("gsrpc err: %w", err)
+		logging.Warningf("gsrpc err: %s", err)
 		return
 	}
 	for k, v := range block.Block.Extrinsics {
@@ -198,7 +198,7 @@ func (s *SubstrateAPI) GetEventRecordsRaw(blockHash types.Hash) (res types.Event
 
 	ok, err := s.RPC.State.GetStorage(key, &res, blockHash)
 	if err != nil {
-		logging.Warningf("gsrpc err: %w", err)
+		logging.Warningf("gsrpc err: %s", err)
 		return
 	}
 	if !ok {
