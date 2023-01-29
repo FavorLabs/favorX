@@ -573,7 +573,7 @@ func NewNode(nodeMode address.Model, p2pAddr string, networkID uint64, logger lo
 
 func (b *Favor) connectChain(client *chain.MainClient, logger logging.Logger, signer *crypto.SignerConfig, o Options, call ...func()) {
 	for {
-		c, err := chain.NewClient(o.SubChainEndpoint, signer.SubKey)
+		c, err := chain.NewClient(o.ChainEndpoint, signer.SubKey)
 		if err != nil {
 			logger.Errorf("chain %s", err)
 			<-time.After(time.Second * 5)
@@ -590,7 +590,7 @@ func (b *Favor) connectChain(client *chain.MainClient, logger logging.Logger, si
 
 func (b *Favor) connectSubChain(client *chain.SubChainClient, logger logging.Logger, signer *crypto.SignerConfig, o Options, call ...func()) {
 	for {
-		c, err := chain.NewSubChainClient(o.ChainEndpoint, signer.SubKey)
+		c, err := chain.NewSubChainClient(o.SubChainEndpoint, signer.SubKey)
 		if err != nil {
 			logger.Errorf("subchain %s", err)
 			<-time.After(time.Second * 5)
