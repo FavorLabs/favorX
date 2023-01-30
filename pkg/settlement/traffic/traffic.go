@@ -2,7 +2,6 @@ package traffic
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"math/big"
@@ -21,6 +20,7 @@ import (
 	"github.com/FavorLabs/favorX/pkg/storage"
 	"github.com/FavorLabs/favorX/pkg/subscribe"
 	"github.com/centrifuge/go-substrate-rpc-client/v4/types"
+	"github.com/centrifuge/go-substrate-rpc-client/v4/types/codec"
 )
 
 var (
@@ -67,14 +67,11 @@ const (
 )
 
 type cashCheque struct {
-	txHash       types.Hash
-	peer         boson.Address
-	chainAddress types.AccountID
+	cid boson.Address
 }
 
 type CashOutStatus struct {
-	Overlay boson.Address `json:"overlay"`
-	Status  bool          `json:"status"`
+	Status bool `json:"status"`
 }
 
 type TrafficInfo struct {
@@ -89,7 +86,7 @@ type ApiInterface interface {
 
 	LastReceivedCheque(peer boson.Address) (*chequePkg.SignedCheque, error)
 
-	CashCheque() (types.Hash, error)
+	CashCheque(peer boson.Address) (types.Hash, error)
 
 	TrafficCheques() ([]*TrafficCheque, error)
 
@@ -104,11 +101,11 @@ type ApiInterface interface {
 
 const (
 	trafficChainRefreshDuration = 24 * time.Hour
+	chequesCount                = 1024
 )
 
 type Service struct {
 	logger              logging.Logger
-	addr                boson.Address
 	chainAddress        types.AccountID
 	stateStore          storage.StateStorer
 	localStore          storage.Storer
@@ -155,7 +152,7 @@ func New(logger logging.Logger, chainAddress types.AccountID, store storage.Stat
 		cashChequeChan: make(chan cashCheque, 5),
 	}
 	service.triggerRefreshInit()
-	//service.cashChequeReceiptUpdate()
+	service.cashChequeReceiptUpdate()
 	return service
 }
 
@@ -414,26 +411,25 @@ func (s *Service) LastReceivedCheque(peer boson.Address) (*chequePkg.SignedChequ
 }
 
 // CashCheque sends a cashing transaction for the last cheque of the peer
-func (s *Service) CashCheque() (types.Hash, error) {
+func (s *Service) CashCheque(peer boson.Address) (types.Hash, error) {
 
 	cid, err := s.countCheque()
-	s.logger.Infof("cid: %s", cid.String())
 	if err != nil {
 		return types.Hash{}, err
 	}
-	tx, err := s.cashout.CashCheque(cid, s.addr)
+	tx, err := s.cashout.CashCheque(cid, peer)
 	if err != nil {
 		return tx, err
 	}
 	s.cashChequeChan <- cashCheque{
-		txHash: tx,
+		cid: cid,
 	}
 	return tx, err
 }
 
 func (s *Service) countCheque() (boson.Address, error) {
 	tp := s.trafficPeers.trafficPeers
-	cheques := make([]*chequePkg.SignedCheque, 0, len(tp))
+	cheques := make([]chequePkg.ChainSignedCheque, 0, len(tp))
 	for chainAddress, t := range tp {
 		if t.transferChequeTraffic.Cmp(t.transferChainTraffic) == 1 {
 			accountId, _ := types.NewAccountIDFromHexString(chainAddress)
@@ -441,15 +437,21 @@ func (s *Service) countCheque() (boson.Address, error) {
 			if err != nil {
 				continue
 			}
-			if len(cheques) > 5000 {
+			if len(cheques) > chequesCount {
 				break
 			}
-			cheques = append(cheques, cheque)
+			chainCheque := chequePkg.ChainSignedCheque{
+				SignedCheque:     types.NewSignature(cheque.Signature),
+				Recipient:        cheque.Recipient,
+				Beneficiary:      cheque.Beneficiary,
+				CumulativePayout: types.NewU128(*cheque.CumulativePayout),
+			}
+			cheques = append(cheques, chainCheque)
 		}
 	}
-	chunk, err := json.Marshal(cheques)
+	chunk, err := codec.Encode(cheques)
 	if err != nil {
-		s.logger.Errorf("json marshal err:%w", err)
+		s.logger.Errorf("encode err:%w", err)
 		return boson.ZeroAddress, err
 	}
 	c, err := cac.New(chunk)
@@ -710,7 +712,7 @@ func (s *Service) Handshake(peer boson.Address, recipient types.AccountID, signe
 		}
 	}
 
-	err := s.UpdatePeerBalance(peer)
+	err := s.UpdatePeerBalance(recipientLocal)
 	if err != nil {
 		return err
 	}
@@ -719,14 +721,13 @@ func (s *Service) Handshake(peer boson.Address, recipient types.AccountID, signe
 		return nil
 	}
 
-	// todo  sing
-	//isUser, err := s.chequeStore.VerifyCheque(&signedCheque, s.chainID) //chequePkg.RecoverCheque(cheque, s.chainID)
-	//if err != nil {
-	//	return err
-	//}
-	//if isUser != s.chainAddress {
-	//	return chequePkg.ErrChequeInvalid
-	//}
+	isUser, err := s.chequeStore.VerifyCheque(&signedCheque)
+	if err != nil {
+		return err
+	}
+	if isUser != s.chainAddress {
+		return chequePkg.ErrChequeInvalid
+	}
 
 	cheque, err := s.chequeStore.LastSendCheque(recipient)
 	if err != nil && err != chequePkg.ErrNoCheque {
@@ -747,18 +748,12 @@ func (s *Service) Handshake(peer boson.Address, recipient types.AccountID, signe
 	return nil
 }
 
-func (s *Service) UpdatePeerBalance(peer boson.Address) error {
-	chainAddress, known := s.addressBook.Beneficiary(peer)
-
-	if !known {
-		return chequePkg.ErrNoCheque
-	}
-
-	balance, err := s.trafficChainService.BalanceOf(chainAddress)
+func (s *Service) UpdatePeerBalance(addr types.AccountID) error {
+	balance, err := s.trafficChainService.BalanceOf(addr)
 	if err != nil {
 		return err
 	}
-	traffic := s.getTraffic(chainAddress)
+	traffic := s.getTraffic(addr)
 	traffic.Lock()
 	defer traffic.Unlock()
 	traffic.trafficPeerBalance = balance
@@ -824,20 +819,7 @@ func (s *Service) TrafficInit() error {
 func (s *Service) cashChequeReceiptUpdate() {
 
 	go func() {
-		tranReceipt := func(txHash types.Hash) (uint64, error) {
-			// todo
-			//status, err := s.cashout.WaitForReceipt(context.Background(), txHash)
-			//if err != nil {
-			//	return 0, err
-			//}
-			//if status == 0 {
-			//	s.logger.Errorf("traffic:cashChequeReceiptUpdate - %s Exchange failed ", txHash.Hex())
-			//}
-			//return status, nil
-			return 0, nil
-		}
-
-		cashUpdate := func(beneficiary types.AccountID, peer boson.Address) error {
+		cashUpdate := func(beneficiary types.AccountID) error {
 			balance, err := s.trafficChainService.BalanceOf(s.chainAddress)
 			if err != nil {
 				return fmt.Errorf("failed to get the chain balance")
@@ -849,36 +831,35 @@ func (s *Service) cashChequeReceiptUpdate() {
 			if err != nil {
 				return err
 			}
-			return s.UpdatePeerBalance(peer)
+			return s.UpdatePeerBalance(beneficiary)
 		}
 
 		for cashInfo := range s.cashChequeChan {
-			status, err := tranReceipt(cashInfo.txHash)
-			traffic := s.getTraffic(cashInfo.chainAddress)
-			traffic.updateStatus(UnOperation)
+			cheques, err := s.localStore.Get(context.TODO(), storage.ModeGetChain, cashInfo.cid, 0)
 			if err != nil {
-				go s.PublishCashOut(CashOutStatus{Overlay: cashInfo.peer, Status: false})
+				go s.PublishCashOut(CashOutStatus{Status: false})
 				continue
 			}
-			if status == 1 {
-				err := s.chequeStore.PutChainRetrieveTraffic(cashInfo.chainAddress, traffic.retrieveChequeTraffic)
-				if err != nil {
-					s.logger.Errorf("traffic:chainRetrieveTrafficUpdate - %v ", err.Error())
-				}
-				err = s.chequeStore.PutChainTransferTraffic(cashInfo.chainAddress, traffic.transferChequeTraffic)
+			chainCheques := make([]chequePkg.ChainSignedCheque, 0, chequesCount)
+			chunk := cheques.Data()[boson.SpanSize:]
+			err = codec.Decode(chunk, &chainCheques)
+			if err != nil {
+				go s.PublishCashOut(CashOutStatus{Status: false})
+				continue
+			}
+			for _, cheque := range chainCheques {
+				err = s.chequeStore.PutChainTransferTraffic(cheque.Beneficiary, cheque.CumulativePayout.Int)
 				if err != nil {
 					s.logger.Errorf("traffic:chainTransferTrafficUpdate - %v ", err.Error())
 				}
-				err = cashUpdate(cashInfo.chainAddress, cashInfo.peer)
+				err = cashUpdate(cheque.Beneficiary)
 				if err != nil {
 					s.logger.Errorf("traffic:cashChequeReceiptUpdate - %v ", err.Error())
 				}
 				go s.PublishHeader()
-				go s.PublishTrafficCheque(cashInfo.chainAddress)
-				go s.PublishCashOut(CashOutStatus{Overlay: cashInfo.peer, Status: true})
-			} else {
-				go s.PublishCashOut(CashOutStatus{Overlay: cashInfo.peer, Status: false})
+				go s.PublishTrafficCheque(cheque.Beneficiary)
 			}
+			go s.PublishCashOut(CashOutStatus{Status: true})
 		}
 	}()
 
@@ -901,15 +882,9 @@ func (s *Service) SubscribeTrafficCheque(notifier *rpc.Notifier, sub *rpc.Subscr
 	}
 }
 
-func (s *Service) SubscribeCashOut(notifier *rpc.Notifier, sub *rpc.Subscription, peers []boson.Address) {
+func (s *Service) SubscribeCashOut(notifier *rpc.Notifier, sub *rpc.Subscription) {
 	iNotifier := subscribe.NewNotifierWithDelay(notifier, sub, 1, true)
-	if len(peers) == 0 {
-		_ = s.subPub.Subscribe(iNotifier, "traffic", "cashOut", "")
-	} else {
-		for _, overlay := range peers {
-			_ = s.subPub.Subscribe(iNotifier, "traffic", "cashOut", overlay.String())
-		}
-	}
+	_ = s.subPub.Subscribe(iNotifier, "traffic", "cashOut", "*")
 }
 
 func (s *Service) PublishHeader() {
@@ -937,7 +912,7 @@ func (s *Service) PublishTrafficCheque(overlay types.AccountID) {
 }
 
 func (s *Service) PublishCashOut(msg CashOutStatus) {
-	_ = s.subPub.Publish("traffic", "cashOut", msg.Overlay.String(), msg)
+	_ = s.subPub.Publish("traffic", "cashOut", "*", msg)
 }
 
 func (t *Traffic) updateStatus(status CashStatus) {

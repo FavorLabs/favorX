@@ -186,12 +186,9 @@ func (s *server) setupRouting() {
 		})),
 	)
 
-	handle("/traffic/cash/{address}", web.ChainHandlers(
-		s.gatewayModeForbidEndpointHandler,
-		web.FinalHandler(jsonhttp.MethodHandler{
-			"POST": http.HandlerFunc(s.cashCheque),
-		})),
-	)
+	handle("/traffic/cash", jsonhttp.MethodHandler{
+		"POST": http.HandlerFunc(s.cashCheque),
+	})
 
 	handle("/fileRegister/{address}", jsonhttp.MethodHandler{
 		"POST": web.ChainHandlers(
@@ -226,10 +223,16 @@ func (s *server) setupRouting() {
 	})
 
 	handle("/buffer", jsonhttp.MethodHandler{
-		"POST": http.HandlerFunc(s.bufferUploadHandler),
+		"POST": web.ChainHandlers(
+			s.newTracingHandler("buffer-upload"),
+			web.FinalHandlerFunc(s.bufferUploadHandler),
+		),
 	})
 	handle("/buffer/{address}", jsonhttp.MethodHandler{
-		"GET": http.HandlerFunc(s.bufferGetHandler),
+		"GET": web.ChainHandlers(
+			s.newTracingHandler("buffer-download"),
+			web.FinalHandlerFunc(s.bufferGetHandler),
+		),
 	})
 
 	s.newLoopbackRouter(router)

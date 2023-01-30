@@ -2,8 +2,8 @@ package cheque
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
+	"github.com/centrifuge/go-substrate-rpc-client/v4/types/codec"
 	"math/big"
 
 	"github.com/FavorLabs/favorX/pkg/crypto"
@@ -12,15 +12,28 @@ import (
 
 // Cheque represents a cheque for a SimpleSwap chequebook
 type Cheque struct {
+	Recipient        types.AccountID `json:"recipient"`
+	Beneficiary      types.AccountID `json:"beneficiary"`
+	CumulativePayout *big.Int        `json:"cumulative_payout"`
+}
+
+type EncodeCheque struct {
 	Recipient        types.AccountID
 	Beneficiary      types.AccountID
-	CumulativePayout *big.Int
+	CumulativePayout types.U128
 }
 
 // SignedCheque represents a cheque together with its signature
 type SignedCheque struct {
 	Cheque
-	Signature []byte
+	Signature []byte `json:"signature"`
+}
+
+type ChainSignedCheque struct {
+	Recipient        types.AccountID
+	Beneficiary      types.AccountID
+	CumulativePayout types.U128
+	SignedCheque     types.Signature
 }
 
 // ChequeSigner signs cheque
@@ -42,7 +55,10 @@ func NewChequeSigner(signer crypto.Signer) ChequeSigner {
 
 // Sign signs a cheque.
 func (s *chequeSigner) Sign(cheque *Cheque) ([]byte, error) {
-	sign, err := json.Marshal(cheque)
+	ec := &EncodeCheque{Recipient: cheque.Recipient,
+		Beneficiary:      cheque.Beneficiary,
+		CumulativePayout: types.NewU128(*cheque.CumulativePayout)}
+	sign, err := codec.Encode(ec)
 	if err != nil {
 		return nil, err
 	}

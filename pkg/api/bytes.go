@@ -1,14 +1,13 @@
 package api
 
 import (
-	"net/http"
-	"strings"
-
 	"github.com/FavorLabs/favorX/pkg/boson"
 	"github.com/FavorLabs/favorX/pkg/file/pipeline/builder"
 	"github.com/FavorLabs/favorX/pkg/jsonhttp"
 	"github.com/FavorLabs/favorX/pkg/tracing"
 	"github.com/gorilla/mux"
+	"net/http"
+	"strings"
 )
 
 type bytesPostResponse struct {

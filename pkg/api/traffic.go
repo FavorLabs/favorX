@@ -81,7 +81,7 @@ func (s *server) trafficCheques(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *server) cashCheque(w http.ResponseWriter, r *http.Request) {
-	hash, err := s.traffic.CashCheque()
+	hash, err := s.traffic.CashCheque(s.overlay)
 	if err != nil {
 		s.logger.Errorf("api cashCheque: query failed %v", err)
 		jsonhttp.NotFound(w, err)
