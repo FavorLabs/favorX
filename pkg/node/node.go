@@ -275,6 +275,7 @@ func NewNode(nodeMode address.Model, p2pAddr string, networkID uint64, logger lo
 		p2pCtx,
 		logger,
 		clientSubChain,
+		clientChain,
 		stateStore,
 		storer,
 		signer.Signer,

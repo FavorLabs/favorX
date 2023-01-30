@@ -5,6 +5,7 @@ import (
 	"github.com/FavorLabs/favorX/pkg/chain/rpc/base"
 	"github.com/FavorLabs/favorX/pkg/chain/rpc/proxy"
 	"github.com/FavorLabs/favorX/pkg/chain/rpc/storage"
+	"github.com/FavorLabs/favorX/pkg/chain/rpc/tokens"
 	"github.com/FavorLabs/favorX/pkg/chain/rpc/traffic"
 	"github.com/FavorLabs/favorX/pkg/logging"
 	"github.com/centrifuge/go-substrate-rpc-client/v4/rpc/author"
@@ -19,6 +20,7 @@ type MainClient struct {
 	Proxy           proxy.Interface
 	SubmitTransChan chan *base.SubmitTrans
 	Acl             acl.Interface
+	Tokens          tokens.Interface
 }
 
 type SubChainClient struct {
@@ -74,6 +76,7 @@ func NewClient(url string, signer signature.KeyringPair) (*MainClient, error) {
 		Default:         api,
 		Proxy:           proxy.New(api),
 		Acl:             acl.New(api, ch),
+		Tokens:          tokens.New(api),
 	}, nil
 }
 

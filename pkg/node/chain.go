@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	subChain "github.com/FavorLabs/favorX/pkg/chain"
+	"github.com/FavorLabs/favorX/pkg/chain"
 	chainTraffic "github.com/FavorLabs/favorX/pkg/chain/rpc/traffic"
 	"github.com/FavorLabs/favorX/pkg/crypto"
 	"github.com/FavorLabs/favorX/pkg/logging"
@@ -24,7 +24,8 @@ import (
 func InitChain(
 	ctx context.Context,
 	logger logging.Logger,
-	subClient *subChain.SubChainClient,
+	subClient *chain.SubChainClient,
+	mainClient *chain.MainClient,
 	stateStore storage.StateStorer,
 	localStore storage.Storer,
 	signer crypto.Signer,
@@ -44,7 +45,7 @@ func InitChain(
 		return service, service, nil
 	}
 
-	trafficService, err := InitTraffic(stateStore, localStore, *accountId, subClient.Traffic, logger, p2pService, signer, subPub)
+	trafficService, err := InitTraffic(stateStore, localStore, *accountId, subClient.Traffic, mainClient, logger, p2pService, signer, subPub)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -57,7 +58,7 @@ func InitChain(
 }
 
 func InitTraffic(store storage.StateStorer, localStore storage.Storer, address types.AccountID,
-	transactionService chainTraffic.Interface, logger logging.Logger, p2pService *libp2p.Service, signer crypto.Signer, subPub subscribe.SubPub) (*traffic.Service, error) {
+	transactionService chainTraffic.Interface, chainMainClient *chain.MainClient, logger logging.Logger, p2pService *libp2p.Service, signer crypto.Signer, subPub subscribe.SubPub) (*traffic.Service, error) {
 	chequeStore := chequePkg.NewChequeStore(store, address, chequePkg.RecoverCheque)
 	cashOut := chequePkg.NewCashoutService(store, transactionService, chequeStore)
 	addressBook := traffic.NewAddressBook(store)
@@ -66,7 +67,7 @@ func InitTraffic(store storage.StateStorer, localStore storage.Storer, address t
 		return nil, fmt.Errorf("traffic server :%v", err)
 	}
 	chequeSigner := chequePkg.NewChequeSigner(signer)
-	trafficService := traffic.New(logger, address, store, localStore, transactionService, chequeStore, cashOut, p2pService, addressBook, chequeSigner, protocol, subPub)
+	trafficService := traffic.New(logger, address, store, localStore, transactionService, chainMainClient, chequeStore, cashOut, p2pService, addressBook, chequeSigner, protocol, subPub)
 	protocol.SetTraffic(trafficService)
 	return trafficService, nil
 }

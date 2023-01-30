@@ -10,6 +10,7 @@ import (
 
 	"github.com/FavorLabs/favorX/pkg/boson"
 	"github.com/FavorLabs/favorX/pkg/cac"
+	"github.com/FavorLabs/favorX/pkg/chain"
 	"github.com/FavorLabs/favorX/pkg/chain/rpc/traffic"
 	"github.com/FavorLabs/favorX/pkg/logging"
 	"github.com/FavorLabs/favorX/pkg/p2p"
@@ -113,6 +114,7 @@ type Service struct {
 	chequeStore         chequePkg.ChequeStore
 	cashout             chequePkg.CashoutService
 	trafficChainService traffic.Interface
+	chainMainClient     *chain.MainClient
 	p2pService          p2p.Service
 	peersLock           sync.Mutex
 	trafficPeers        TrafficPeer
@@ -121,12 +123,12 @@ type Service struct {
 	protocol            trafficprotocol.Interface
 	notifyPaymentFunc   settlement.NotifyPaymentFunc
 	subPub              subscribe.SubPub
-	//txHash:beneficiary
+	// txHash:beneficiary
 	cashChequeChan chan cashCheque
 }
 
 func New(logger logging.Logger, chainAddress types.AccountID, store storage.StateStorer, localStore storage.Storer,
-	trafficChainService traffic.Interface, chequeStore chequePkg.ChequeStore, cashout chequePkg.CashoutService,
+	trafficChainService traffic.Interface, chainMainClient *chain.MainClient, chequeStore chequePkg.ChequeStore, cashout chequePkg.CashoutService,
 	p2pService p2p.Service, addressBook Addressbook, chequeSigner chequePkg.ChequeSigner,
 	protocol trafficprotocol.Interface, subPub subscribe.SubPub) *Service {
 
@@ -136,6 +138,7 @@ func New(logger logging.Logger, chainAddress types.AccountID, store storage.Stat
 		localStore:          localStore,
 		chainAddress:        chainAddress,
 		trafficChainService: trafficChainService,
+		chainMainClient:     chainMainClient,
 		metrics:             newMetrics(),
 		chequeStore:         chequeStore,
 		cashout:             cashout,
@@ -173,7 +176,7 @@ func (s *Service) triggerRefreshInit() {
 			err := s.trafficInit()
 			if err != nil {
 				s.logger.Errorf("traffic-InitChain: %w", err)
-				//os.Exit(1)
+				// os.Exit(1)
 			}
 		}
 	}(ticker)
@@ -221,15 +224,15 @@ func (s *Service) getAllAddress(addresses map[types.AccountID]struct{}) (map[typ
 		}
 	}
 
-	//retrieveList, err := s.trafficChainService.RetrievedAddress(s.chainAddress)
-	//if err != nil {
+	// retrieveList, err := s.trafficChainService.RetrievedAddress(s.chainAddress)
+	// if err != nil {
 	//	return chanResp, err
-	//}
-	//for _, v := range retrieveList {
+	// }
+	// for _, v := range retrieveList {
 	//	if _, ok := chanResp[v]; !ok {
 	//		chanResp[v] = Traffic{}
 	//	}
-	//}
+	// }
 	transferList, err := s.trafficChainService.TransferredAddress(s.chainAddress)
 	if err != nil {
 		return chanResp, err
@@ -274,8 +277,8 @@ func (s *Service) trafficInit() error {
 		return fmt.Errorf("traffic: Update of local traffic data failed. ")
 	}
 
-	//transferTotal, err := s.trafficChainService.TransferredTotal(k)
-	balance, err := s.trafficChainService.BalanceOf(s.chainAddress)
+	// transferTotal, err := s.trafficChainService.TransferredTotal(k)
+	balance, err := s.chainMainClient.Tokens.BalanceOf(s.chainAddress)
 	if err != nil {
 		return fmt.Errorf("failed to get the chain balance")
 	}
@@ -749,7 +752,7 @@ func (s *Service) Handshake(peer boson.Address, recipient types.AccountID, signe
 }
 
 func (s *Service) UpdatePeerBalance(addr types.AccountID) error {
-	balance, err := s.trafficChainService.BalanceOf(addr)
+	balance, err := s.chainMainClient.Tokens.BalanceOf(addr)
 	if err != nil {
 		return err
 	}
@@ -820,7 +823,7 @@ func (s *Service) cashChequeReceiptUpdate() {
 
 	go func() {
 		cashUpdate := func(beneficiary types.AccountID) error {
-			balance, err := s.trafficChainService.BalanceOf(s.chainAddress)
+			balance, err := s.chainMainClient.Tokens.BalanceOf(s.chainAddress)
 			if err != nil {
 				return fmt.Errorf("failed to get the chain balance")
 			}
