@@ -25,7 +25,7 @@ type AccountInfo struct {
 }
 
 func (s *service) BalanceOf(account types.AccountID) (*big.Int, error) {
-	currencyId, _ := codec.Encode(types.U32(1)) // todo id
+	currencyId, _ := codec.Encode(types.U64(1)) // todo id
 	key, err := types.CreateStorageKey(s.meta, "Tokens", "Accounts", account.ToBytes(), currencyId)
 	if err != nil {
 		return nil, err
