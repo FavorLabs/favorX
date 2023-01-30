@@ -716,6 +716,11 @@ func (s *Service) Handshake(peer boson.Address, recipient types.AccountID, signe
 		}
 	}
 
+	if s.chainMainClient.Tokens == nil || s.trafficChainService.Traffic == nil {
+		<-time.After(time.Second)
+		return fmt.Errorf("chain client not ready")
+	}
+
 	err := s.UpdatePeerBalance(recipientLocal)
 	if err != nil {
 		return err
