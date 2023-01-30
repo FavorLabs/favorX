@@ -29,6 +29,7 @@ import (
 	"github.com/FavorLabs/favorX/pkg/multicast/model"
 	"github.com/FavorLabs/favorX/pkg/netrelay"
 	"github.com/FavorLabs/favorX/pkg/netstore"
+	"github.com/FavorLabs/favorX/pkg/oracle"
 	"github.com/FavorLabs/favorX/pkg/p2p/libp2p"
 	"github.com/FavorLabs/favorX/pkg/pingpong"
 	"github.com/FavorLabs/favorX/pkg/pinning"
@@ -83,6 +84,7 @@ type Options struct {
 	WelcomeMessage         string
 	Bootnodes              []string
 	ChainEndpoint          string
+	SubChainEndpoint       string
 	CORSAllowedOrigins     []string
 	Logger                 logging.Logger
 	Standalone             bool
@@ -228,10 +230,8 @@ func NewNode(nodeMode address.Model, p2pAddr string, networkID uint64, logger lo
 		return nil, fmt.Errorf("p2p service: %w", err)
 	}
 
-	client, err := chain.NewClient(o.ChainEndpoint, signer.SubKey)
-	if err != nil {
-		return nil, err
-	}
+	clientSubChain := &chain.SubChainClient{}
+	clientChain := &chain.MainClient{}
 
 	var path string
 
@@ -266,18 +266,22 @@ func NewNode(nodeMode address.Model, p2pAddr string, networkID uint64, logger lo
 
 	fileInfo := fileinfo.New(signer.Overlay, storer, logger, multiResolver)
 
+	oracleChain, err := oracle.NewServer(logger, clientChain, subPub, fileInfo)
+	if err != nil {
+		return nil, err
+	}
 	// apiInterface := client.Traffic
-	oracleChain, settlement, apiInterface, err := InitChain(
+	settlement, apiInterface, err := InitChain(
 		p2pCtx,
 		logger,
-		client,
+		clientSubChain,
 		stateStore,
 		storer,
 		signer.Signer,
 		o.TrafficEnable,
 		p2ps,
 		subPub,
-		fileInfo)
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -430,7 +434,7 @@ func NewNode(nodeMode address.Model, p2pAddr string, networkID uint64, logger lo
 	if o.APIAddr != "" {
 		// API server
 		apiService = api.New(ns, multiResolver, signer.Overlay, chunkInfo, fileInfo, traversal.New(ns), pinningService,
-			authenticator, logger, kad, tracer, apiInterface, client, oracleChain, relay, group, route, notify,
+			authenticator, logger, kad, tracer, apiInterface, clientSubChain, oracleChain, relay, group, route, notify,
 			api.Options{
 				CORSAllowedOrigins: o.CORSAllowedOrigins,
 				GatewayMode:        o.GatewayMode,
@@ -537,17 +541,20 @@ func NewNode(nodeMode address.Model, p2pAddr string, networkID uint64, logger lo
 		return nil, err
 	}
 
+	var needChainFunc = func() {}
 	if o.StorageFilesEnable {
-		services, err := storagefiles.NewServices(o.StorageFilesConfig, signer.Signer, logger, subPub, client, chunkInfo, fileInfo, oracleChain)
+		services, err := storagefiles.NewServices(o.StorageFilesConfig, signer.Signer, logger, subPub, clientSubChain, chunkInfo, fileInfo, oracleChain)
 		if err != nil {
 			return nil, err
 		}
 		b.storagefilesCloser = services
-		services.Start()
+		needChainFunc = func() {
+			go services.Start()
+		}
 	} else {
-		go func() {
+		needChainFunc = func() {
 			for {
-				err = storagefiles.CheckAndUnRegisterMerchant(signer.Signer, client)
+				err = storagefiles.CheckAndUnRegisterMerchant(signer.Signer, clientSubChain)
 				if err != nil {
 					logger.Error(err)
 					<-time.After(time.Second * 5)
@@ -556,10 +563,46 @@ func NewNode(nodeMode address.Model, p2pAddr string, networkID uint64, logger lo
 				logger.Infof("merchant unregister successful")
 				break
 			}
-		}()
+		}
 	}
+	go b.connectChain(clientChain, logger, signer, o)
+	go b.connectSubChain(clientSubChain, logger, signer, o, needChainFunc)
 
 	return b, nil
+}
+
+func (b *Favor) connectChain(client *chain.MainClient, logger logging.Logger, signer *crypto.SignerConfig, o Options, call ...func()) {
+	for {
+		c, err := chain.NewClient(o.ChainEndpoint, signer.SubKey)
+		if err != nil {
+			logger.Errorf("chain %s", err)
+			<-time.After(time.Second * 5)
+			continue
+		}
+		c.CloneTo(client)
+		logger.Infof("chain client start successful")
+		break
+	}
+	for _, v := range call {
+		v()
+	}
+}
+
+func (b *Favor) connectSubChain(client *chain.SubChainClient, logger logging.Logger, signer *crypto.SignerConfig, o Options, call ...func()) {
+	for {
+		c, err := chain.NewSubChainClient(o.SubChainEndpoint, signer.SubKey)
+		if err != nil {
+			logger.Errorf("subchain %s", err)
+			<-time.After(time.Second * 5)
+			continue
+		}
+		c.CloneTo(client)
+		logger.Infof("subchain client start successful")
+		break
+	}
+	for _, v := range call {
+		v()
+	}
 }
 
 func (b *Favor) Shutdown(ctx context.Context) error {

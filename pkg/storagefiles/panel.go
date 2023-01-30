@@ -28,7 +28,7 @@ type Panel struct {
 	fileInfo        fileinfo.Interface
 }
 
-func NewPanel(ctx context.Context, cfg Config, dm *DiskManager, logger logging.Logger, subPub subscribe.SubPub, subClient *chain.Client,
+func NewPanel(ctx context.Context, cfg Config, dm *DiskManager, logger logging.Logger, subPub subscribe.SubPub, subClient *chain.SubChainClient,
 	chunkInfo chunkinfo.Interface, fileInfo fileinfo.Interface, oracle oracle.Resolver) (*Panel, error) {
 
 	quit := make(chan struct{}, 1)

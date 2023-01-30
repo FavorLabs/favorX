@@ -40,7 +40,7 @@ func (s *server) placeOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	users, err := s.commonChain.Storage.PlaceOrderWatch(r.Context(), req.Cid.Bytes(), uint64(info.Size), req.FileCopy, req.Expire)
+	users, err := s.subChainClient.Storage.PlaceOrderWatch(r.Context(), req.Cid.Bytes(), uint64(info.Size), req.FileCopy, req.Expire)
 	if err != nil {
 		jsonhttp.InternalServerError(w, err)
 		return

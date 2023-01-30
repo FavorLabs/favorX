@@ -242,6 +242,9 @@ func (f *FileInfo) FileCounter(rootCid boson.Address) error {
 func chunkLen(span int64) int64 {
 	count := span / boson.ChunkSize
 	count1 := span % boson.ChunkSize
+	if count1 > 0 && span < boson.ChunkSize {
+		return 0
+	}
 	if count1 > 0 {
 		count++
 	}

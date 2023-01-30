@@ -95,19 +95,19 @@ type authenticator interface {
 }
 
 type server struct {
-	auth        authenticator
-	storer      storage.Storer
-	resolver    resolver.Interface
-	overlay     boson.Address
-	chunkInfo   chunkinfo.Interface
-	fileInfo    fileinfo.Interface
-	traversal   traversal.Traverser
-	pinning     pinning.Interface
-	logger      logging.Logger
-	tracer      *tracing.Tracer
-	traffic     traffic.ApiInterface
-	commonChain *chain.Client
-	oracleChain oracle.Resolver
+	auth           authenticator
+	storer         storage.Storer
+	resolver       resolver.Interface
+	overlay        boson.Address
+	chunkInfo      chunkinfo.Interface
+	fileInfo       fileinfo.Interface
+	traversal      traversal.Traverser
+	pinning        pinning.Interface
+	logger         logging.Logger
+	tracer         *tracing.Tracer
+	traffic        traffic.ApiInterface
+	subChainClient *chain.SubChainClient
+	oracleChain    oracle.Resolver
 	Options
 	http.Handler
 	metrics metrics
@@ -142,7 +142,7 @@ type TransactionResponse struct {
 // New will create a and initialize a new API service.
 func New(storer storage.Storer, resolver resolver.Interface, addr boson.Address, chunkInfo chunkinfo.Interface, fileInfo fileinfo.Interface,
 	traversalService traversal.Traverser, pinning pinning.Interface, auth authenticator, logger logging.Logger, kad topology.Driver,
-	tracer *tracing.Tracer, traffic traffic.ApiInterface, commonChain *chain.Client, oracleChain oracle.Resolver, netRelay netrelay.NetRelay,
+	tracer *tracing.Tracer, traffic traffic.ApiInterface, subChainClient *chain.SubChainClient, oracleChain oracle.Resolver, netRelay netrelay.NetRelay,
 	multicast multicast.GroupInterface, route routetab.RouteTab, orderNotify storagefiles.StreamServiceInterface, o Options) Service {
 	s := &server{
 		auth:            auth,
@@ -156,7 +156,7 @@ func New(storer storage.Storer, resolver resolver.Interface, addr boson.Address,
 		Options:         o,
 		logger:          logger,
 		tracer:          tracer,
-		commonChain:     commonChain,
+		subChainClient:  subChainClient,
 		oracleChain:     oracleChain,
 		metrics:         newMetrics(),
 		quit:            make(chan struct{}),
