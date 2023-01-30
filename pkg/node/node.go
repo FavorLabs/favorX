@@ -9,6 +9,7 @@ import (
 	"net"
 	"net/http"
 	"path/filepath"
+	"sync/atomic"
 	"time"
 
 	"github.com/FavorLabs/favorX/pkg/accounting"
@@ -566,9 +567,27 @@ func NewNode(nodeMode address.Model, p2pAddr string, networkID uint64, logger lo
 			}
 		}
 	}
-	go b.connectChain(clientChain, logger, signer, o)
-	go b.connectSubChain(clientSubChain, logger, signer, o, needChainFunc)
+	var sig atomic.Int32
+	go b.connectChain(clientChain, logger, signer, o, func() {
+		sig.Add(1)
+	})
+	go b.connectSubChain(clientSubChain, logger, signer, o, needChainFunc, func() {
+		sig.Add(1)
+	})
 
+	go func() {
+		for {
+			if sig.Load() != 2 {
+				<-time.After(time.Second)
+				continue
+			}
+			err = apiInterface.Init()
+			if err != nil {
+				logger.Errorf("InitChain: %w", err)
+			}
+			break
+		}
+	}()
 	return b, nil
 }
 

@@ -44,6 +44,7 @@ func (s *MainClient) CloneTo(p *MainClient) {
 	p.SubmitTransChan = s.SubmitTransChan
 	p.Default = s.Default
 	p.Acl = s.Acl
+	p.Tokens = s.Tokens
 }
 
 func NewSubChainClient(url string, signer signature.KeyringPair) (*SubChainClient, error) {

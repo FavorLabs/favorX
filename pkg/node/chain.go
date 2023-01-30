@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/FavorLabs/favorX/pkg/chain"
-	chainTraffic "github.com/FavorLabs/favorX/pkg/chain/rpc/traffic"
 	"github.com/FavorLabs/favorX/pkg/crypto"
 	"github.com/FavorLabs/favorX/pkg/logging"
 	"github.com/FavorLabs/favorX/pkg/p2p/libp2p"
@@ -45,20 +44,16 @@ func InitChain(
 		return service, service, nil
 	}
 
-	trafficService, err := InitTraffic(stateStore, localStore, *accountId, subClient.Traffic, mainClient, logger, p2pService, signer, subPub)
+	trafficService, err := InitTraffic(stateStore, localStore, *accountId, subClient, mainClient, logger, p2pService, signer, subPub)
 	if err != nil {
 		return nil, nil, err
-	}
-	err = trafficService.Init()
-	if err != nil {
-		return nil, nil, fmt.Errorf("InitChain: %w", err)
 	}
 
 	return trafficService, trafficService, nil
 }
 
 func InitTraffic(store storage.StateStorer, localStore storage.Storer, address types.AccountID,
-	transactionService chainTraffic.Interface, chainMainClient *chain.MainClient, logger logging.Logger, p2pService *libp2p.Service, signer crypto.Signer, subPub subscribe.SubPub) (*traffic.Service, error) {
+	transactionService *chain.SubChainClient, chainMainClient *chain.MainClient, logger logging.Logger, p2pService *libp2p.Service, signer crypto.Signer, subPub subscribe.SubPub) (*traffic.Service, error) {
 	chequeStore := chequePkg.NewChequeStore(store, address, chequePkg.RecoverCheque)
 	cashOut := chequePkg.NewCashoutService(store, transactionService, chequeStore)
 	addressBook := traffic.NewAddressBook(store)

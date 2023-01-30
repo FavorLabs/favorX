@@ -11,7 +11,6 @@ import (
 	"github.com/FavorLabs/favorX/pkg/boson"
 	"github.com/FavorLabs/favorX/pkg/cac"
 	"github.com/FavorLabs/favorX/pkg/chain"
-	"github.com/FavorLabs/favorX/pkg/chain/rpc/traffic"
 	"github.com/FavorLabs/favorX/pkg/logging"
 	"github.com/FavorLabs/favorX/pkg/p2p"
 	"github.com/FavorLabs/favorX/pkg/rpc"
@@ -98,6 +97,8 @@ type ApiInterface interface {
 	TrafficInit() error
 
 	API() rpc.API
+
+	Init() error
 }
 
 const (
@@ -113,7 +114,7 @@ type Service struct {
 	metrics             metrics
 	chequeStore         chequePkg.ChequeStore
 	cashout             chequePkg.CashoutService
-	trafficChainService traffic.Interface
+	trafficChainService *chain.SubChainClient
 	chainMainClient     *chain.MainClient
 	p2pService          p2p.Service
 	peersLock           sync.Mutex
@@ -128,7 +129,7 @@ type Service struct {
 }
 
 func New(logger logging.Logger, chainAddress types.AccountID, store storage.StateStorer, localStore storage.Storer,
-	trafficChainService traffic.Interface, chainMainClient *chain.MainClient, chequeStore chequePkg.ChequeStore, cashout chequePkg.CashoutService,
+	trafficChainService *chain.SubChainClient, chainMainClient *chain.MainClient, chequeStore chequePkg.ChequeStore, cashout chequePkg.CashoutService,
 	p2pService p2p.Service, addressBook Addressbook, chequeSigner chequePkg.ChequeSigner,
 	protocol trafficprotocol.Interface, subPub subscribe.SubPub) *Service {
 
@@ -233,7 +234,7 @@ func (s *Service) getAllAddress(addresses map[types.AccountID]struct{}) (map[typ
 	//		chanResp[v] = Traffic{}
 	//	}
 	// }
-	transferList, err := s.trafficChainService.TransferredAddress(s.chainAddress)
+	transferList, err := s.trafficChainService.Traffic.TransferredAddress(s.chainAddress)
 	if err != nil {
 		return chanResp, err
 	}
@@ -284,7 +285,7 @@ func (s *Service) trafficInit() error {
 	}
 	s.trafficPeers.balance = balance
 
-	paiOut, err := s.trafficChainService.TransferredTotal(s.chainAddress)
+	paiOut, err := s.trafficChainService.Traffic.TransferredTotal(s.chainAddress)
 	if err != nil {
 		return fmt.Errorf("failed to get the chain totalPaidOut")
 	}
@@ -322,7 +323,7 @@ func (s *Service) trafficPeerChainUpdate(peerAddress, chainAddress types.Account
 	traffic := s.getTraffic(peerAddress)
 	traffic.Lock()
 	defer traffic.Unlock()
-	transferTotal, err := s.trafficChainService.TransAmount(peerAddress, chainAddress)
+	transferTotal, err := s.trafficChainService.Traffic.TransAmount(peerAddress, chainAddress)
 	if err != nil {
 		transferTotal, err = s.chequeStore.GetChainTransferTraffic(peerAddress)
 		if err != nil {
@@ -334,7 +335,7 @@ func (s *Service) trafficPeerChainUpdate(peerAddress, chainAddress types.Account
 			return err
 		}
 	}
-	retrievedTotal, err := s.trafficChainService.TransAmount(chainAddress, peerAddress)
+	retrievedTotal, err := s.trafficChainService.Traffic.TransAmount(chainAddress, peerAddress)
 	if err != nil {
 		retrievedTotal, err = s.chequeStore.GetChainRetrieveTraffic(peerAddress)
 		if err != nil {
