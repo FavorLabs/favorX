@@ -33,6 +33,7 @@ const (
 	optionNameDebugAPIAddr          = "debug-api-addr"
 	optionNameBootnodes             = "bootnode"
 	optionNameChainEndpoint         = "chain-endpoint"
+	optionNameSubChainEndpoint      = "subchain-endpoint"
 	optionNameNetworkID             = "network-id"
 	optionWelcomeMessage            = "welcome-message"
 	optionCORSAllowedOrigins        = "cors-allowed-origins"
@@ -213,6 +214,7 @@ func (c *command) setAllFlags(cmd *cobra.Command) {
 	cmd.Flags().Bool(optionNameP2PQUICEnable, false, "enable P2P QUIC transport")
 	cmd.Flags().StringSlice(optionNameBootnodes, []string{}, "initial nodes to connect to")
 	cmd.Flags().String(optionNameChainEndpoint, "", "link to chain endpoint")
+	cmd.Flags().String(optionNameSubChainEndpoint, "", "link to subchain endpoint")
 	cmd.Flags().Bool(optionNameDebugAPIEnable, true, "enable debug HTTP API")
 	cmd.Flags().String(optionNameDebugAPIAddr, ":1635", "debug HTTP API listen address")
 	cmd.Flags().Uint64(optionNameNetworkID, 10, "ID of the favorX network")

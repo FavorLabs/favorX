@@ -12,10 +12,15 @@ import (
 
 type Interface interface {
 	base.CheckExtrinsicInterface
+	// Deprecated
 	GetNodesFromCid(cid []byte) ([]types.AccountID, error)
+	// Deprecated
 	RegisterCidAndNode(ctx context.Context, rootCid []byte, address []byte, fn base.Finalized) (hash types.Hash, err error)
+	// Deprecated
 	RegisterCidAndNodeWatch(ctx context.Context, cid []byte, overlay []byte) (err error)
+	// Deprecated
 	RemoveCidAndNode(ctx context.Context, rootCid []byte, address []byte, fn base.Finalized) (hash types.Hash, err error)
+	// Deprecated
 	RemoveCidAndNodeWatch(ctx context.Context, cid []byte, overlay []byte) (err error)
 	StorageFileWatch(ctx context.Context, buyer []byte, cid []byte) (err error)
 	PlaceOrder(ctx context.Context, cid []byte, fileSize, fileCopy uint64, expire uint32, fn OrderMatchSuccess) (txn types.Hash, err error)
@@ -92,7 +97,7 @@ func (s *service) GetNodesFromCid(cid []byte) (overlays []types.AccountID, err e
 	}
 	ok, err := s.client.RPC.State.GetStorageLatest(key, &overlays)
 	if err != nil {
-		logging.Warningf("gsrpc err: %w", err)
+		logging.Warningf("gsrpc err: %s", err)
 		return
 	}
 	if !ok {
@@ -474,7 +479,7 @@ func (s *service) GetMerchantInfo(mch []byte) (*MerchantInfo, error) {
 	var info MerchantInfo
 	ok, err := s.client.RPC.State.GetStorageLatest(key, &info)
 	if err != nil {
-		logging.Warningf("gsrpc err: %w", err)
+		logging.Warningf("gsrpc err: %s", err)
 		return nil, err
 	}
 	if !ok {

@@ -31,10 +31,10 @@ type Manager struct {
 	options   Config
 	fileInfo  fileinfo.Interface
 	oracle    oracle.Resolver
-	subClient *chain.Client
+	subClient *chain.SubChainClient
 }
 
-func NewManager(done chan struct{}, cfg Config, dm *DiskManager, logger logging.Logger, fileInfo fileinfo.Interface, oracle oracle.Resolver, subClient *chain.Client) (*Manager, error) {
+func NewManager(done chan struct{}, cfg Config, dm *DiskManager, logger logging.Logger, fileInfo fileinfo.Interface, oracle oracle.Resolver, subClient *chain.SubChainClient) (*Manager, error) {
 	database, err := NewDB(cfg.CacheDir)
 	if err != nil {
 		logger.Errorf("leveldb init %v", err)

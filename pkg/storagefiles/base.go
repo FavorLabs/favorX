@@ -18,10 +18,11 @@ import (
 )
 
 type Services struct {
-	panel *Panel
+	panel  *Panel
+	signer crypto.Signer
 }
 
-func CheckAndUnRegisterMerchant(signer crypto.Signer, subClient *chain.Client) error {
+func CheckAndUnRegisterMerchant(signer crypto.Signer, subClient *chain.SubChainClient) error {
 	info, err := subClient.Storage.GetMerchantInfo(signer.Public().Encode())
 	if err != nil && !errors.Is(err, base.KeyEmptyError) {
 		return fmt.Errorf("merchant info check err %s", err)
@@ -35,7 +36,7 @@ func CheckAndUnRegisterMerchant(signer crypto.Signer, subClient *chain.Client) e
 	return nil
 }
 
-func NewServices(cfg Config, signer crypto.Signer, logger logging.Logger, subPub subscribe.SubPub, subClient *chain.Client,
+func NewServices(cfg Config, signer crypto.Signer, logger logging.Logger, subPub subscribe.SubPub, subClient *chain.SubChainClient,
 	chunkInfo chunkinfo.Interface, fileInfo fileinfo.Interface, oracle oracle.Resolver) (*Services, error) {
 
 	if cfg.CacheDir == "" {
@@ -57,37 +58,35 @@ func NewServices(cfg Config, signer crypto.Signer, logger logging.Logger, subPub
 		return nil, errors.New("the available storage space is less than 10GB")
 	}
 
-	go func() {
-		for {
-			info, e := subClient.Storage.GetMerchantInfo(signer.Public().Encode())
-			if e != nil && !errors.Is(e, base.KeyEmptyError) {
-				logger.Errorf("merchant info check err %s", e)
-				<-time.After(time.Second * 5)
-				continue
-			}
-			if info == nil || uint64(info.DiskTotal) != cfg.Capacity {
-				e = subClient.Storage.MerchantRegisterWatch(context.Background(), cfg.Capacity)
-				if e != nil {
-					logger.Errorf("merchant register err %s", e)
-					<-time.After(time.Second * 5)
-					continue
-				}
-				logger.Infof("merchant register successful")
-			}
-			break
-		}
-	}()
-
 	p, err := NewPanel(context.Background(), cfg, dm, logger, subPub, subClient, chunkInfo, fileInfo, oracle)
 	if err != nil {
 		return nil, err
 	}
 	return &Services{
-		panel: p,
+		panel:  p,
+		signer: signer,
 	}, nil
 }
 
 func (s *Services) Start() {
+	for {
+		info, e := s.panel.manager.subClient.Storage.GetMerchantInfo(s.signer.Public().Encode())
+		if e != nil && !errors.Is(e, base.KeyEmptyError) {
+			s.panel.logger.Errorf("merchant info check err %s", e)
+			<-time.After(time.Second * 5)
+			continue
+		}
+		if info == nil || uint64(info.DiskTotal) != s.panel.options.Capacity {
+			e = s.panel.manager.subClient.Storage.MerchantRegisterWatch(context.Background(), s.panel.options.Capacity)
+			if e != nil {
+				s.panel.logger.Errorf("merchant register err %s", e)
+				<-time.After(time.Second * 5)
+				continue
+			}
+			s.panel.logger.Infof("merchant register successful")
+		}
+		break
+	}
 	s.panel.Start()
 }
 

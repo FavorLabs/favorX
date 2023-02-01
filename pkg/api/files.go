@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"mime"
 	"net/http"
 	"path"
@@ -463,7 +462,7 @@ func (s *server) fileListHandler(w http.ResponseWriter, r *http.Request) {
 	isPage := false
 	pageTotal := 0
 
-	req, err := ioutil.ReadAll(r.Body)
+	req, err := io.ReadAll(r.Body)
 	if err != nil {
 		s.logger.Error("file list: Request parameter acquisition failed,%v", err.Error())
 		jsonhttp.InternalServerError(w, fmt.Errorf("file list: Request parameter acquisition failed,%v", err.Error()))
@@ -660,7 +659,7 @@ func (s *server) fileRegister(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	txn, err := s.commonChain.Storage.PlaceOrder(r.Context(), addr.Bytes(), uint64(info.Size), 1, 14400, func(mch types.AccountID) {
+	txn, err := s.subChainClient.Storage.PlaceOrder(r.Context(), addr.Bytes(), uint64(info.Size), 1, 14400, func(mch types.AccountID) {
 		target, _ := crypto.NewOverlayAddress(mch.ToBytes(), s.NetWorkID)
 		s.logger.Debugf("order file %s notify to %s", addr, target)
 		go s.orderNotify.Notify(context.Background(), target, addr)
@@ -673,6 +672,7 @@ func (s *server) fileRegister(w http.ResponseWriter, r *http.Request) {
 	jsonhttp.OK(w, RegisterResponse{Hash: txn})
 }
 
+// Deprecated
 func (s *server) fileRegisterRemove(w http.ResponseWriter, r *http.Request) {
 	apiName := "fileRegisterRemove"
 	logger := tracing.NewLoggerWithTraceID(r.Context(), s.logger)
