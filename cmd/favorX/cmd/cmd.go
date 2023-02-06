@@ -66,6 +66,14 @@ const (
 	optionNameProxyAddr             = "proxy-addr"
 	optionNameProxyNATAddr          = "proxy-nat-addr"
 	optionNameProxyGroup            = "proxy-group"
+	optionNameTunEnable             = "tun-enable"
+	optionNameTunCidr4              = "tun-cidr4"
+	optionNameTunCidr6              = "tun-cidr6"
+	optionNameTunMTU                = "tun-mtu"
+	optionNameTunServiceIP4         = "tun-sip4"
+	optionNameTunServiceIP6         = "tun-sip6"
+	optionNameVpnGroup              = "vpn-group"
+	optionNameVpnListen             = "vpn-listen"
 )
 
 func init() {
@@ -246,6 +254,14 @@ func (c *command) setAllFlags(cmd *cobra.Command) {
 	cmd.Flags().String(optionNameProxyAddr, "127.0.0.1:1080", "listening address of http(s)/socks5 proxy")
 	cmd.Flags().String(optionNameProxyNATAddr, "", "listening address of http(s)/socks5 proxy with udp protocol")
 	cmd.Flags().String(optionNameProxyGroup, "", "group name of http(s)/socks5 proxy")
+	cmd.Flags().Bool(optionNameTunEnable, false, "enable tunnel of vpn service")
+	cmd.Flags().String(optionNameTunCidr4, "172.16.0.254/24", "tun interface cidr")
+	cmd.Flags().String(optionNameTunCidr6, "fec0:9999::9999/64", "tun interface ipv6 cidr")
+	cmd.Flags().Int(optionNameTunMTU, 1500, "tun mtu")
+	cmd.Flags().String(optionNameTunServiceIP4, "172.16.0.1", "server ip")
+	cmd.Flags().String(optionNameTunServiceIP6, "fec0:9999::1", "server ipv6")
+	cmd.Flags().String(optionNameVpnGroup, "", "group name of vpn service")
+	cmd.Flags().String(optionNameVpnListen, "", "listening address of vpn service")
 }
 
 func newLogger(cmd *cobra.Command, verbosity string) (logging.Logger, error) {

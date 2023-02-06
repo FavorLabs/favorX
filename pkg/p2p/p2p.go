@@ -4,15 +4,16 @@ package p2p
 
 import (
 	"context"
-	"github.com/FavorLabs/favorX/pkg/address"
-	"github.com/FavorLabs/favorX/pkg/boson"
-	"github.com/FavorLabs/favorX/pkg/routetab/pb"
-	"github.com/libp2p/go-libp2p-core/network"
-	libp2ppeer "github.com/libp2p/go-libp2p-core/peer"
-	ma "github.com/multiformats/go-multiaddr"
 	"io"
 	"net"
 	"time"
+
+	"github.com/FavorLabs/favorX/pkg/address"
+	"github.com/FavorLabs/favorX/pkg/boson"
+	"github.com/FavorLabs/favorX/pkg/routetab/pb"
+	"github.com/libp2p/go-libp2p/core/network"
+	libp2ppeer "github.com/libp2p/go-libp2p/core/peer"
+	ma "github.com/multiformats/go-multiaddr"
 )
 
 // ReachabilityStatus represents the node reachability status.

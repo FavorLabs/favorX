@@ -17,7 +17,7 @@ import (
 	"github.com/FavorLabs/favorX/pkg/keystore/p2pkey"
 	"github.com/FavorLabs/favorX/pkg/logging"
 	"github.com/FavorLabs/favorX/pkg/node"
-	crypto2 "github.com/libp2p/go-libp2p-core/crypto"
+	crypto2 "github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/sirupsen/logrus"
 )
 

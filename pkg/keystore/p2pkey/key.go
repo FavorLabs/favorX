@@ -13,7 +13,7 @@ import (
 	"github.com/FavorLabs/favorX/pkg/crypto"
 	"github.com/FavorLabs/favorX/pkg/keystore"
 	"github.com/google/uuid"
-	crypto2 "github.com/libp2p/go-libp2p-core/crypto"
+	crypto2 "github.com/libp2p/go-libp2p/core/crypto"
 	"golang.org/x/crypto/scrypt"
 	"golang.org/x/crypto/sha3"
 )

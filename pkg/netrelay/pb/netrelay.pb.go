@@ -158,29 +158,130 @@ func (m *RelayHttpResp) GetBody() []byte {
 	return nil
 }
 
+type VpnRequest struct {
+	Pattern string `protobuf:"bytes,1,opt,name=pattern,proto3" json:"pattern,omitempty"`
+	Ip      string `protobuf:"bytes,2,opt,name=ip,proto3" json:"ip,omitempty"`
+}
+
+func (m *VpnRequest) Reset()         { *m = VpnRequest{} }
+func (m *VpnRequest) String() string { return proto.CompactTextString(m) }
+func (*VpnRequest) ProtoMessage()    {}
+func (*VpnRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_2ede289ea5d6ac4f, []int{2}
+}
+func (m *VpnRequest) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *VpnRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_VpnRequest.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *VpnRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_VpnRequest.Merge(m, src)
+}
+func (m *VpnRequest) XXX_Size() int {
+	return m.Size()
+}
+func (m *VpnRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_VpnRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_VpnRequest proto.InternalMessageInfo
+
+func (m *VpnRequest) GetPattern() string {
+	if m != nil {
+		return m.Pattern
+	}
+	return ""
+}
+
+func (m *VpnRequest) GetIp() string {
+	if m != nil {
+		return m.Ip
+	}
+	return ""
+}
+
+type VpnResponse struct {
+	Body string `protobuf:"bytes,1,opt,name=body,proto3" json:"body,omitempty"`
+}
+
+func (m *VpnResponse) Reset()         { *m = VpnResponse{} }
+func (m *VpnResponse) String() string { return proto.CompactTextString(m) }
+func (*VpnResponse) ProtoMessage()    {}
+func (*VpnResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_2ede289ea5d6ac4f, []int{3}
+}
+func (m *VpnResponse) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *VpnResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_VpnResponse.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *VpnResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_VpnResponse.Merge(m, src)
+}
+func (m *VpnResponse) XXX_Size() int {
+	return m.Size()
+}
+func (m *VpnResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_VpnResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_VpnResponse proto.InternalMessageInfo
+
+func (m *VpnResponse) GetBody() string {
+	if m != nil {
+		return m.Body
+	}
+	return ""
+}
+
 func init() {
 	proto.RegisterType((*RelayHttpReq)(nil), "netrelayFavorX.RelayHttpReq")
 	proto.RegisterType((*RelayHttpResp)(nil), "netrelayFavorX.RelayHttpResp")
+	proto.RegisterType((*VpnRequest)(nil), "netrelayFavorX.VpnRequest")
+	proto.RegisterType((*VpnResponse)(nil), "netrelayFavorX.VpnResponse")
 }
 
 func init() { proto.RegisterFile("netrelay.proto", fileDescriptor_2ede289ea5d6ac4f) }
 
 var fileDescriptor_2ede289ea5d6ac4f = []byte{
-	// 212 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0xe2, 0xcb, 0x4b, 0x2d, 0x29,
-	0x4a, 0xcd, 0x49, 0xac, 0xd4, 0x2b, 0x28, 0xca, 0x2f, 0xc9, 0x17, 0x82, 0xf3, 0xdd, 0x12, 0xcb,
-	0xf2, 0x8b, 0x22, 0x94, 0xea, 0xb8, 0x78, 0x82, 0x40, 0x5c, 0x8f, 0x92, 0x92, 0x82, 0xa0, 0xd4,
-	0x42, 0x21, 0x01, 0x2e, 0xe6, 0xd0, 0xa2, 0x1c, 0x09, 0x46, 0x05, 0x46, 0x0d, 0xce, 0x20, 0x10,
-	0x53, 0x48, 0x8c, 0x8b, 0xcd, 0x37, 0xb5, 0x24, 0x23, 0x3f, 0x45, 0x82, 0x49, 0x81, 0x51, 0x83,
-	0x27, 0x08, 0xca, 0x03, 0x89, 0x7b, 0xa4, 0x26, 0xa6, 0xa4, 0x16, 0x49, 0x30, 0x43, 0xc4, 0x21,
-	0x3c, 0x21, 0x21, 0x2e, 0x16, 0xa7, 0xfc, 0x94, 0x4a, 0x09, 0x16, 0xb0, 0x28, 0x98, 0x2d, 0x24,
-	0xc1, 0xc5, 0x1e, 0x92, 0x99, 0x9b, 0x9a, 0x5f, 0x5a, 0x22, 0xc1, 0xaa, 0xc0, 0xa8, 0xc1, 0x1c,
-	0x04, 0xe3, 0x2a, 0x05, 0x73, 0xf1, 0x22, 0xd9, 0x5f, 0x5c, 0x00, 0x32, 0x36, 0xb8, 0x24, 0xb1,
-	0xa4, 0xb4, 0x18, 0xec, 0x06, 0xd6, 0x20, 0x28, 0x0f, 0xc9, 0x3a, 0x26, 0xac, 0xd6, 0x31, 0x23,
-	0xac, 0x73, 0x92, 0x39, 0xf1, 0x48, 0x8e, 0xf1, 0xc2, 0x23, 0x39, 0xc6, 0x07, 0x8f, 0xe4, 0x18,
-	0x27, 0x3c, 0x96, 0x63, 0xb8, 0xf0, 0x58, 0x8e, 0xe1, 0xc6, 0x63, 0x39, 0x86, 0x28, 0xa6, 0x82,
-	0xa4, 0x24, 0x36, 0x70, 0x48, 0x18, 0x03, 0x02, 0x00, 0x00, 0xff, 0xff, 0x11, 0x0d, 0x10, 0xc9,
-	0x1b, 0x01, 0x00, 0x00,
+	// 270 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x6c, 0x90, 0xb1, 0x4e, 0xc3, 0x30,
+	0x14, 0x45, 0xe3, 0xa4, 0x2d, 0xea, 0xa3, 0x54, 0xc8, 0x03, 0xf2, 0x80, 0xac, 0x90, 0x29, 0x13,
+	0x0b, 0x12, 0x1f, 0xd0, 0x01, 0x75, 0x61, 0x71, 0x01, 0x21, 0xb6, 0x44, 0x79, 0x12, 0x91, 0x4a,
+	0xec, 0x3a, 0x2f, 0x48, 0x5d, 0xf8, 0x06, 0x3e, 0x8b, 0xb1, 0x23, 0x23, 0x4a, 0x7e, 0x04, 0xd9,
+	0x49, 0xa1, 0x43, 0xb7, 0x7b, 0xae, 0xf4, 0xee, 0x49, 0x0c, 0xf3, 0x0a, 0xc9, 0xe2, 0x3a, 0xdb,
+	0x5e, 0x1b, 0xab, 0x49, 0xf3, 0x3f, 0xbe, 0xcb, 0xde, 0xb5, 0x7d, 0x4e, 0x3e, 0x60, 0xa6, 0x1c,
+	0x2e, 0x89, 0x8c, 0xc2, 0x0d, 0x3f, 0x87, 0xe8, 0xd1, 0xae, 0x05, 0x8b, 0x59, 0x3a, 0x55, 0x2e,
+	0xf2, 0x0b, 0x98, 0xdc, 0x23, 0xbd, 0xea, 0x42, 0x84, 0x31, 0x4b, 0x67, 0x6a, 0x20, 0xd7, 0x2f,
+	0x31, 0x2b, 0xd0, 0x8a, 0xa8, 0xef, 0x7b, 0xe2, 0x1c, 0x46, 0x0b, 0x5d, 0x6c, 0xc5, 0xc8, 0xb7,
+	0x3e, 0x73, 0x01, 0x27, 0x0f, 0xe5, 0x1b, 0xea, 0x86, 0xc4, 0x38, 0x66, 0x69, 0xa4, 0xf6, 0x98,
+	0xac, 0xe0, 0xec, 0xc0, 0x5f, 0x1b, 0x37, 0xbb, 0xa2, 0x8c, 0x9a, 0xda, 0x7f, 0xc3, 0x58, 0x0d,
+	0x74, 0xa0, 0x0b, 0x8f, 0xea, 0xa2, 0x7f, 0x5d, 0x72, 0x0b, 0xf0, 0x64, 0x2a, 0x85, 0x9b, 0x06,
+	0x6b, 0x72, 0x72, 0x93, 0x11, 0xa1, 0xad, 0x86, 0xdf, 0xda, 0x23, 0x9f, 0x43, 0x58, 0x1a, 0xbf,
+	0x37, 0x55, 0x61, 0x69, 0x92, 0x2b, 0x38, 0xf5, 0x77, 0xb5, 0xd1, 0x55, 0x8d, 0x6e, 0x3a, 0x77,
+	0xd3, 0xfd, 0x95, 0xcf, 0x8b, 0xcb, 0xaf, 0x56, 0xb2, 0x5d, 0x2b, 0xd9, 0x4f, 0x2b, 0xd9, 0x67,
+	0x27, 0x83, 0x5d, 0x27, 0x83, 0xef, 0x4e, 0x06, 0x2f, 0xa1, 0xc9, 0xf3, 0x89, 0x7f, 0xe4, 0x9b,
+	0xdf, 0x00, 0x00, 0x00, 0xff, 0xff, 0x10, 0xc4, 0xe1, 0xb8, 0x76, 0x01, 0x00, 0x00,
 }
 
 func (m *RelayHttpReq) Marshal() (dAtA []byte, err error) {
@@ -281,6 +382,73 @@ func (m *RelayHttpResp) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
+func (m *VpnRequest) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *VpnRequest) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *VpnRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.Ip) > 0 {
+		i -= len(m.Ip)
+		copy(dAtA[i:], m.Ip)
+		i = encodeVarintNetrelay(dAtA, i, uint64(len(m.Ip)))
+		i--
+		dAtA[i] = 0x12
+	}
+	if len(m.Pattern) > 0 {
+		i -= len(m.Pattern)
+		copy(dAtA[i:], m.Pattern)
+		i = encodeVarintNetrelay(dAtA, i, uint64(len(m.Pattern)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *VpnResponse) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *VpnResponse) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *VpnResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.Body) > 0 {
+		i -= len(m.Body)
+		copy(dAtA[i:], m.Body)
+		i = encodeVarintNetrelay(dAtA, i, uint64(len(m.Body)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
 func encodeVarintNetrelay(dAtA []byte, offset int, v uint64) int {
 	offset -= sovNetrelay(v)
 	base := offset
@@ -333,6 +501,36 @@ func (m *RelayHttpResp) Size() (n int) {
 	if l > 0 {
 		n += 1 + l + sovNetrelay(uint64(l))
 	}
+	l = len(m.Body)
+	if l > 0 {
+		n += 1 + l + sovNetrelay(uint64(l))
+	}
+	return n
+}
+
+func (m *VpnRequest) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.Pattern)
+	if l > 0 {
+		n += 1 + l + sovNetrelay(uint64(l))
+	}
+	l = len(m.Ip)
+	if l > 0 {
+		n += 1 + l + sovNetrelay(uint64(l))
+	}
+	return n
+}
+
+func (m *VpnResponse) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
 	l = len(m.Body)
 	if l > 0 {
 		n += 1 + l + sovNetrelay(uint64(l))
@@ -664,6 +862,202 @@ func (m *RelayHttpResp) Unmarshal(dAtA []byte) error {
 			if m.Body == nil {
 				m.Body = []byte{}
 			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipNetrelay(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthNetrelay
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *VpnRequest) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowNetrelay
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: VpnRequest: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: VpnRequest: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Pattern", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowNetrelay
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthNetrelay
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthNetrelay
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Pattern = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Ip", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowNetrelay
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthNetrelay
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthNetrelay
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Ip = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipNetrelay(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthNetrelay
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *VpnResponse) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowNetrelay
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: VpnResponse: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: VpnResponse: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Body", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowNetrelay
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthNetrelay
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthNetrelay
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Body = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex

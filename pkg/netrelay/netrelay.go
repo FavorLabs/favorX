@@ -18,6 +18,7 @@ import (
 	"github.com/FavorLabs/favorX/pkg/multicast/model"
 	"github.com/FavorLabs/favorX/pkg/p2p"
 	"github.com/FavorLabs/favorX/pkg/routetab"
+	"github.com/net-byte/water"
 )
 
 type NetRelay interface {
@@ -33,6 +34,9 @@ type Service struct {
 	socks5UDPConn *net.UDPConn
 	socks5UDPAddr *net.UDPAddr
 	proxyGroup    string
+	iface         *water.Interface
+	vpnGroup      string
+	vpnConfig     VpnConfig
 }
 
 func New(streamer p2p.Streamer, logging logging.Logger, groups []model.ConfigNodeGroup, route routetab.RouteTab, multicast multicast.GroupInterface) *Service {

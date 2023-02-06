@@ -25,7 +25,7 @@ import (
 	"github.com/FavorLabs/favorX/pkg/node"
 	"github.com/FavorLabs/favorX/pkg/resolver/multiresolver"
 	"github.com/kardianos/service"
-	crypto2 "github.com/libp2p/go-libp2p-core/crypto"
+	crypto2 "github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/spf13/cobra"
 )
 
@@ -149,6 +149,14 @@ func (c *command) initStartCmd() (err error) {
 				ProxyAddr:              c.config.GetString(optionNameProxyAddr),
 				ProxyNATAddr:           c.config.GetString(optionNameProxyNATAddr),
 				ProxyGroup:             c.config.GetString(optionNameProxyGroup),
+				TunEnable:              c.config.GetBool(optionNameTunEnable),
+				TunCidr4:               c.config.GetString(optionNameTunCidr4),
+				TunCidr6:               c.config.GetString(optionNameTunCidr6),
+				TunMTU:                 c.config.GetInt(optionNameTunMTU),
+				TunServiceIPv4:         c.config.GetString(optionNameTunServiceIP4),
+				TunServiceIPv6:         c.config.GetString(optionNameTunServiceIP6),
+				VpnGroup:               c.config.GetString(optionNameVpnGroup),
+				VpnListen:              c.config.GetString(optionNameVpnListen),
 			})
 			if err != nil {
 				return err

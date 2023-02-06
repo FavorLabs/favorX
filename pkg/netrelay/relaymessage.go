@@ -23,6 +23,8 @@ const (
 	streamHttpProxy      = "httpproxy"
 	streamSocks5TCP      = "socks5tcp"
 	streamSocks5UDP      = "socks5udp"
+	streamVpnTun         = "vpntun"
+	streamVpnRequest     = "vpnrequest"
 )
 
 func (s *Service) Protocol() p2p.ProtocolSpec {
@@ -45,6 +47,14 @@ func (s *Service) Protocol() p2p.ProtocolSpec {
 			{
 				Name:    streamSocks5UDP,
 				Handler: s.onSocks5UDP,
+			},
+			{
+				Name:    streamVpnTun,
+				Handler: s.onVpnTun,
+			},
+			{
+				Name:    streamVpnRequest,
+				Handler: s.onVpnRequest,
 			},
 		},
 	}

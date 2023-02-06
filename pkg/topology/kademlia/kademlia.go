@@ -5,6 +5,13 @@ import (
 	random "crypto/rand"
 	"encoding/json"
 	"errors"
+	"math/big"
+	"net"
+	"sort"
+	"sync"
+	"syscall"
+	"time"
+
 	"github.com/FavorLabs/favorX/pkg/address"
 	"github.com/FavorLabs/favorX/pkg/addressbook"
 	"github.com/FavorLabs/favorX/pkg/blocker"
@@ -22,15 +29,9 @@ import (
 	"github.com/FavorLabs/favorX/pkg/topology/lightnode"
 	"github.com/FavorLabs/favorX/pkg/topology/model"
 	"github.com/FavorLabs/favorX/pkg/topology/pslice"
-	"github.com/libp2p/go-libp2p-core/network"
+	"github.com/libp2p/go-libp2p/core/network"
 	ma "github.com/multiformats/go-multiaddr"
 	"golang.org/x/sync/errgroup"
-	"math/big"
-	"net"
-	"sort"
-	"sync"
-	"syscall"
-	"time"
 )
 
 const (

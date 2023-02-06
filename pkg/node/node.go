@@ -45,7 +45,7 @@ import (
 	"github.com/FavorLabs/favorX/pkg/tracing"
 	"github.com/FavorLabs/favorX/pkg/traversal"
 	"github.com/gogf/gf/v2/util/gconv"
-	crypto2 "github.com/libp2p/go-libp2p-core/crypto"
+	crypto2 "github.com/libp2p/go-libp2p/core/crypto"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
@@ -110,6 +110,14 @@ type Options struct {
 	ProxyAddr              string
 	ProxyNATAddr           string
 	ProxyGroup             string
+	TunEnable              bool
+	TunCidr4               string
+	TunCidr6               string
+	TunMTU                 int
+	TunServiceIPv4         string
+	TunServiceIPv6         string
+	VpnGroup               string
+	VpnListen              string
 }
 
 func NewNode(nodeMode address.Model, addr string, bosonAddress boson.Address, publicKey ecdsa.PublicKey, signer crypto.Signer, networkID uint64, logger logging.Logger, libp2pPrivateKey crypto2.PrivKey, o Options) (b *Favor, err error) {
@@ -416,6 +424,24 @@ func NewNode(nodeMode address.Model, addr string, bosonAddress boson.Address, pu
 			return nil, fmt.Errorf("proxy group %s notfound", o.ProxyGroup)
 		}
 		go relay.StartProxy(o.ProxyAddr, o.ProxyNATAddr, o.ProxyGroup)
+	}
+	if o.VpnGroup != "" {
+		_, err = group.GetGroupPeers(o.VpnGroup)
+		if err != nil {
+			return nil, fmt.Errorf("vpn group %s notfound", o.VpnGroup)
+		}
+		if o.TunEnable {
+			relay.CreateTun(netrelay.VpnConfig{
+				ServerIP:   o.TunServiceIPv4,
+				ServerIPv6: o.TunServiceIPv6,
+				CIDR:       o.TunCidr4,
+				CIDRv6:     o.TunCidr6,
+				MTU:        o.TunMTU,
+				Group:      o.VpnGroup,
+			})
+		} else if o.VpnListen != "" {
+			go relay.StartVpnServer(o.VpnListen, o.VpnGroup)
+		}
 	}
 
 	var apiService api.Service
