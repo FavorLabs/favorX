@@ -248,9 +248,9 @@ const (
 	HeaderNameTracingSpanContext = "tracing-span-context"
 )
 
-// NewAuroraStreamName constructs a libp2p compatible stream name out of
+// NewProtocolStreamName constructs a libp2p compatible stream name out of
 // protocol name and version and stream name.
-func NewAuroraStreamName(protocol, version, stream string) string {
+func NewProtocolStreamName(protocol, version, stream string) string {
 	return "/boson/" + protocol + "/" + version + "/" + stream
 }
 
