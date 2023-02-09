@@ -6,8 +6,7 @@ GOLANGCI_LINT_VERSION ?= v1.46.2
 GOGOPROTOBUF ?= protoc-gen-gogofaster
 GOGOPROTOBUF_VERSION ?= v1.3.2
 
-GO_MIN_VERSION ?= 1.17
-GO_BUILD_VERSION ?= 1.17.11
+GO_MIN_VERSION ?= 1.18
 GO_MOD_ENABLED_VERSION ?= 1.12
 GO_MOD_VERSION ?= $(shell go mod edit -print | awk '/^go[ \t]+[0-9]+\.[0-9]+(\.[0-9]+)?[ \t]*$$/{print $$2}')
 GO_SYSTEM_VERSION ?= $(shell go version | awk '{ gsub(/go/, "", $$3); print $$3 }')
@@ -127,8 +126,7 @@ android: check-mobile-tool
 android: download-vendor
 android:
 	[ -d "dist" ] || mkdir dist
-	$(GO) mod vendor && echo "create go dependency vendor"
-	[ -f "dist/favorX.aar" ] || (GO111MODULE=off $(GOMOBILE) bind -tags=leveldb -target=android -o=favorX.aar -ldflags="$(LDFLAGS)" ./mobile && mv -n favorX.aar dist/ && mv -n favorX-sources.jar dist/) || (echo "build android sdk failed" && rm -rf vendor && exit 1)
+	[ -f "dist/favorX.aar" ] || ($(GOMOBILE) bind -androidapi 26 -tags=leveldb -target=android -o=favorX.aar -ldflags="$(LDFLAGS)" ./mobile && mv -n favorX.aar dist/ && mv -n favorX-sources.jar dist/) || (echo "build android sdk failed" && exit 1)
 	rm -rf vendor
 	echo "android sdk build finished."
 	echo "please import dist/favorX.aar to android studio!"
@@ -139,8 +137,7 @@ ios: check-mobile-tool
 ios: download-vendor
 ios:
 	[ -d "dist" ] || mkdir dist
-	$(GO) mod vendor && echo "create go dependency vendor"
-	[ -d "dist/favorX.xcframework" ] || (GO111MODULE=off $(GOMOBILE) bind -tags=leveldb,nowatchdog -target=ios -o=favorX.xcframework -ldflags="$(LDFLAGS)" ./mobile && mv -n favorX.xcframework dist/) || (echo "build ios framework failed" && rm -rf vendor && exit 1)
+	[ -d "dist/favorX.xcframework" ] || ($(GOMOBILE) bind -tags=leveldb,nowatchdog -target=ios -o=favorX.xcframework -ldflags="$(LDFLAGS)" ./mobile && mv -n favorX.xcframework dist/) || (echo "build ios framework failed" && exit 1)
 	rm -rf vendor
 	echo "ios framework build finished."
 	echo "please import dist/favorX.xcframework to xcode!"
@@ -150,7 +147,9 @@ check-mobile-tool: check-version
 check-mobile-tool:
 	check_path=false; for line in $(shell $(GO) env GOPATH | tr $(PATH_SEP) '\n' | tr '[:upper:]' '[:lower:]'); do if [[ $(WORK_DIR) =~ ^$$line ]]; then check_path=true; fi; done; $$check_path || (echo "Current path does not match your GOPATH, please check" && exit 1)
 	type ${GOMOBILE} || $(GO) install golang.org/x/mobile/cmd/gomobile@latest
+	${GOMOBILE} init
 	type ${GOBIND} || $(GO) install golang.org/x/mobile/cmd/gobind@latest
+	$(GO) get golang.org/x/mobile/bind
 
 .PHONY: check-java
 check-java:
@@ -173,7 +172,6 @@ download-vendor:
 check-version:
 	[ ${GO_SYSTEM_VERSION} \< ${GO_MOD_ENABLED_VERSION} ] && echo "The version of Golang on the system (${GO_SYSTEM_VERSION}) is too old and does not support go modules. Please use at least ${GO_MIN_VERSION}." && exit 1; exit 0
 	[ ${GO_SYSTEM_VERSION} \< ${GO_MIN_VERSION} ] && echo "The version of Golang on the system (${GO_SYSTEM_VERSION}) is below the minimum required version (${GO_MIN_VERSION}) and therefore will not build correctly." && exit 1; exit 0
-	if ! expr ${GO_BUILD_VERSION} : ^${GO_MOD_VERSION} 1>/dev/null; then echo "The version of Golang mod (${GO_MOD_VERSION}) does not match required version (${GO_BUILD_VERSION})." && exit 1; fi
 
 .PHONY: githooks
 githooks:
