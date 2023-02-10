@@ -58,6 +58,7 @@ type Favor struct {
 	apiServer        *http.Server
 	debugAPIServer   *http.Server
 	vpnServer        *http.Server
+	rpcServer        io.Closer
 	resolverCloser   io.Closer
 	errorLogWriter   *io.PipeWriter
 	tracerCloser     io.Closer
@@ -576,6 +577,8 @@ func NewNode(nodeMode address.Model, addr string, bosonAddress boson.Address, pu
 		return nil, err
 	}
 
+	b.rpcServer = stack
+
 	if err = p2ps.Ready(); err != nil {
 		return nil, err
 	}
@@ -607,6 +610,16 @@ func (b *Favor) Shutdown(ctx context.Context) error {
 				return fmt.Errorf("debug api server: %w", err)
 			}
 			logging.Infof("debug api shutting down")
+			return nil
+		})
+	}
+
+	if b.rpcServer != nil {
+		eg.Go(func() error {
+			if err := b.rpcServer.Close(); err != nil {
+				return fmt.Errorf("rpc server: %w", err)
+			}
+			logging.Infof("rpc shutting down")
 			return nil
 		})
 	}
