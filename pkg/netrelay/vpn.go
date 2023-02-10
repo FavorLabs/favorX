@@ -38,7 +38,7 @@ func (s *Service) StartVpnServer(listen, group string) {
 	if err != nil {
 		panic(err)
 	}
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
 		wsconn, _, _, err := ws.UpgradeHTTP(r, w)
 		if err != nil {
 			s.logger.Infof("[vpn server] failed to upgrade http %v", err)
@@ -103,6 +103,11 @@ func (s *Service) StartVpnServer(listen, group string) {
 
 	http.HandleFunc("/stats", func(w http.ResponseWriter, req *http.Request) {
 		io.WriteString(w, counter.PrintBytes(true))
+	})
+
+	http.HandleFunc("/test", func(w http.ResponseWriter, r *http.Request) {
+		_, resp := s.vpnRequest(r.Context(), "/test", "")
+		io.WriteString(w, resp)
 	})
 
 	http.ListenAndServe(listen, nil)

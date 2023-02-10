@@ -170,6 +170,8 @@ func (s *Service) onVpnRequest(ctx context.Context, p p2p.Peer, stream p2p.Strea
 		return err
 	}
 	switch req.Pattern {
+	case "/test":
+		err = w.WriteMsgWithContext(ctx, &pb.VpnResponse{Body: "OK"})
 	case "/register/pick/ip":
 		ip, pl := register.PickClientIP(s.vpnConfig.CIDR)
 		resp := fmt.Sprintf("%v/%v", ip, pl)
