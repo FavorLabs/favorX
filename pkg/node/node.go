@@ -57,6 +57,7 @@ type Favor struct {
 	apiCloser        io.Closer
 	apiServer        *http.Server
 	debugAPIServer   *http.Server
+	vpnServer        *http.Server
 	resolverCloser   io.Closer
 	errorLogWriter   *io.PipeWriter
 	tracerCloser     io.Closer
@@ -189,7 +190,7 @@ func NewNode(nodeMode address.Model, addr string, bosonAddress boson.Address, pu
 			IdleTimeout:       30 * time.Second,
 			ReadHeaderTimeout: 3 * time.Second,
 			Handler:           debugAPIService,
-			ErrorLog:          log.New(b.errorLogWriter, "", 0),
+			ErrorLog:          log.New(b.errorLogWriter, "debugApi", 0),
 		}
 
 		go func() {
@@ -440,7 +441,34 @@ func NewNode(nodeMode address.Model, addr string, bosonAddress boson.Address, pu
 				Group:      o.VpnGroup,
 			})
 		} else if o.VpnListen != "" {
-			go relay.StartVpnServer(o.VpnListen, o.VpnGroup)
+			vpnService := relay.NewVpnService(o.VpnGroup)
+			vpnServer := &http.Server{
+				IdleTimeout:       30 * time.Second,
+				ReadHeaderTimeout: 10 * time.Second,
+				Handler:           vpnService,
+				ErrorLog:          log.New(b.errorLogWriter, "vpn", 0),
+			}
+			vpnListener, err := net.Listen("tcp", o.VpnListen)
+			if err != nil {
+				return nil, fmt.Errorf("vpn listener: %w", err)
+			}
+			go func() {
+				if o.EnableApiTLS {
+					logger.Infof("vpn address: wss://%s", vpnListener.Addr())
+					err = vpnServer.ServeTLS(vpnListener, o.TlsCrtFile, o.TlsKeyFile)
+					if err != nil {
+						logger.Errorf("vpn server enable wss: %v", err)
+					}
+				}
+				logger.Infof("vpn address: ws://%s", vpnListener.Addr())
+				err = vpnServer.Serve(vpnListener)
+				if err != nil && err != http.ErrServerClosed {
+					logger.Debugf("vpn server: %v", err)
+					logger.Error("unable to serve vpn")
+				}
+			}()
+
+			b.vpnServer = vpnServer
 		}
 	}
 
@@ -467,7 +495,7 @@ func NewNode(nodeMode address.Model, addr string, bosonAddress boson.Address, pu
 			IdleTimeout:       30 * time.Second,
 			ReadHeaderTimeout: 3 * time.Second,
 			Handler:           apiService,
-			ErrorLog:          log.New(b.errorLogWriter, "", 0),
+			ErrorLog:          log.New(b.errorLogWriter, "api", 0),
 		}
 
 		go func() {
@@ -578,6 +606,17 @@ func (b *Favor) Shutdown(ctx context.Context) error {
 			if err := b.debugAPIServer.Shutdown(ctx); err != nil {
 				return fmt.Errorf("debug api server: %w", err)
 			}
+			logging.Infof("debug api shutting down")
+			return nil
+		})
+	}
+
+	if b.vpnServer != nil {
+		eg.Go(func() error {
+			if err := b.vpnServer.Shutdown(ctx); err != nil {
+				return fmt.Errorf("vpn server: %w", err)
+			}
+			logging.Infof("vpn shutting down")
 			return nil
 		})
 	}
