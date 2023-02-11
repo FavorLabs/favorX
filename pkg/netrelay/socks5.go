@@ -649,11 +649,11 @@ type UDPExchange struct {
 	RemoteConn *net.UDPConn
 }
 
-func (s *Service) forwardStream(src p2p.Stream, group, streamName string) {
+func (s *Service) forwardStream(src p2p.Stream, group, streamName string) error {
 	forward, err := s.getForward(group)
 	if err != nil {
 		s.logger.Errorf("socks5 get forward peer err %s", err)
-		return
+		return err
 	}
 	var st p2p.Stream
 	for _, p := range forward {
@@ -666,7 +666,11 @@ func (s *Service) forwardStream(src p2p.Stream, group, streamName string) {
 			break
 		}
 	}
+	if err != nil {
+		return err
+	}
 	defer st.Close()
 	go io.Copy(src, st)
 	io.Copy(st, src)
+	return nil
 }

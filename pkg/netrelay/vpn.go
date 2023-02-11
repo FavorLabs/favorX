@@ -197,7 +197,6 @@ func (s *Service) createStream(wsconn net.Conn) (st p2p.Stream, err error) {
 func (s *Service) vpnRequest(ctx context.Context, path, ip string) (err error, respBody string) {
 	forward, err := s.getForward(s.vpnGroup)
 	if err != nil {
-		s.logger.Errorf("get group(%s) peer err %s", s.vpnGroup, err)
 		return err, ""
 	}
 	var st p2p.Stream

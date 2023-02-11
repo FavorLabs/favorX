@@ -170,6 +170,7 @@ func (s *Service) getForward(group string) (forward []boson.Address, err error) 
 	}
 
 	if len(nodes.Connected) == 0 && len(nodes.Keep) == 0 {
+		err = fmt.Errorf("no peers in group %s", group)
 		return
 	}
 	forward = append(forward, nodes.Connected...)

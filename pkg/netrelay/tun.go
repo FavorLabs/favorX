@@ -114,7 +114,7 @@ func (s *Service) onVpnTun(_ context.Context, p p2p.Peer, stream p2p.Stream) (er
 			s.logger.Tracef("onVpnTun from %s stream close", p.Address)
 		}
 	}()
-	if s.vpnGroup != "" {
+	if s.vpnGroup != "" && s.vpnConfig.CIDR == "" {
 		s.forwardStream(stream, s.vpnGroup, streamVpnTun)
 		return nil
 	}
@@ -167,7 +167,7 @@ func (s *Service) onVpnRequest(ctx context.Context, p p2p.Peer, stream p2p.Strea
 		}
 	}()
 
-	if s.vpnGroup != "" {
+	if s.vpnGroup != "" && s.vpnConfig.CIDR == "" {
 		s.forwardStream(stream, s.vpnGroup, streamVpnRequest)
 		return nil
 	}
