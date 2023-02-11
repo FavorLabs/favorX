@@ -336,6 +336,12 @@ func (s *Service) onSocks5TCP(_ context.Context, p p2p.Peer, stream p2p.Stream) 
 		}
 	}()
 
+	if s.proxyGroup != "" {
+		// forward
+		s.forwardStream(stream, streamSocks5TCP)
+		return nil
+	}
+
 	var b [2048]byte
 	n, err := stream.Read(b[:])
 	if err != nil {
@@ -441,6 +447,12 @@ func (s *Service) onSocks5UDP(_ context.Context, p p2p.Peer, stream p2p.Stream) 
 			s.logger.Tracef("onSocks5 udp from %s stream close", p.Address)
 		}
 	}()
+
+	if s.proxyGroup != "" {
+		// forward
+		s.forwardStream(stream, streamSocks5UDP)
+		return nil
+	}
 
 	b := make([]byte, 65507)
 	n, err := stream.Read(b[:])
@@ -635,4 +647,26 @@ func (r *Reply) WriteTo(w io.Writer) (int64, error) {
 type UDPExchange struct {
 	ClientAddr *net.UDPAddr
 	RemoteConn *net.UDPConn
+}
+
+func (s *Service) forwardStream(src p2p.Stream, streamName string) {
+	forward, err := s.getForward(s.proxyGroup)
+	if err != nil {
+		s.logger.Errorf("socks5 get forward peer err %s", err)
+		return
+	}
+	var st p2p.Stream
+	for _, p := range forward {
+		if s.route.IsNeighbor(p) {
+			st, err = s.streamer.NewStream(context.Background(), p, nil, protocolName, protocolVersion, streamName)
+		} else {
+			st, err = s.streamer.NewConnChainRelayStream(context.Background(), p, nil, protocolName, protocolVersion, streamName)
+		}
+		if err == nil {
+			break
+		}
+	}
+	defer st.Close()
+	go io.Copy(src, st)
+	io.Copy(st, src)
 }

@@ -420,17 +420,19 @@ func NewNode(nodeMode address.Model, addr string, bosonAddress boson.Address, pu
 	if err != nil {
 		return nil, err
 	}
-	if o.ProxyEnable && o.ProxyGroup != "" {
-		_, err = group.GetGroupPeers(o.ProxyGroup)
+	if o.ProxyGroup != "" {
+		err = relay.SetProxyGroup(o.ProxyGroup)
 		if err != nil {
-			return nil, fmt.Errorf("proxy group %s notfound", o.ProxyGroup)
+			return nil, err
 		}
+	}
+	if o.ProxyEnable {
 		go relay.StartProxy(o.ProxyAddr, o.ProxyNATAddr, o.ProxyGroup)
 	}
 	if o.VpnGroup != "" {
-		_, err = group.GetGroupPeers(o.VpnGroup)
+		err = relay.SetVpnGroup(o.VpnGroup)
 		if err != nil {
-			return nil, fmt.Errorf("vpn group %s notfound", o.VpnGroup)
+			return nil, err
 		}
 		if o.TunEnable {
 			relay.CreateTun(netrelay.VpnConfig{

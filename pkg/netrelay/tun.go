@@ -114,6 +114,10 @@ func (s *Service) onVpnTun(_ context.Context, p p2p.Peer, stream p2p.Stream) (er
 			s.logger.Tracef("onVpnTun from %s stream close", p.Address)
 		}
 	}()
+	if s.vpnGroup != "" {
+		s.forwardStream(stream, streamVpnTun)
+		return nil
+	}
 
 	packet := make([]byte, 64*1024)
 	for {
@@ -162,6 +166,11 @@ func (s *Service) onVpnRequest(ctx context.Context, p p2p.Peer, stream p2p.Strea
 			s.logger.Tracef("onVpnRequest from %s stream close", p.Address)
 		}
 	}()
+
+	if s.vpnGroup != "" {
+		s.forwardStream(stream, streamVpnRequest)
+		return nil
+	}
 
 	w, r := protobuf.NewWriterAndReader(stream)
 	var req pb.VpnRequest

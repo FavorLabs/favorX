@@ -193,6 +193,12 @@ func (s *Service) onHttpProxy(ctx context.Context, p p2p.Peer, stream p2p.Stream
 		}
 	}()
 
+	if s.proxyGroup != "" {
+		// forward
+		s.forwardStream(stream, streamHttpProxy)
+		return nil
+	}
+
 	buf := bufio.NewReader(stream)
 	// Read the HTTP request from the buffer
 	req, err := http.ReadRequest(buf)

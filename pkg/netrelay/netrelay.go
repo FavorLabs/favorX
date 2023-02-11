@@ -177,6 +177,24 @@ func (s *Service) getForward(group string) (forward []boson.Address, err error) 
 	return
 }
 
+func (s *Service) SetProxyGroup(group string) error {
+	_, err := s.multicast.GetGroupPeers(group)
+	if err != nil {
+		return fmt.Errorf("proxy group %s notfound", group)
+	}
+	s.proxyGroup = group
+	return nil
+}
+
+func (s *Service) SetVpnGroup(group string) error {
+	_, err := s.multicast.GetGroupPeers(group)
+	if err != nil {
+		return fmt.Errorf("vpn group %s notfound", group)
+	}
+	s.vpnGroup = group
+	return nil
+}
+
 func (s *Service) StartProxy(addr, natAddr, group string) {
 	host, port, err := net.SplitHostPort(addr)
 	if err != nil {
