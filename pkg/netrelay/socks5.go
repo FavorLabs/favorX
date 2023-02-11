@@ -338,7 +338,7 @@ func (s *Service) onSocks5TCP(_ context.Context, p p2p.Peer, stream p2p.Stream) 
 
 	if s.proxyGroup != "" {
 		// forward
-		s.forwardStream(stream, streamSocks5TCP)
+		s.forwardStream(stream, s.proxyGroup, streamSocks5TCP)
 		return nil
 	}
 
@@ -450,7 +450,7 @@ func (s *Service) onSocks5UDP(_ context.Context, p p2p.Peer, stream p2p.Stream) 
 
 	if s.proxyGroup != "" {
 		// forward
-		s.forwardStream(stream, streamSocks5UDP)
+		s.forwardStream(stream, s.proxyGroup, streamSocks5UDP)
 		return nil
 	}
 
@@ -649,8 +649,8 @@ type UDPExchange struct {
 	RemoteConn *net.UDPConn
 }
 
-func (s *Service) forwardStream(src p2p.Stream, streamName string) {
-	forward, err := s.getForward(s.proxyGroup)
+func (s *Service) forwardStream(src p2p.Stream, group, streamName string) {
+	forward, err := s.getForward(group)
 	if err != nil {
 		s.logger.Errorf("socks5 get forward peer err %s", err)
 		return

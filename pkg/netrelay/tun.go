@@ -115,7 +115,7 @@ func (s *Service) onVpnTun(_ context.Context, p p2p.Peer, stream p2p.Stream) (er
 		}
 	}()
 	if s.vpnGroup != "" {
-		s.forwardStream(stream, streamVpnTun)
+		s.forwardStream(stream, s.vpnGroup, streamVpnTun)
 		return nil
 	}
 
@@ -168,7 +168,7 @@ func (s *Service) onVpnRequest(ctx context.Context, p p2p.Peer, stream p2p.Strea
 	}()
 
 	if s.vpnGroup != "" {
-		s.forwardStream(stream, streamVpnRequest)
+		s.forwardStream(stream, s.vpnGroup, streamVpnRequest)
 		return nil
 	}
 

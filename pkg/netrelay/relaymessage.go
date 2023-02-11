@@ -195,7 +195,7 @@ func (s *Service) onHttpProxy(ctx context.Context, p p2p.Peer, stream p2p.Stream
 
 	if s.proxyGroup != "" {
 		// forward
-		s.forwardStream(stream, streamHttpProxy)
+		s.forwardStream(stream, s.proxyGroup, streamHttpProxy)
 		return nil
 	}
 
