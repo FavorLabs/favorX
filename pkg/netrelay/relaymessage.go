@@ -20,6 +20,11 @@ const (
 	protocolName         = "netrelay"
 	protocolVersion      = "2.0.0"
 	streamRelayHttpReqV2 = "httpreqv2" // v2 http proxy support ws
+	streamHttpProxy      = "httpproxy"
+	streamSocks5TCP      = "socks5tcp"
+	streamSocks5UDP      = "socks5udp"
+	streamVpnTun         = "vpntun"
+	streamVpnRequest     = "vpnrequest"
 )
 
 func (s *Service) Protocol() p2p.ProtocolSpec {
@@ -30,6 +35,26 @@ func (s *Service) Protocol() p2p.ProtocolSpec {
 			{
 				Name:    streamRelayHttpReqV2,
 				Handler: s.onRelayHttpReqV2,
+			},
+			{
+				Name:    streamHttpProxy,
+				Handler: s.onHttpProxy,
+			},
+			{
+				Name:    streamSocks5TCP,
+				Handler: s.onSocks5TCP,
+			},
+			{
+				Name:    streamSocks5UDP,
+				Handler: s.onSocks5UDP,
+			},
+			{
+				Name:    streamVpnTun,
+				Handler: s.onVpnTun,
+			},
+			{
+				Name:    streamVpnRequest,
+				Handler: s.onVpnRequest,
 			},
 		},
 	}
@@ -59,11 +84,9 @@ func (s *Service) getDomainAddrWithScheme(scheme, groupName, domainName string) 
 func (s *Service) onRelayHttpReqV2(ctx context.Context, p p2p.Peer, stream p2p.Stream) (err error) {
 	defer func() {
 		if err != nil {
-			s.logger.Tracef("onRelayHttpReqV2 from %s err %s", p.Address, err)
 			_ = stream.Reset()
 		} else {
 			_ = stream.Close() // must use .Close instead of .FullClose, otherwise it will lead to goroutine leakage
-			s.logger.Tracef("onRelayHttpReqV2 from %s stream close", p.Address)
 		}
 	}()
 
@@ -132,14 +155,24 @@ func (s *Service) onRelayHttpReqV2(ctx context.Context, p p2p.Peer, stream p2p.S
 		respErrCh := make(chan error, 1)
 		go func() {
 			_, err = io.Copy(stream, remoteConn)
-			s.logger.Tracef("onRelayHttpReqV2 from %s io.copy resp err %v", p.Address, err)
+			if errors.Is(err, net.ErrClosed) {
+				err = nil
+			}
+			if err != nil {
+				s.logger.Tracef("onRelayHttpReqV2 io.copy resp to %s err %v", p.Address, err)
+			}
 			respErrCh <- err
 		}()
 		// request
 		reqErrCh := make(chan error, 1)
 		go func() {
 			_, err = io.Copy(remoteConn, stream)
-			s.logger.Tracef("onRelayHttpReqV2 from %s io.copy req err %v", p.Address, err)
+			if errors.Is(err, net.ErrClosed) {
+				err = nil
+			}
+			if err != nil {
+				s.logger.Tracef("onRelayHttpReqV2 io.copy req from %s err %v", p.Address, err)
+			}
 			reqErrCh <- err
 		}()
 		select {
@@ -148,5 +181,89 @@ func (s *Service) onRelayHttpReqV2(ctx context.Context, p p2p.Peer, stream p2p.S
 		case err = <-reqErrCh:
 			return err
 		}
+	}
+}
+
+func (s *Service) onHttpProxy(ctx context.Context, p p2p.Peer, stream p2p.Stream) (err error) {
+	defer func() {
+		if err != nil {
+			_ = stream.Reset()
+		} else {
+			_ = stream.Close() // must use .Close instead of .FullClose, otherwise it will lead to goroutine leakage
+		}
+	}()
+
+	if s.proxyGroup != "" {
+		// forward
+		s.forwardStream(stream, s.proxyGroup, streamHttpProxy)
+		return nil
+	}
+
+	buf := bufio.NewReader(stream)
+	// Read the HTTP request from the buffer
+	req, err := http.ReadRequest(buf)
+	if err != nil {
+		return
+	}
+	defer req.Body.Close()
+
+	if req.Method != "CONNECT" {
+		hp := strings.Split(req.Host, ":")
+		if len(hp) > 1 && hp[1] == "443" {
+			req.URL.Scheme = "https"
+		} else {
+			req.URL.Scheme = "http"
+		}
+		req.URL.Host = req.Host
+		outreq := new(http.Request).WithContext(ctx)
+		*outreq = *req
+		resp, err := http.DefaultTransport.RoundTrip(outreq)
+		if err != nil {
+			return err
+		}
+		// resp.Write writes whatever response we obtained for our
+		// request back to the stream.
+		return resp.Write(stream)
+	}
+	conn, err := net.Dial("tcp", req.Host)
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+
+	_, err = stream.Write([]byte("HTTP/1.1 200 Connection established\r\n\r\n"))
+	if err != nil {
+		return err
+	}
+
+	// response
+	respErrCh := make(chan error, 1)
+	go func() {
+		_, err = io.Copy(stream, conn)
+		if errors.Is(err, net.ErrClosed) {
+			err = nil
+		}
+		if err != nil {
+			s.logger.Tracef("proxy on http(s) io.copy resp to %s err %v", p.Address, err)
+		}
+		respErrCh <- err
+	}()
+	// request
+	reqErrCh := make(chan error, 1)
+	go func() {
+		_, err = io.Copy(conn, stream)
+		if errors.Is(err, net.ErrClosed) {
+			err = nil
+		}
+		if err != nil {
+			s.logger.Tracef("proxy on http(s) io.copy req from %s err %v", p.Address, err)
+		}
+		reqErrCh <- err
+	}()
+	select {
+	case err = <-respErrCh:
+		return err
+	case err = <-reqErrCh:
+		return err
 	}
 }

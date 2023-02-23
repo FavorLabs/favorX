@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/FavorLabs/favorX/pkg/multicast/model"
 	"github.com/FavorLabs/favorX/pkg/node"
 	"github.com/FavorLabs/favorX/pkg/resolver/multiresolver"
 )
@@ -19,6 +20,10 @@ type Options struct {
 	ApiPort        int
 	DebugAPIPort   int
 	EnableDebugAPI bool
+
+	// vpn setting
+	VpnGroupName string
+	VpnPort      int
 
 	// rpc setting
 	WebsocketPort int
@@ -73,6 +78,7 @@ var defaultOptions = &Options{
 	DebugAPIPort:       1635,
 	WebsocketPort:      1637,
 	P2PPort:            1634,
+	VpnPort:            1638,
 	CacheCapacity:      4000,
 	EnableFullNode:     false,
 	BinMaxPeers:        20,
@@ -91,6 +97,19 @@ func (o Options) DataDir(c *node.Options) {
 
 func (o Options) APIAddr(c *node.Options) {
 	c.APIAddr = fmt.Sprintf("%s:%d", listenAddress, o.ApiPort)
+}
+
+func (o Options) VpnGroup(c *node.Options) {
+	c.VpnGroup = o.VpnGroupName
+	c.Groups = []model.ConfigNodeGroup{{
+		Name:               o.VpnGroupName,
+		GType:              1,
+		KeepConnectedPeers: 1,
+	}}
+}
+
+func (o Options) VpnListen(c *node.Options) {
+	c.VpnListen = fmt.Sprintf("%s:%d", listenAddress, o.VpnPort)
 }
 
 func (o Options) EnableApiTLS(c *node.Options) {

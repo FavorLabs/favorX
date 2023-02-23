@@ -4,12 +4,12 @@ import (
 	"testing"
 
 	"github.com/FavorLabs/favorX/pkg/p2p"
-	"github.com/libp2p/go-libp2p-core/network"
+	"github.com/libp2p/go-libp2p/core/network"
 )
 
-func TestNewAuroraStreamName(t *testing.T) {
+func TestNewProtocolStreamName(t *testing.T) {
 	want := "/boson/hive/1.2.0/peers"
-	got := p2p.NewAuroraStreamName("hive", "1.2.0", "peers")
+	got := p2p.NewProtocolStreamName("hive", "1.2.0", "peers")
 
 	if got != want {
 		t.Errorf("got %s, want %s", got, want)

@@ -6,7 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
-	crypto2 "github.com/libp2p/go-libp2p-core/crypto"
+	crypto2 "github.com/libp2p/go-libp2p/core/crypto"
 )
 
 // Service is the file-based keystore.Service implementation.

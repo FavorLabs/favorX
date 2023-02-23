@@ -601,8 +601,8 @@ func (s *Service) AddGroup(groups []model.ConfigNodeGroup) error {
 		}
 		if err != nil {
 			s.logger.Errorf("Groups: Join group failed :%v ", err.Error())
+			return err
 		}
-		return err
 	}
 	return nil
 }

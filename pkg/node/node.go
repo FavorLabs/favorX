@@ -45,7 +45,7 @@ import (
 	"github.com/FavorLabs/favorX/pkg/tracing"
 	"github.com/FavorLabs/favorX/pkg/traversal"
 	"github.com/gogf/gf/v2/util/gconv"
-	crypto2 "github.com/libp2p/go-libp2p-core/crypto"
+	crypto2 "github.com/libp2p/go-libp2p/core/crypto"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
@@ -57,6 +57,8 @@ type Favor struct {
 	apiCloser        io.Closer
 	apiServer        *http.Server
 	debugAPIServer   *http.Server
+	vpnServer        *http.Server
+	rpcServer        io.Closer
 	resolverCloser   io.Closer
 	errorLogWriter   *io.PipeWriter
 	tracerCloser     io.Closer
@@ -106,6 +108,18 @@ type Options struct {
 	EnableApiTLS           bool
 	TlsCrtFile             string
 	TlsKeyFile             string
+	ProxyEnable            bool
+	ProxyAddr              string
+	ProxyNATAddr           string
+	ProxyGroup             string
+	TunEnable              bool
+	TunCidr4               string
+	TunCidr6               string
+	TunMTU                 int
+	TunServiceIPv4         string
+	TunServiceIPv6         string
+	VpnGroup               string
+	VpnListen              string
 }
 
 func NewNode(nodeMode address.Model, addr string, bosonAddress boson.Address, publicKey ecdsa.PublicKey, signer crypto.Signer, networkID uint64, logger logging.Logger, libp2pPrivateKey crypto2.PrivKey, o Options) (b *Favor, err error) {
@@ -177,7 +191,7 @@ func NewNode(nodeMode address.Model, addr string, bosonAddress boson.Address, pu
 			IdleTimeout:       30 * time.Second,
 			ReadHeaderTimeout: 3 * time.Second,
 			Handler:           debugAPIService,
-			ErrorLog:          log.New(b.errorLogWriter, "", 0),
+			ErrorLog:          log.New(b.errorLogWriter, "debugApi", 0),
 		}
 
 		go func() {
@@ -406,6 +420,60 @@ func NewNode(nodeMode address.Model, addr string, bosonAddress boson.Address, pu
 	if err != nil {
 		return nil, err
 	}
+	if o.ProxyGroup != "" {
+		err = relay.SetProxyGroup(o.ProxyGroup)
+		if err != nil {
+			return nil, err
+		}
+	}
+	if o.ProxyEnable {
+		go relay.StartProxy(o.ProxyAddr, o.ProxyNATAddr, o.ProxyGroup)
+	}
+	if o.VpnGroup != "" {
+		err = relay.SetVpnGroup(o.VpnGroup)
+		if err != nil {
+			return nil, err
+		}
+		if o.TunEnable {
+			relay.CreateTun(netrelay.VpnConfig{
+				ServerIP:   o.TunServiceIPv4,
+				ServerIPv6: o.TunServiceIPv6,
+				CIDR:       o.TunCidr4,
+				CIDRv6:     o.TunCidr6,
+				MTU:        o.TunMTU,
+				Group:      o.VpnGroup,
+			})
+		} else if o.VpnListen != "" {
+			vpnService := relay.NewVpnService(o.VpnGroup)
+			vpnServer := &http.Server{
+				IdleTimeout:       30 * time.Second,
+				ReadHeaderTimeout: 10 * time.Second,
+				Handler:           vpnService,
+				ErrorLog:          log.New(b.errorLogWriter, "vpn", 0),
+			}
+			vpnListener, err := net.Listen("tcp", o.VpnListen)
+			if err != nil {
+				return nil, fmt.Errorf("vpn listener: %w", err)
+			}
+			go func() {
+				if o.EnableApiTLS {
+					logger.Infof("vpn address: wss://%s", vpnListener.Addr())
+					err = vpnServer.ServeTLS(vpnListener, o.TlsCrtFile, o.TlsKeyFile)
+					if err != nil {
+						logger.Errorf("vpn server enable wss: %v", err)
+					}
+				}
+				logger.Infof("vpn address: ws://%s", vpnListener.Addr())
+				err = vpnServer.Serve(vpnListener)
+				if err != nil && err != http.ErrServerClosed {
+					logger.Debugf("vpn server: %v", err)
+					logger.Error("unable to serve vpn")
+				}
+			}()
+
+			b.vpnServer = vpnServer
+		}
+	}
 
 	var apiService api.Service
 	if o.APIAddr != "" {
@@ -430,7 +498,7 @@ func NewNode(nodeMode address.Model, addr string, bosonAddress boson.Address, pu
 			IdleTimeout:       30 * time.Second,
 			ReadHeaderTimeout: 3 * time.Second,
 			Handler:           apiService,
-			ErrorLog:          log.New(b.errorLogWriter, "", 0),
+			ErrorLog:          log.New(b.errorLogWriter, "api", 0),
 		}
 
 		go func() {
@@ -511,6 +579,8 @@ func NewNode(nodeMode address.Model, addr string, bosonAddress boson.Address, pu
 		return nil, err
 	}
 
+	b.rpcServer = stack
+
 	if err = p2ps.Ready(); err != nil {
 		return nil, err
 	}
@@ -541,6 +611,27 @@ func (b *Favor) Shutdown(ctx context.Context) error {
 			if err := b.debugAPIServer.Shutdown(ctx); err != nil {
 				return fmt.Errorf("debug api server: %w", err)
 			}
+			logging.Infof("debug api shutting down")
+			return nil
+		})
+	}
+
+	if b.rpcServer != nil {
+		eg.Go(func() error {
+			if err := b.rpcServer.Close(); err != nil {
+				return fmt.Errorf("rpc server: %w", err)
+			}
+			logging.Infof("rpc shutting down")
+			return nil
+		})
+	}
+
+	if b.vpnServer != nil {
+		eg.Go(func() error {
+			if err := b.vpnServer.Shutdown(ctx); err != nil {
+				return fmt.Errorf("vpn server: %w", err)
+			}
+			logging.Infof("vpn shutting down")
 			return nil
 		})
 	}
