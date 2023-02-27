@@ -44,7 +44,6 @@ import (
 	"github.com/FavorLabs/favorX/pkg/topology/lightnode"
 	"github.com/FavorLabs/favorX/pkg/tracing"
 	"github.com/FavorLabs/favorX/pkg/traversal"
-	"github.com/gogf/gf/v2/util/gconv"
 	crypto2 "github.com/libp2p/go-libp2p/core/crypto"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/sirupsen/logrus"
@@ -104,7 +103,7 @@ type Options struct {
 	TokenEncryptionKey     string
 	AdminPasswordHash      string
 	RouteAlpha             int32
-	Groups                 interface{}
+	Groups                 []model.ConfigNodeGroup
 	EnableApiTLS           bool
 	TlsCrtFile             string
 	TlsKeyFile             string
@@ -402,20 +401,14 @@ func NewNode(nodeMode address.Model, addr string, bosonAddress boson.Address, pu
 	if err != nil {
 		return nil, err
 	}
-	var configGroups []model.ConfigNodeGroup
-	if o.Groups != nil {
-		err = gconv.Struct(o.Groups, &configGroups)
-		if err != nil {
-			logger.Errorf("Group configuration acquisition failed: %v", err)
-			return nil, err
-		}
-		err = group.AddGroup(configGroups)
+	if len(o.Groups) > 0 {
+		err = group.AddGroup(o.Groups)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	relay := netrelay.New(p2ps, logger, configGroups, route, group)
+	relay := netrelay.New(p2ps, logger, o.Groups, route, group)
 	err = p2ps.AddProtocol(relay.Protocol())
 	if err != nil {
 		return nil, err

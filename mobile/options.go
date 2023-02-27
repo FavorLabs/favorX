@@ -25,6 +25,11 @@ type Options struct {
 	VpnGroupName string
 	VpnPort      int
 
+	// proxy setting
+	ProxyEnable    bool
+	ProxyGroupName string
+	ProxyPort      int
+
 	// rpc setting
 	WebsocketPort int
 
@@ -101,15 +106,28 @@ func (o Options) APIAddr(c *node.Options) {
 
 func (o Options) VpnGroup(c *node.Options) {
 	c.VpnGroup = o.VpnGroupName
-	c.Groups = []model.ConfigNodeGroup{{
+	c.Groups = append(c.Groups, model.ConfigNodeGroup{
 		Name:               o.VpnGroupName,
 		GType:              1,
 		KeepConnectedPeers: 1,
-	}}
+	})
 }
 
 func (o Options) VpnListen(c *node.Options) {
 	c.VpnListen = fmt.Sprintf("%s:%d", listenAddress, o.VpnPort)
+}
+
+func (o Options) ProxyGroup(c *node.Options) {
+	c.ProxyGroup = o.ProxyGroupName
+	c.Groups = append(c.Groups, model.ConfigNodeGroup{
+		Name:               o.ProxyGroupName,
+		GType:              1,
+		KeepConnectedPeers: 1,
+	})
+}
+
+func (o Options) ProxyAddr(c *node.Options) {
+	c.ProxyAddr = fmt.Sprintf("%s:%d", listenAddress, o.ProxyPort)
 }
 
 func (o Options) EnableApiTLS(c *node.Options) {
