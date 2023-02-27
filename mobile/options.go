@@ -22,6 +22,7 @@ type Options struct {
 	EnableDebugAPI bool
 
 	// vpn setting
+	VpnEnable    bool
 	VpnGroupName string
 	VpnPort      int
 
@@ -105,6 +106,9 @@ func (o Options) APIAddr(c *node.Options) {
 }
 
 func (o Options) VpnGroup(c *node.Options) {
+	if !o.VpnEnable {
+		return
+	}
 	c.VpnGroup = o.VpnGroupName
 	c.Groups = append(c.Groups, model.ConfigNodeGroup{
 		Name:               o.VpnGroupName,
@@ -114,10 +118,16 @@ func (o Options) VpnGroup(c *node.Options) {
 }
 
 func (o Options) VpnListen(c *node.Options) {
+	if !o.VpnEnable {
+		return
+	}
 	c.VpnListen = fmt.Sprintf("%s:%d", listenAddress, o.VpnPort)
 }
 
 func (o Options) ProxyGroup(c *node.Options) {
+	if !o.ProxyEnable {
+		return
+	}
 	c.ProxyGroup = o.ProxyGroupName
 	c.Groups = append(c.Groups, model.ConfigNodeGroup{
 		Name:               o.ProxyGroupName,
@@ -127,6 +137,9 @@ func (o Options) ProxyGroup(c *node.Options) {
 }
 
 func (o Options) ProxyAddr(c *node.Options) {
+	if !o.ProxyEnable {
+		return
+	}
 	c.ProxyAddr = fmt.Sprintf("%s:%d", listenAddress, o.ProxyPort)
 }
 
