@@ -29,5 +29,9 @@ func ExportDefaultConfig() (o *Options, err error) {
 	o.OracleContract = "0x7F578e5ade91A30aC8ABf120d102E282821bd142"
 	o.ChainEndpoint = "https://data-seed-prebsc-1-s1.binance.org:8545"
 
+	o.Group = "[" +
+		"{\"name\":\"dao-proxy\",\"type\":1,\"keep-connected-peers\":1,\"nodes\":[\"5e93f90b5c5ab366080d81a7eb25cb20428432a950d24b44f82639673bee14dd\"]}" +
+		"]"
+
 	return
 }

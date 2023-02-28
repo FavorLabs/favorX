@@ -2,12 +2,14 @@ package mobile
 
 import (
 	"fmt"
+	"log"
 	"reflect"
 	"strings"
 
-	"github.com/FavorLabs/favorX/pkg/multicast/model"
 	"github.com/FavorLabs/favorX/pkg/node"
 	"github.com/FavorLabs/favorX/pkg/resolver/multiresolver"
+	"github.com/gogf/gf/v2/encoding/gjson"
+	"github.com/gogf/gf/v2/util/gconv"
 )
 
 // Options represents the collection of configuration values to fine tune the
@@ -22,8 +24,17 @@ type Options struct {
 	EnableDebugAPI bool
 
 	// vpn setting
+	VpnEnable    bool
 	VpnGroupName string
 	VpnPort      int
+
+	// proxy setting
+	ProxyEnable    bool
+	ProxyGroupName string
+	ProxyPort      int
+
+	// group setting json
+	Group string
 
 	// rpc setting
 	WebsocketPort int
@@ -100,16 +111,43 @@ func (o Options) APIAddr(c *node.Options) {
 }
 
 func (o Options) VpnGroup(c *node.Options) {
+	if !o.VpnEnable {
+		return
+	}
 	c.VpnGroup = o.VpnGroupName
-	c.Groups = []model.ConfigNodeGroup{{
-		Name:               o.VpnGroupName,
-		GType:              1,
-		KeepConnectedPeers: 1,
-	}}
 }
 
 func (o Options) VpnListen(c *node.Options) {
+	if !o.VpnEnable {
+		return
+	}
 	c.VpnListen = fmt.Sprintf("%s:%d", listenAddress, o.VpnPort)
+}
+
+func (o Options) ProxyGroup(c *node.Options) {
+	if !o.ProxyEnable {
+		return
+	}
+	c.ProxyGroup = o.ProxyGroupName
+}
+
+func (o Options) ProxyAddr(c *node.Options) {
+	if !o.ProxyEnable {
+		return
+	}
+	c.ProxyAddr = fmt.Sprintf("%s:%d", listenAddress, o.ProxyPort)
+}
+
+func (o Options) Groups(c *node.Options) {
+	json, err := gjson.LoadContent(o.Group)
+	if err != nil {
+		log.Println(err)
+	}
+	// var tmp []*model.ConfigNodeGroup
+	err = gconv.Structs(json.Interfaces(), &c.Groups)
+	if err != nil {
+		log.Println(err)
+	}
 }
 
 func (o Options) EnableApiTLS(c *node.Options) {
