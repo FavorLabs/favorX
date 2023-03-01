@@ -37,7 +37,10 @@ CGO_LDFLAGS ?= -L$(LIB_INSTALL_DIR)/lib
 endif
 
 .PHONY: all
-all: check-version lint vet test-race binary
+all: binary
+
+.PHONY: pre
+pre: check-version lint vet test-race binary
 
 .PHONY: binary-ldb
 binary-ldb: dist
