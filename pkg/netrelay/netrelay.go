@@ -35,8 +35,8 @@ type Service struct {
 	socks5UDPAddr *net.UDPAddr
 	proxyGroup    string
 	iface         *water.Interface
-	vpnGroup      string
-	vpnConfig     VpnConfig
+	tunGroup      string
+	tunConfig     TunConfig
 }
 
 func New(streamer p2p.Streamer, logging logging.Logger, groups []model.ConfigNodeGroup, route routetab.RouteTab, multicast multicast.GroupInterface) *Service {
@@ -187,16 +187,16 @@ func (s *Service) SetProxyGroup(group string) error {
 	return nil
 }
 
-func (s *Service) SetVpnGroup(group string) error {
+func (s *Service) SetTunGroup(group string) error {
 	_, err := s.multicast.GetGroupPeers(group)
 	if err != nil {
-		return fmt.Errorf("vpn group %s notfound", group)
+		return fmt.Errorf("tun forward group %s notfound", group)
 	}
-	s.vpnGroup = group
+	s.tunGroup = group
 	return nil
 }
 
-func (s *Service) StartProxy(addr, natAddr, group string) {
+func (s *Service) StartProxy(addr, natAddr string) (*net.TCPListener, *net.UDPConn) {
 	host, port, err := net.SplitHostPort(addr)
 	if err != nil {
 		panic(err)
@@ -223,17 +223,19 @@ func (s *Service) StartProxy(addr, natAddr, group string) {
 		s.logger.Errorf("proxy listen tcp %s err", addr, err.Error())
 		panic(err)
 	}
-	s.proxyGroup = group
 	go s.enableSocks5UDP(addr, natAddr)
 	s.logger.Infof("proxy listen tcp %s", localServer.Addr())
-	for {
-		conn, e := localServer.Accept()
-		if e != nil {
-			s.logger.Warningf("proxy tcp accept err", e.Error())
-			continue
+	go func() {
+		for {
+			conn, e := localServer.Accept()
+			if e != nil {
+				s.logger.Warningf("proxy tcp accept err", e.Error())
+				continue
+			}
+			s.parseFirst(conn)
 		}
-		s.parseFirst(conn)
-	}
+	}()
+	return localServer, s.socks5UDPConn
 }
 
 func (s *Service) parseFirst(conn net.Conn) {

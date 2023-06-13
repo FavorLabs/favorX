@@ -166,8 +166,9 @@ func (c *command) initStartCmd() (err error) {
 				TunMTU:                 c.config.GetInt(optionNameTunMTU),
 				TunServiceIPv4:         c.config.GetString(optionNameTunServiceIP4),
 				TunServiceIPv6:         c.config.GetString(optionNameTunServiceIP6),
-				VpnGroup:               c.config.GetString(optionNameVpnGroup),
-				VpnListen:              c.config.GetString(optionNameVpnListen),
+				TunGroup:               c.config.GetString(optionNameTunGroup),
+				VpnEnable:              c.config.GetBool(optionNameVpnEnable),
+				VpnAddr:                c.config.GetString(optionNameVpnAddr),
 			})
 			if err != nil {
 				return err

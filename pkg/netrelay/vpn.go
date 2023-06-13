@@ -9,7 +9,9 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/FavorLabs/favorX/pkg/boson"
 	"github.com/FavorLabs/favorX/pkg/logging"
+	"github.com/FavorLabs/favorX/pkg/multicast/model"
 	"github.com/FavorLabs/favorX/pkg/netrelay/pb"
 	"github.com/FavorLabs/favorX/pkg/p2p"
 	"github.com/FavorLabs/favorX/pkg/p2p/protobuf"
@@ -21,14 +23,12 @@ import (
 	"resenje.org/web"
 )
 
-type VpnConfig struct {
+type TunConfig struct {
 	ServerIP   string
 	ServerIPv6 string
 	CIDR       string
 	CIDRv6     string
 	MTU        int
-	Group      string
-	Listen     string
 }
 
 type VpnService struct {
@@ -37,37 +37,76 @@ type VpnService struct {
 }
 
 func (v *VpnService) ws(w http.ResponseWriter, r *http.Request) {
+	group := r.Header.Get("group")
 	wsconn, _, _, err := ws.UpgradeHTTP(r, w)
 	if err != nil {
 		v.logger.Infof("[vpn server] failed to upgrade http %v", err)
 		return
 	}
-	st, err := v.service.createStream(wsconn)
+	st, err := v.service.createStream(wsconn, group)
 	if err != nil {
+		wsconn.Close()
 		v.logger.Warningf("[vpn server] failed create stream %v", err)
 		return
 	}
 	v.service.toServer(wsconn, st)
 }
 
-func (v *VpnService) ip(w http.ResponseWriter, req *http.Request) {
-	ip := req.Header.Get("X-Forwarded-For")
+func (v *VpnService) addObserveGroup(w http.ResponseWriter, r *http.Request) {
+	group := r.Header.Get("group")
+	list := strings.Split(r.URL.Query().Get("nodes"), ",")
+	nodes := make([]boson.Address, 0)
+	for _, v := range list {
+		address, err := boson.ParseHexAddress(v)
+		if err != nil {
+			io.WriteString(w, err.Error())
+			return
+		}
+		nodes = append(nodes, address)
+	}
+	err := v.service.multicast.AddGroup([]model.ConfigNodeGroup{{
+		Name:               group,
+		GType:              1,
+		KeepConnectedPeers: len(nodes),
+		Nodes:              nodes,
+	}})
+	if err != nil {
+		io.WriteString(w, err.Error())
+		return
+	}
+	io.WriteString(w, "OK")
+}
+
+func (v *VpnService) delObserveGroup(w http.ResponseWriter, r *http.Request) {
+	group := r.Header.Get("group")
+	err := v.service.multicast.RemoveGroup(group, model.GTypeObserve)
+	if err != nil {
+		io.WriteString(w, err.Error())
+		return
+	}
+	io.WriteString(w, "OK")
+}
+
+func (v *VpnService) ip(w http.ResponseWriter, r *http.Request) {
+	ip := r.Header.Get("X-Forwarded-For")
 	if ip == "" {
-		ip = strings.Split(req.RemoteAddr, ":")[0]
+		ip = strings.Split(r.RemoteAddr, ":")[0]
 	}
 	resp := fmt.Sprintf("%v", ip)
 	io.WriteString(w, resp)
 }
 
 func (v *VpnService) pickIP(w http.ResponseWriter, r *http.Request) {
-	_, resp := v.service.vpnRequest(r.Context(), "/register/pick/ip", "")
+	group := r.Header.Get("group")
+	_, resp := v.service.vpnRequest(r.Context(), group, "/register/pick/ip", "")
 	io.WriteString(w, resp)
 }
 
 func (v *VpnService) deleteIP(w http.ResponseWriter, r *http.Request) {
+	group := r.Header.Get("group")
 	ip := r.URL.Query().Get("ip")
 	if ip != "" {
-		_, resp := v.service.vpnRequest(r.Context(), "/register/delete/ip", ip)
+		_, resp := v.service.vpnRequest(r.Context(), group, "/register/delete/ip", ip)
 		io.WriteString(w, resp)
 		return
 	}
@@ -75,9 +114,10 @@ func (v *VpnService) deleteIP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (v *VpnService) keepaliveIP(w http.ResponseWriter, r *http.Request) {
+	group := r.Header.Get("group")
 	ip := r.URL.Query().Get("ip")
 	if ip != "" {
-		_, resp := v.service.vpnRequest(r.Context(), "/register/keepalive/ip", ip)
+		_, resp := v.service.vpnRequest(r.Context(), group, "/register/keepalive/ip", ip)
 		io.WriteString(w, resp)
 		return
 	}
@@ -85,17 +125,20 @@ func (v *VpnService) keepaliveIP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (v *VpnService) listIP(w http.ResponseWriter, r *http.Request) {
-	_, resp := v.service.vpnRequest(r.Context(), "/register/list/ip", "")
+	group := r.Header.Get("group")
+	_, resp := v.service.vpnRequest(r.Context(), group, "/register/list/ip", "")
 	io.WriteString(w, resp)
 }
 
 func (v *VpnService) prefixIPv4(w http.ResponseWriter, r *http.Request) {
-	_, resp := v.service.vpnRequest(r.Context(), "/register/prefix/ipv4", "")
+	group := r.Header.Get("group")
+	_, resp := v.service.vpnRequest(r.Context(), group, "/register/prefix/ipv4", "")
 	io.WriteString(w, resp)
 }
 
 func (v *VpnService) prefixIPv6(w http.ResponseWriter, r *http.Request) {
-	_, resp := v.service.vpnRequest(r.Context(), "/register/prefix/ipv6", "")
+	group := r.Header.Get("group")
+	_, resp := v.service.vpnRequest(r.Context(), group, "/register/prefix/ipv6", "")
 	io.WriteString(w, resp)
 }
 
@@ -104,19 +147,20 @@ func (v *VpnService) stats(w http.ResponseWriter, r *http.Request) {
 }
 
 func (v *VpnService) test(w http.ResponseWriter, r *http.Request) {
-	_, resp := v.service.vpnRequest(r.Context(), "/test", "")
+	group := r.Header.Get("group")
+	_, resp := v.service.vpnRequest(r.Context(), group, "/test", "")
 	io.WriteString(w, resp)
 }
 
-func (s *Service) NewVpnService(group string) http.Handler {
-	s.vpnGroup = group
-
+func (s *Service) NewVpnService() http.Handler {
 	srv := &VpnService{
 		service: s,
 		logger:  s.logger,
 	}
 
 	router := mux.NewRouter()
+	router.HandleFunc("/observe/add/group", srv.addObserveGroup)
+	router.HandleFunc("/observe/delete/group", srv.delObserveGroup)
 	router.HandleFunc("/ws", srv.ws)
 	router.HandleFunc("/ip", srv.ip)
 	router.HandleFunc("/test", srv.test)
@@ -174,10 +218,10 @@ func (s *Service) toClient(wsconn net.Conn, st p2p.Stream) {
 	}
 }
 
-func (s *Service) createStream(wsconn net.Conn) (st p2p.Stream, err error) {
-	forward, err := s.getForward(s.vpnGroup)
+func (s *Service) createStream(wsconn net.Conn, group string) (st p2p.Stream, err error) {
+	forward, err := s.getForward(group)
 	if err != nil {
-		s.logger.Errorf("get group(%s) peer err %s", s.vpnGroup, err)
+		s.logger.Errorf("get group(%s) peer err %s", group, err)
 		return
 	}
 	for _, peer := range forward {
@@ -194,8 +238,8 @@ func (s *Service) createStream(wsconn net.Conn) (st p2p.Stream, err error) {
 	return
 }
 
-func (s *Service) vpnRequest(ctx context.Context, path, ip string) (err error, respBody string) {
-	forward, err := s.getForward(s.vpnGroup)
+func (s *Service) vpnRequest(ctx context.Context, group, path, ip string) (err error, respBody string) {
+	forward, err := s.getForward(group)
 	if err != nil {
 		return err, ""
 	}

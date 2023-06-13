@@ -72,8 +72,9 @@ const (
 	optionNameTunMTU                = "tun-mtu"
 	optionNameTunServiceIP4         = "tun-sip4"
 	optionNameTunServiceIP6         = "tun-sip6"
-	optionNameVpnGroup              = "vpn-group"
-	optionNameVpnListen             = "vpn-listen"
+	optionNameTunGroup              = "tun-group"
+	optionNameVpnEnable             = "vpn-enable"
+	optionNameVpnAddr               = "vpn-addr"
 )
 
 func init() {
@@ -260,8 +261,9 @@ func (c *command) setAllFlags(cmd *cobra.Command) {
 	cmd.Flags().Int(optionNameTunMTU, 1500, "tun mtu")
 	cmd.Flags().String(optionNameTunServiceIP4, "172.16.0.1", "server ip")
 	cmd.Flags().String(optionNameTunServiceIP6, "fec0:9999::1", "server ipv6")
-	cmd.Flags().String(optionNameVpnGroup, "", "group name of vpn service")
-	cmd.Flags().String(optionNameVpnListen, "", "listening address of vpn service")
+	cmd.Flags().String(optionNameTunGroup, "", "group name of tunnel")
+	cmd.Flags().Bool(optionNameVpnEnable, false, "enable tunnel of vpn service")
+	cmd.Flags().String(optionNameVpnAddr, ":1638", "listening address of vpn server")
 }
 
 func newLogger(cmd *cobra.Command, verbosity string) (logging.Logger, error) {
