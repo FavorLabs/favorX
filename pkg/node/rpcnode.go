@@ -241,6 +241,7 @@ func (n *Node) stopInProc() {
 // Wait blocks until the node is closed.
 func (n *Node) Wait() {
 	<-n.stop
+	n.stopRPC()
 }
 
 // RegisterAPIs registers the APIs a service provides on the node.

@@ -23,7 +23,7 @@ import (
 )
 
 // CreateTun creates a tun interface
-func (s *Service) CreateTun(config VpnConfig) (iface *water.Interface) {
+func (s *Service) CreateTun(config TunConfig) (iface *water.Interface) {
 	c := water.Config{DeviceType: water.TUN}
 	c.PlatformSpecificParams = water.PlatformSpecificParams{}
 	os := runtime.GOOS
@@ -41,12 +41,12 @@ func (s *Service) CreateTun(config VpnConfig) (iface *water.Interface) {
 	s.setRoute(config, iface)
 	go s.forwardVpn(iface)
 	s.iface = iface
-	s.vpnConfig = config
+	s.tunConfig = config
 	return iface
 }
 
 // setRoute sets the system routes
-func (s *Service) setRoute(config VpnConfig, iface *water.Interface) {
+func (s *Service) setRoute(config TunConfig, iface *water.Interface) {
 	ip, _, err := net.ParseCIDR(config.CIDR)
 	if err != nil {
 		log.Panicf("tun error cidr %v", config.CIDR)
@@ -114,8 +114,8 @@ func (s *Service) onVpnTun(_ context.Context, p p2p.Peer, stream p2p.Stream) (er
 			s.logger.Tracef("onVpnTun from %s stream close", p.Address)
 		}
 	}()
-	if s.vpnGroup != "" && s.vpnConfig.CIDR == "" {
-		s.forwardStream(stream, s.vpnGroup, streamVpnTun)
+	if s.tunGroup != "" {
+		s.forwardStream(stream, s.tunGroup, streamVpnTun)
 		return nil
 	}
 
@@ -167,8 +167,8 @@ func (s *Service) onVpnRequest(ctx context.Context, p p2p.Peer, stream p2p.Strea
 		}
 	}()
 
-	if s.vpnGroup != "" && s.vpnConfig.CIDR == "" {
-		s.forwardStream(stream, s.vpnGroup, streamVpnRequest)
+	if s.tunGroup != "" {
+		s.forwardStream(stream, s.tunGroup, streamVpnRequest)
 		return nil
 	}
 
@@ -182,7 +182,7 @@ func (s *Service) onVpnRequest(ctx context.Context, p p2p.Peer, stream p2p.Strea
 	case "/test":
 		err = w.WriteMsgWithContext(ctx, &pb.VpnResponse{Body: "OK"})
 	case "/register/pick/ip":
-		ip, pl := register.PickClientIP(s.vpnConfig.CIDR)
+		ip, pl := register.PickClientIP(s.tunConfig.CIDR)
 		resp := fmt.Sprintf("%v/%v", ip, pl)
 		err = w.WriteMsgWithContext(ctx, &pb.VpnResponse{Body: resp})
 	case "/register/delete/ip":
@@ -199,7 +199,7 @@ func (s *Service) onVpnRequest(ctx context.Context, p p2p.Peer, stream p2p.Strea
 		resp := strings.Join(register.ListClientIPs(), "\r\n")
 		err = w.WriteMsgWithContext(ctx, &pb.VpnResponse{Body: resp})
 	case "/register/prefix/ipv4":
-		_, ipv4Net, e := net.ParseCIDR(s.vpnConfig.CIDR)
+		_, ipv4Net, e := net.ParseCIDR(s.tunConfig.CIDR)
 		var resp string
 		if e != nil {
 			resp = "error"
@@ -208,7 +208,7 @@ func (s *Service) onVpnRequest(ctx context.Context, p p2p.Peer, stream p2p.Strea
 		}
 		err = w.WriteMsgWithContext(ctx, &pb.VpnResponse{Body: resp})
 	case "/register/prefix/ipv6":
-		_, ipv6Net, e := net.ParseCIDR(s.vpnConfig.CIDRv6)
+		_, ipv6Net, e := net.ParseCIDR(s.tunConfig.CIDRv6)
 		var resp string
 		if e != nil {
 			resp = "error"

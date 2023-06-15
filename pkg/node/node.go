@@ -3,6 +3,7 @@ package node
 import (
 	"context"
 	"crypto/ecdsa"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -57,6 +58,8 @@ type Favor struct {
 	apiServer        *http.Server
 	debugAPIServer   *http.Server
 	vpnServer        *http.Server
+	proxyTCPServer   io.Closer
+	proxyUDPServer   io.Closer
 	rpcServer        io.Closer
 	resolverCloser   io.Closer
 	errorLogWriter   *io.PipeWriter
@@ -117,8 +120,9 @@ type Options struct {
 	TunMTU                 int
 	TunServiceIPv4         string
 	TunServiceIPv6         string
-	VpnGroup               string
-	VpnListen              string
+	TunGroup               string
+	VpnEnable              bool
+	VpnAddr                string
 }
 
 func NewNode(nodeMode address.Model, addr string, bosonAddress boson.Address, publicKey ecdsa.PublicKey, signer crypto.Signer, networkID uint64, logger logging.Logger, libp2pPrivateKey crypto2.PrivKey, o Options) (b *Favor, err error) {
@@ -420,52 +424,56 @@ func NewNode(nodeMode address.Model, addr string, bosonAddress boson.Address, pu
 		}
 	}
 	if o.ProxyEnable {
-		go relay.StartProxy(o.ProxyAddr, o.ProxyNATAddr, o.ProxyGroup)
+		if o.ProxyGroup == "" {
+			return nil, errors.New("please set proxy-group or disable proxy")
+		}
+		b.proxyTCPServer = relay.StartProxyTCP(o.ProxyAddr, o.ProxyNATAddr)
+		b.proxyUDPServer = relay.StartProxyUDP(o.ProxyAddr, o.ProxyNATAddr)
 	}
-	if o.VpnGroup != "" {
-		err = relay.SetVpnGroup(o.VpnGroup)
+	if o.TunGroup != "" {
+		err = relay.SetTunGroup(o.TunGroup)
 		if err != nil {
 			return nil, err
 		}
-		if o.TunEnable {
-			relay.CreateTun(netrelay.VpnConfig{
-				ServerIP:   o.TunServiceIPv4,
-				ServerIPv6: o.TunServiceIPv6,
-				CIDR:       o.TunCidr4,
-				CIDRv6:     o.TunCidr6,
-				MTU:        o.TunMTU,
-				Group:      o.VpnGroup,
-			})
-		} else if o.VpnListen != "" {
-			vpnService := relay.NewVpnService(o.VpnGroup)
-			vpnServer := &http.Server{
-				IdleTimeout:       30 * time.Second,
-				ReadHeaderTimeout: 10 * time.Second,
-				Handler:           vpnService,
-				ErrorLog:          log.New(b.errorLogWriter, "vpn", 0),
-			}
-			vpnListener, err := net.Listen("tcp", o.VpnListen)
-			if err != nil {
-				return nil, fmt.Errorf("vpn listener: %w", err)
-			}
-			go func() {
-				if o.EnableApiTLS {
-					logger.Infof("vpn address: wss://%s", vpnListener.Addr())
-					err = vpnServer.ServeTLS(vpnListener, o.TlsCrtFile, o.TlsKeyFile)
-					if err != nil {
-						logger.Errorf("vpn server enable wss: %v", err)
-					}
-				}
-				logger.Infof("vpn address: ws://%s", vpnListener.Addr())
-				err = vpnServer.Serve(vpnListener)
-				if err != nil && err != http.ErrServerClosed {
-					logger.Debugf("vpn server: %v", err)
-					logger.Error("unable to serve vpn")
-				}
-			}()
-
-			b.vpnServer = vpnServer
+	}
+	if o.TunEnable {
+		relay.CreateTun(netrelay.TunConfig{
+			ServerIP:   o.TunServiceIPv4,
+			ServerIPv6: o.TunServiceIPv6,
+			CIDR:       o.TunCidr4,
+			CIDRv6:     o.TunCidr6,
+			MTU:        o.TunMTU,
+		})
+	}
+	if o.VpnEnable {
+		vpnService := relay.NewVpnService()
+		vpnServer := &http.Server{
+			IdleTimeout:       30 * time.Second,
+			ReadHeaderTimeout: 10 * time.Second,
+			Handler:           vpnService,
+			ErrorLog:          log.New(b.errorLogWriter, "vpn", 0),
 		}
+		vpnListener, err := net.Listen("tcp", o.VpnAddr)
+		if err != nil {
+			return nil, fmt.Errorf("vpn listener: %w", err)
+		}
+		go func() {
+			if o.EnableApiTLS {
+				logger.Infof("vpn address: wss://%s", vpnListener.Addr())
+				err = vpnServer.ServeTLS(vpnListener, o.TlsCrtFile, o.TlsKeyFile)
+				if err != nil {
+					logger.Errorf("vpn server enable wss: %v", err)
+				}
+			}
+			logger.Infof("vpn address: ws://%s", vpnListener.Addr())
+			err = vpnServer.Serve(vpnListener)
+			if err != nil && err != http.ErrServerClosed {
+				logger.Debugf("vpn server: %v", err)
+				logger.Error("unable to serve vpn")
+			}
+		}()
+
+		b.vpnServer = vpnServer
 	}
 
 	var apiService api.Service
@@ -573,6 +581,7 @@ func NewNode(nodeMode address.Model, addr string, bosonAddress boson.Address, pu
 	}
 
 	b.rpcServer = stack
+	go stack.Wait()
 
 	if err = p2ps.Ready(); err != nil {
 		return nil, err
@@ -625,6 +634,24 @@ func (b *Favor) Shutdown(ctx context.Context) error {
 				return fmt.Errorf("vpn server: %w", err)
 			}
 			logging.Infof("vpn shutting down")
+			return nil
+		})
+	}
+	if b.proxyTCPServer != nil {
+		eg.Go(func() error {
+			if err := b.proxyTCPServer.Close(); err != nil {
+				return fmt.Errorf("proxy tcp server: %w", err)
+			}
+			logging.Infof("proxy tcp shutting down")
+			return nil
+		})
+	}
+	if b.proxyUDPServer != nil {
+		eg.Go(func() error {
+			if err := b.proxyUDPServer.Close(); err != nil {
+				return fmt.Errorf("proxy udp server: %w", err)
+			}
+			logging.Infof("proxy udp shutting down")
 			return nil
 		})
 	}

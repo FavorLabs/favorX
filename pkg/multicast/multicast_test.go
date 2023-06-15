@@ -1,6 +1,9 @@
 package multicast
 
 import (
+	"io"
+	"testing"
+
 	"github.com/FavorLabs/favorX/pkg/address"
 	"github.com/FavorLabs/favorX/pkg/boson/test"
 	"github.com/FavorLabs/favorX/pkg/logging"
@@ -10,8 +13,6 @@ import (
 	"github.com/FavorLabs/favorX/pkg/topology/kademlia/mock"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/sirupsen/logrus"
-	"io"
-	"testing"
 )
 
 var (
@@ -50,7 +51,7 @@ func TestService_ObserveGroup(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = s.RemoveGroup(gid, model.GTypeObserve)
+	err = s.RemoveGroup("gid1", model.GTypeObserve)
 	if err != nil {
 		t.Fatal(err)
 	}
