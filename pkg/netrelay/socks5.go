@@ -41,44 +41,6 @@ var (
 	ErrBadRequest = errors.New("bad Request")
 )
 
-func (s *Service) enableSocks5UDP(addr, natAddr string) {
-	ipaddr, err := net.ResolveUDPAddr("udp", addr)
-	if err != nil {
-		panic(err)
-	}
-	if natAddr != "" {
-		s.socks5UDPAddr, err = net.ResolveUDPAddr("udp", natAddr)
-		if err != nil {
-			panic(err)
-		}
-	} else {
-		s.socks5UDPAddr = ipaddr
-	}
-
-	s.socks5UDPConn, err = net.ListenUDP("udp", ipaddr)
-	defer func() {
-		if s.socks5UDPConn != nil {
-			_ = s.socks5UDPConn.Close()
-		}
-	}()
-	if err != nil {
-		s.logger.Errorf("socks5 listen udp %s err", addr, err.Error())
-		panic(err)
-	}
-
-	s.logger.Infof("proxy enabled socks5 udp %s", s.socks5UDPConn.LocalAddr())
-	for {
-		b := make([]byte, 65507)
-		n, src, e := s.socks5UDPConn.ReadFromUDP(b)
-		if e != nil {
-			s.logger.Warningf("socks5 udp read err", e.Error())
-			continue
-		}
-		s.logger.Debugf("proxy socks5(udp) got from %s", src)
-		go s.socks5ProxyUDP(src, b[0:n])
-	}
-}
-
 // Datagram is the UDP packet
 type Datagram struct {
 	Rsv     []byte // 0x00 0x00

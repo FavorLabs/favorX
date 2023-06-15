@@ -427,7 +427,8 @@ func NewNode(nodeMode address.Model, addr string, bosonAddress boson.Address, pu
 		if o.ProxyGroup == "" {
 			return nil, errors.New("please set proxy-group or disable proxy")
 		}
-		b.proxyTCPServer, b.proxyUDPServer = relay.StartProxy(o.ProxyAddr, o.ProxyNATAddr)
+		b.proxyTCPServer = relay.StartProxyTCP(o.ProxyAddr, o.ProxyNATAddr)
+		b.proxyUDPServer = relay.StartProxyUDP(o.ProxyAddr, o.ProxyNATAddr)
 	}
 	if o.TunGroup != "" {
 		err = relay.SetTunGroup(o.TunGroup)
@@ -580,6 +581,7 @@ func NewNode(nodeMode address.Model, addr string, bosonAddress boson.Address, pu
 	}
 
 	b.rpcServer = stack
+	go stack.Wait()
 
 	if err = p2ps.Ready(); err != nil {
 		return nil, err

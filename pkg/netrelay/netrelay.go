@@ -196,7 +196,7 @@ func (s *Service) SetTunGroup(group string) error {
 	return nil
 }
 
-func (s *Service) StartProxy(addr, natAddr string) (*net.TCPListener, *net.UDPConn) {
+func (s *Service) StartProxyTCP(addr, natAddr string) *net.TCPListener {
 	host, port, err := net.SplitHostPort(addr)
 	if err != nil {
 		panic(err)
@@ -214,28 +214,66 @@ func (s *Service) StartProxy(addr, natAddr string) (*net.TCPListener, *net.UDPCo
 		}
 	}
 	localServer, err := net.ListenTCP("tcp", ipaddr)
-	defer func() {
-		if localServer != nil {
-			_ = localServer.Close()
-		}
-	}()
 	if err != nil {
 		s.logger.Errorf("proxy listen tcp %s err", addr, err.Error())
 		panic(err)
 	}
-	go s.enableSocks5UDP(addr, natAddr)
 	s.logger.Infof("proxy listen tcp %s", localServer.Addr())
 	go func() {
 		for {
 			conn, e := localServer.Accept()
 			if e != nil {
+				if errors.Is(e, net.ErrClosed) {
+					s.logger.Info("proxy tcp closed")
+					break
+				}
 				s.logger.Warningf("proxy tcp accept err", e.Error())
 				continue
 			}
 			s.parseFirst(conn)
 		}
 	}()
-	return localServer, s.socks5UDPConn
+	return localServer
+}
+
+func (s *Service) StartProxyUDP(addr, natAddr string) *net.UDPConn {
+	ipaddr, err := net.ResolveUDPAddr("udp", addr)
+	if err != nil {
+		panic(err)
+	}
+	if natAddr != "" {
+		s.socks5UDPAddr, err = net.ResolveUDPAddr("udp", natAddr)
+		if err != nil {
+			panic(err)
+		}
+	} else {
+		s.socks5UDPAddr = ipaddr
+	}
+
+	s.socks5UDPConn, err = net.ListenUDP("udp", ipaddr)
+	if err != nil {
+		s.logger.Errorf("socks5 listen udp %s err", addr, err.Error())
+		panic(err)
+	}
+
+	s.logger.Infof("proxy enabled socks5 udp %s", s.socks5UDPConn.LocalAddr())
+	go func() {
+		for {
+			b := make([]byte, 65507)
+			n, src, e := s.socks5UDPConn.ReadFromUDP(b)
+			if e != nil {
+				if errors.Is(e, net.ErrClosed) {
+					s.logger.Info("proxy socks5 udp closed")
+					break
+				}
+				s.logger.Warningf("proxy socks5 udp read err", e.Error())
+				continue
+			}
+			s.logger.Debugf("proxy socks5(udp) got from %s", src)
+			go s.socks5ProxyUDP(src, b[0:n])
+		}
+	}()
+	return s.socks5UDPConn
 }
 
 func (s *Service) parseFirst(conn net.Conn) {
