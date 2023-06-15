@@ -12,7 +12,7 @@ import (
 type GroupInterface interface {
 	Multicast(info *pb.MulticastMsg, skip ...boson.Address) error
 	AddGroup(groups []model.ConfigNodeGroup) error
-	RemoveGroup(gid boson.Address, gType model.GType) error
+	RemoveGroup(group string, gType model.GType) error
 	Snapshot() *model.KadParams
 	StartDiscover()
 	SubscribeLogContent(n *rpc.Notifier, sub *rpc.Subscription)

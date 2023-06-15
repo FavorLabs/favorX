@@ -2,11 +2,14 @@ package mobile
 
 import (
 	"fmt"
+	"log"
 	"reflect"
 	"strings"
 
 	"github.com/FavorLabs/favorX/pkg/node"
 	"github.com/FavorLabs/favorX/pkg/resolver/multiresolver"
+	"github.com/gogf/gf/v2/encoding/gjson"
+	"github.com/gogf/gf/v2/util/gconv"
 )
 
 // Options represents the collection of configuration values to fine tune the
@@ -19,6 +22,18 @@ type Options struct {
 	ApiPort        int
 	DebugAPIPort   int
 	EnableDebugAPI bool
+
+	// vpn setting
+	VpnEnable bool
+	VpnPort   int
+
+	// proxy setting
+	ProxyEnable    bool
+	ProxyGroupName string
+	ProxyPort      int
+
+	// group setting json
+	Group string
 
 	// rpc setting
 	WebsocketPort int
@@ -73,6 +88,7 @@ var defaultOptions = &Options{
 	DebugAPIPort:       1635,
 	WebsocketPort:      1637,
 	P2PPort:            1634,
+	VpnPort:            1638,
 	CacheCapacity:      4000,
 	EnableFullNode:     false,
 	BinMaxPeers:        20,
@@ -91,6 +107,39 @@ func (o Options) DataDir(c *node.Options) {
 
 func (o Options) APIAddr(c *node.Options) {
 	c.APIAddr = fmt.Sprintf("%s:%d", listenAddress, o.ApiPort)
+}
+
+func (o Options) VpnAddr(c *node.Options) {
+	if !o.VpnEnable {
+		return
+	}
+	c.VpnAddr = fmt.Sprintf("%s:%d", listenAddress, o.VpnPort)
+}
+
+func (o Options) ProxyGroup(c *node.Options) {
+	if !o.ProxyEnable {
+		return
+	}
+	c.ProxyGroup = o.ProxyGroupName
+}
+
+func (o Options) ProxyAddr(c *node.Options) {
+	if !o.ProxyEnable {
+		return
+	}
+	c.ProxyAddr = fmt.Sprintf("%s:%d", listenAddress, o.ProxyPort)
+}
+
+func (o Options) Groups(c *node.Options) {
+	json, err := gjson.LoadContent(o.Group)
+	if err != nil {
+		log.Println(err)
+	}
+	// var tmp []*model.ConfigNodeGroup
+	err = gconv.Structs(json.Interfaces(), &c.Groups)
+	if err != nil {
+		log.Println(err)
+	}
 }
 
 func (o Options) EnableApiTLS(c *node.Options) {

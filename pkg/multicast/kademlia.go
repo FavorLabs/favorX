@@ -601,13 +601,17 @@ func (s *Service) AddGroup(groups []model.ConfigNodeGroup) error {
 		}
 		if err != nil {
 			s.logger.Errorf("Groups: Join group failed :%v ", err.Error())
+			return err
 		}
-		return err
 	}
 	return nil
 }
 
-func (s *Service) RemoveGroup(gid boson.Address, gType model.GType) error {
+func (s *Service) RemoveGroup(group string, gType model.GType) error {
+	gid, err := boson.ParseHexAddress(group)
+	if err != nil {
+		gid = GenerateGID(group)
+	}
 	defer s.refreshProtectPeers()
 	switch gType {
 	case model.GTypeObserve:

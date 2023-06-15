@@ -12,7 +12,7 @@ import (
 	"github.com/FavorLabs/favorX/pkg/p2p"
 	"github.com/FavorLabs/favorX/pkg/p2p/libp2p"
 	libp2pm "github.com/libp2p/go-libp2p"
-	"github.com/libp2p/go-libp2p-core/host"
+	"github.com/libp2p/go-libp2p/core/host"
 	bhost "github.com/libp2p/go-libp2p/p2p/host/basic"
 	swarmt "github.com/libp2p/go-libp2p/p2p/net/swarm/testing"
 	"github.com/multiformats/go-multistream"

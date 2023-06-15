@@ -22,10 +22,12 @@ import (
 	memkeystore "github.com/FavorLabs/favorX/pkg/keystore/mem"
 	"github.com/FavorLabs/favorX/pkg/keystore/p2pkey"
 	"github.com/FavorLabs/favorX/pkg/logging"
+	"github.com/FavorLabs/favorX/pkg/multicast/model"
 	"github.com/FavorLabs/favorX/pkg/node"
 	"github.com/FavorLabs/favorX/pkg/resolver/multiresolver"
+	"github.com/gogf/gf/v2/util/gconv"
 	"github.com/kardianos/service"
-	crypto2 "github.com/libp2p/go-libp2p-core/crypto"
+	crypto2 "github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/spf13/cobra"
 )
 
@@ -106,6 +108,15 @@ func (c *command) initStartCmd() (err error) {
 				logger.Info("Start node mode light.")
 			}
 
+			var configGroups []model.ConfigNodeGroup
+			if obj := c.config.Get(optionNameGroups); obj != nil {
+				err = gconv.Struct(obj, &configGroups)
+				if err != nil {
+					logger.Errorf("Group configuration acquisition failed: %v", err)
+					return err
+				}
+			}
+
 			b, err := node.NewNode(mode, c.config.GetString(optionNameP2PAddr), signerCfg.address, *signerCfg.publicKey, signerCfg.signer, c.config.GetUint64(optionNameNetworkID), logger, signerCfg.libp2pPrivateKey, node.Options{
 				DataDir:                c.config.GetString(optionNameDataDir),
 				CacheCapacity:          c.config.GetUint64(optionNameCacheCapacity),
@@ -141,10 +152,23 @@ func (c *command) initStartCmd() (err error) {
 				TokenEncryptionKey:     c.config.GetString(optionNameTokenEncryptionKey),
 				AdminPasswordHash:      c.config.GetString(optionNameAdminPasswordHash),
 				RouteAlpha:             c.config.GetInt32(optionNameRouteAlpha),
-				Groups:                 c.config.Get(optionNameGroups),
+				Groups:                 configGroups,
 				EnableApiTLS:           c.config.GetBool(optionNameEnableApiTls),
 				TlsCrtFile:             c.config.GetString(optionNameTlsCRT),
 				TlsKeyFile:             c.config.GetString(optionNameTlsKey),
+				ProxyEnable:            c.config.GetBool(optionNameProxyEnable),
+				ProxyAddr:              c.config.GetString(optionNameProxyAddr),
+				ProxyNATAddr:           c.config.GetString(optionNameProxyNATAddr),
+				ProxyGroup:             c.config.GetString(optionNameProxyGroup),
+				TunEnable:              c.config.GetBool(optionNameTunEnable),
+				TunCidr4:               c.config.GetString(optionNameTunCidr4),
+				TunCidr6:               c.config.GetString(optionNameTunCidr6),
+				TunMTU:                 c.config.GetInt(optionNameTunMTU),
+				TunServiceIPv4:         c.config.GetString(optionNameTunServiceIP4),
+				TunServiceIPv6:         c.config.GetString(optionNameTunServiceIP6),
+				TunGroup:               c.config.GetString(optionNameTunGroup),
+				VpnEnable:              c.config.GetBool(optionNameVpnEnable),
+				VpnAddr:                c.config.GetString(optionNameVpnAddr),
 			})
 			if err != nil {
 				return err

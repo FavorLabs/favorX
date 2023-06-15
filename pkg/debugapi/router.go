@@ -150,6 +150,12 @@ func (s *Service) newRouter() *mux.Router {
 	handle("/traffic/init", jsonhttp.MethodHandler{
 		"POST": http.HandlerFunc(s.trafficInit),
 	})
+	handle("/tun/register/list", jsonhttp.MethodHandler{
+		"GET": http.HandlerFunc(s.tunRegisterList),
+	})
+	handle("/tun/stats", jsonhttp.MethodHandler{
+		"GET": http.HandlerFunc(s.tunStats),
+	})
 
 	s.newLoopbackRouter(router)
 

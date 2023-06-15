@@ -3,7 +3,7 @@ package api
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 
 	"github.com/FavorLabs/favorX/pkg/boson"
@@ -16,7 +16,7 @@ import (
 
 func (s *server) addGroup(w http.ResponseWriter, r *http.Request, gType model.GType) {
 	gid := mux.Vars(r)["gid"]
-	body, err := ioutil.ReadAll(r.Body)
+	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		jsonhttp.InternalServerError(w, err)
 		return
@@ -50,12 +50,8 @@ func (s *server) groupJoinHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *server) groupLeaveHandler(w http.ResponseWriter, r *http.Request) {
-	str := mux.Vars(r)["gid"]
-	gid, err := boson.ParseHexAddress(str)
-	if err != nil {
-		gid = multicast.GenerateGID(str)
-	}
-	err = s.multicast.RemoveGroup(gid, model.GTypeJoin)
+	gid := mux.Vars(r)["gid"]
+	err := s.multicast.RemoveGroup(gid, model.GTypeJoin)
 	if err != nil {
 		s.logger.Errorf("multicast join group: %v", err)
 		jsonhttp.InternalServerError(w, err)
@@ -71,7 +67,7 @@ func (s *server) multicastMsg(w http.ResponseWriter, r *http.Request) {
 		gid = multicast.GenerateGID(str)
 	}
 
-	body, err := ioutil.ReadAll(r.Body)
+	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		jsonhttp.InternalServerError(w, err)
 		return
@@ -92,12 +88,8 @@ func (s *server) groupObserveHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *server) groupObserveCancelHandler(w http.ResponseWriter, r *http.Request) {
-	str := mux.Vars(r)["gid"]
-	gid, err := boson.ParseHexAddress(str)
-	if err != nil {
-		gid = multicast.GenerateGID(str)
-	}
-	err = s.multicast.RemoveGroup(gid, model.GTypeObserve)
+	gid := mux.Vars(r)["gid"]
+	err := s.multicast.RemoveGroup(gid, model.GTypeObserve)
 	if err != nil {
 		s.logger.Errorf("multicast cancel observe group: %v", err)
 		jsonhttp.InternalServerError(w, err)
@@ -119,7 +111,7 @@ func (s *server) sendReceive(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	body, err := ioutil.ReadAll(r.Body)
+	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		jsonhttp.InternalServerError(w, err)
 		return
@@ -151,7 +143,7 @@ func (s *server) notify(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	body, err := ioutil.ReadAll(r.Body)
+	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		jsonhttp.InternalServerError(w, err)
 		return

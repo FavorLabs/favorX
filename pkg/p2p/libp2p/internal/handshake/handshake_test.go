@@ -18,7 +18,7 @@ import (
 	"github.com/FavorLabs/favorX/pkg/p2p/libp2p/internal/handshake/pb"
 	"github.com/FavorLabs/favorX/pkg/p2p/protobuf"
 	"github.com/FavorLabs/favorX/pkg/topology/lightnode"
-	libp2ppeer "github.com/libp2p/go-libp2p-core/peer"
+	libp2ppeer "github.com/libp2p/go-libp2p/core/peer"
 	ma "github.com/multiformats/go-multiaddr"
 )
 

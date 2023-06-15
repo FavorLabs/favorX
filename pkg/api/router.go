@@ -244,9 +244,12 @@ func (s *server) setupRouting() {
 				if o := r.Header.Get("Origin"); o != "" && s.checkOrigin(r) {
 					w.Header().Set("Access-Control-Allow-Credentials", "true")
 					w.Header().Set("Access-Control-Allow-Origin", o)
-					w.Header().Set("Access-Control-Allow-Headers", "User-Agent, Origin, Accept, Authorization, Content-Type, X-Requested-With, Access-Control-Request-Headers, Access-Control-Request-Method, Tag, Pin, Encrypt, Index-Document, Error-Document, Collection, Collection-Name, Reference-Link")
+					w.Header().Set("Access-Control-Allow-Headers", "X-Session-Token, User-Agent, Origin, Accept, Authorization, Content-Type, X-Requested-With, Access-Control-Request-Headers, Access-Control-Request-Method, Tag, Pin, Encrypt, Index-Document, Error-Document, Collection, Collection-Name, Reference-Link")
 					w.Header().Set("Access-Control-Allow-Methods", "GET, HEAD, OPTIONS, POST, PUT, DELETE")
 					w.Header().Set("Access-Control-Max-Age", "3600")
+				}
+				if strings.HasPrefix(r.URL.Path, address.RelayPrefixHttp) {
+					w.Header().Set("Access-Control-Allow-Headers", "*")
 				}
 				if r.Method == "OPTIONS" {
 					w.WriteHeader(http.StatusOK)
