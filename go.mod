@@ -4,12 +4,12 @@ go 1.18
 
 require (
 	github.com/FavorLabs/manifest v1.2.0
-	github.com/btcsuite/btcd v0.22.1
+	github.com/btcsuite/btcd v0.22.3
 	github.com/casbin/casbin/v2 v2.35.0
 	github.com/coreos/go-semver v0.3.0
 	github.com/davecgh/go-spew v1.1.1
 	github.com/deckarep/golang-set v1.8.0
-	github.com/ethereum/go-ethereum v1.10.17
+	github.com/ethereum/go-ethereum v1.10.22
 	github.com/ethersphere/langos v1.0.0
 	github.com/ethersphere/sw3-bindings/v3 v3.0.3
 	github.com/gobwas/ws v1.1.0
