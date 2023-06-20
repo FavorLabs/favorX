@@ -3,6 +3,7 @@ package node
 import (
 	"context"
 	"fmt"
+	"math/big"
 
 	"github.com/FavorLabs/favorX/pkg/crypto"
 	"github.com/FavorLabs/favorX/pkg/logging"
@@ -37,24 +38,32 @@ func InitChain(
 	p2pService *libp2p.Service,
 	subPub subscribe.SubPub,
 ) (chain.Resolver, settlement.Interface, traffic.ApiInterface, chain.Common, error) {
+	var (
+		backend = &ethclient.Client{}
+		chainID = &big.Int{}
+		cc      = &chainCommon.Common{}
+	)
+
 	backend, err := ethclient.Dial(endpoint)
-	if err != nil {
+	if err != nil && (trafficEnable || oracleContractAddress != "") {
 		return nil, nil, nil, nil, fmt.Errorf("dial eth client: %w", err)
 	}
 
-	chainID, err := backend.ChainID(ctx)
-	if err != nil {
-		logger.Infof("could not connect to backend at %v. In a swap-enabled network a working blockchain node (for goerli network in production) is required. Check your node or specify another node using --chain-endpoint.", endpoint)
-		return nil, nil, nil, nil, fmt.Errorf("get chain id: %w", err)
+	if backend != nil {
+		chainID, err = backend.ChainID(ctx)
+		if err != nil {
+			logger.Infof("could not connect to backend at %v. In a swap-enabled network a working blockchain node (for goerli network in production) is required. Check your node or specify another node using --chain-endpoint.", endpoint)
+			return nil, nil, nil, nil, fmt.Errorf("get chain id: %w", err)
+		}
+		cc, err = chainCommon.New(logger, signer, chainID, endpoint)
+		if err != nil {
+			return nil, nil, nil, nil, fmt.Errorf("new common serveice: %v", err)
+		}
+		if oracleContractAddress == "" {
+			return nil, nil, nil, nil, fmt.Errorf("oracle contract address is empty")
+		}
 	}
-	cc, err := chainCommon.New(logger, signer, chainID, endpoint)
-	if err != nil {
-		return nil, nil, nil, nil, fmt.Errorf("new common serveice: %v", err)
-	}
-	if oracleContractAddress == "" {
-		return nil, nil, nil, nil, fmt.Errorf("oracle contract address is empty")
-	}
-	oracleServer, err := oracle.NewServer(logger, backend, oracleContractAddress, signer, cc, subPub)
+	oracleServer, err := oracle.NewServer(logger, backend, chainID, oracleContractAddress, signer, cc, subPub)
 	if err != nil {
 		return nil, nil, nil, nil, fmt.Errorf("new oracle service: %w", err)
 	}

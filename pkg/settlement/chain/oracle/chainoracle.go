@@ -31,17 +31,11 @@ type ChainOracle struct {
 	subPub        subscribe.SubPub
 }
 
-func NewServer(logger logging.Logger, backend *ethclient.Client, address string, signer crypto.Signer, commonService chain.Common, subPub subscribe.SubPub) (chain.Resolver, error) {
+func NewServer(logger logging.Logger, backend *ethclient.Client, chainID *big.Int, address string, signer crypto.Signer, commonService chain.Common, subPub subscribe.SubPub) (chain.Resolver, error) {
 	senderAddress, err := signer.EthereumAddress()
 	if err != nil {
 		return nil, err
 	}
-	chainID, err := backend.ChainID(context.Background())
-	if err != nil {
-		logger.Infof("could not connect to backend  In a swap-enabled network a working blockchain node (for goerli network in production) is required. Check your node or specify another node using --traffic-endpoint.")
-		return nil, err
-	}
-
 	oracle, err := NewOracle(common.HexToAddress(address), backend)
 	if err != nil {
 		logger.Errorf("Failed to connect to the Ethereum client: %v", err)
@@ -65,6 +59,11 @@ func (ora *ChainOracle) GetCid(_ string) []byte {
 }
 
 func (ora *ChainOracle) GetNodesFromCid(cid []byte) []boson.Address {
+
+	if ora.chain == nil {
+		return make([]boson.Address, 0)
+	}
+
 	ctx, cancel := context.WithTimeout(context.TODO(), 30*time.Second)
 	defer cancel()
 	opts := &bind.CallOpts{Context: ctx}
@@ -96,6 +95,10 @@ func (ora *ChainOracle) DataStoreFinished(cid boson.Address, dataLen uint64, sal
 func (ora *ChainOracle) RegisterCidAndNode(ctx context.Context, rootCid boson.Address, address boson.Address, gasPrice, minGasPrice *big.Int) (hash common.Hash, err error) {
 	ora.Lock()
 	defer ora.Unlock()
+	if ora.chain == nil {
+		return common.Hash{}, nil
+	}
+
 	defer func() {
 		if err == nil {
 			ora.commonService.SyncTransaction(chain.ORACLE, rootCid.String(), hash.String())
@@ -119,6 +122,9 @@ func (ora *ChainOracle) RegisterCidAndNode(ctx context.Context, rootCid boson.Ad
 func (ora *ChainOracle) RemoveCidAndNode(ctx context.Context, rootCid boson.Address, address boson.Address, gasPrice, minGasPrice *big.Int) (hash common.Hash, err error) {
 	ora.Lock()
 	defer ora.Unlock()
+	if ora.chain == nil {
+		return common.Hash{}, nil
+	}
 	defer func() {
 		if err == nil {
 			ora.commonService.SyncTransaction(chain.ORACLE, rootCid.String(), hash.String())
@@ -140,6 +146,10 @@ func (ora *ChainOracle) RemoveCidAndNode(ctx context.Context, rootCid boson.Addr
 }
 
 func (ora *ChainOracle) WaitForReceipt(ctx context.Context, rootCid boson.Address, txHash common.Hash) (receipt *types.Receipt, err error) {
+	if ora.chain == nil {
+		ora.PublishRegisterStatus(rootCid, 0)
+		return nil, nil
+	}
 	defer func() {
 		ora.commonService.UpdateStatus(false)
 	}()
@@ -166,6 +176,9 @@ func (ora *ChainOracle) WaitForReceipt(ctx context.Context, rootCid boson.Addres
 }
 
 func (ora *ChainOracle) GetRegisterState(ctx context.Context, rootCid boson.Address, address boson.Address) (bool, error) {
+	if ora.chain == nil {
+		return false, nil
+	}
 	ctx, cancel := context.WithTimeout(context.TODO(), 2*time.Second)
 	defer cancel()
 	opts := &bind.CallOpts{Context: ctx}
@@ -178,6 +191,9 @@ func (ora *ChainOracle) GetRegisterState(ctx context.Context, rootCid boson.Addr
 }
 
 func (ora *ChainOracle) getTransactOpts(ctx context.Context, gasPrice, minGasPrice *big.Int) (*bind.TransactOpts, error) {
+	if ora.chain == nil {
+		return nil, nil
+	}
 	chainNonce, err := ora.chain.PendingNonceAt(ctx, ora.senderAddress)
 	if err != nil {
 		return nil, err
