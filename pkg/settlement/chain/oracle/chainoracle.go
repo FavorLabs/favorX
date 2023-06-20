@@ -60,7 +60,7 @@ func (ora *ChainOracle) GetCid(_ string) []byte {
 
 func (ora *ChainOracle) GetNodesFromCid(cid []byte) []boson.Address {
 
-	if ora.commonService == nil {
+	if ora.chain == nil {
 		return make([]boson.Address, 0)
 	}
 
@@ -95,7 +95,7 @@ func (ora *ChainOracle) DataStoreFinished(cid boson.Address, dataLen uint64, sal
 func (ora *ChainOracle) RegisterCidAndNode(ctx context.Context, rootCid boson.Address, address boson.Address, gasPrice, minGasPrice *big.Int) (hash common.Hash, err error) {
 	ora.Lock()
 	defer ora.Unlock()
-	if ora.commonService == nil {
+	if ora.chain == nil {
 		return common.Hash{}, nil
 	}
 
@@ -122,7 +122,7 @@ func (ora *ChainOracle) RegisterCidAndNode(ctx context.Context, rootCid boson.Ad
 func (ora *ChainOracle) RemoveCidAndNode(ctx context.Context, rootCid boson.Address, address boson.Address, gasPrice, minGasPrice *big.Int) (hash common.Hash, err error) {
 	ora.Lock()
 	defer ora.Unlock()
-	if ora.commonService == nil {
+	if ora.chain == nil {
 		return common.Hash{}, nil
 	}
 	defer func() {
@@ -146,7 +146,7 @@ func (ora *ChainOracle) RemoveCidAndNode(ctx context.Context, rootCid boson.Addr
 }
 
 func (ora *ChainOracle) WaitForReceipt(ctx context.Context, rootCid boson.Address, txHash common.Hash) (receipt *types.Receipt, err error) {
-	if ora.commonService == nil {
+	if ora.chain == nil {
 		ora.PublishRegisterStatus(rootCid, 0)
 		return nil, nil
 	}
@@ -176,7 +176,7 @@ func (ora *ChainOracle) WaitForReceipt(ctx context.Context, rootCid boson.Addres
 }
 
 func (ora *ChainOracle) GetRegisterState(ctx context.Context, rootCid boson.Address, address boson.Address) (bool, error) {
-	if ora.commonService == nil {
+	if ora.chain == nil {
 		return false, nil
 	}
 	ctx, cancel := context.WithTimeout(context.TODO(), 2*time.Second)
@@ -191,7 +191,7 @@ func (ora *ChainOracle) GetRegisterState(ctx context.Context, rootCid boson.Addr
 }
 
 func (ora *ChainOracle) getTransactOpts(ctx context.Context, gasPrice, minGasPrice *big.Int) (*bind.TransactOpts, error) {
-	if ora.commonService == nil {
+	if ora.chain == nil {
 		return nil, nil
 	}
 	chainNonce, err := ora.chain.PendingNonceAt(ctx, ora.senderAddress)
