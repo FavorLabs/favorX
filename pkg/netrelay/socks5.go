@@ -37,7 +37,6 @@ const (
 )
 
 var (
-	ErrVersion    = errors.New("invalid Version")
 	ErrBadRequest = errors.New("bad Request")
 )
 
@@ -137,11 +136,13 @@ func (s *Service) socks5ProxyTCP(conn net.Conn) {
 	if err != nil || n != 1 {
 		return
 	}
+	s.counter.IncrProxyInBytes(n)
 	ms := make([]byte, int(b[0]))
-	_, err = conn.Read(ms)
+	n, err = conn.Read(ms)
 	if err != nil {
 		return
 	}
+	s.counter.IncrProxyInBytes(n)
 	_, err = conn.Write([]byte{socks5Version, 0x00})
 	if err != nil {
 		return
@@ -152,6 +153,7 @@ func (s *Service) socks5ProxyTCP(conn net.Conn) {
 	if err != nil || n != 2 {
 		return
 	}
+	s.counter.IncrProxyInBytes(n)
 	cmd := b2[1]
 	switch cmd {
 	case cmdTCPConnect, cmdTorResolve, cmdTorResolvePTR:
@@ -170,11 +172,17 @@ func (s *Service) socks5ProxyTCP(conn net.Conn) {
 			s.logger.Errorf("socks5 forward err %s", err)
 		}
 	case cmdTCPBind:
-		_, err = NewReply(statusCmdNotSupport, ATYPIPv4, []byte{0x00, 0x00, 0x00, 0x00}, []byte{0x00, 0x00}).WriteTo(conn)
+		ln, err := NewReply(statusCmdNotSupport, ATYPIPv4, []byte{0x00, 0x00, 0x00, 0x00}, []byte{0x00, 0x00}).WriteTo(conn)
+		if err == nil {
+			s.counter.IncrProxyOutBytes(int(ln))
+		}
 		s.logger.Warningf("socks5 not support tcp bind")
 	case cmdUDPAssociate:
 		if s.socks5UDPConn == nil || s.socks5UDPAddr == nil {
-			_, err = NewReply(statusCmdNotSupport, ATYPIPv4, []byte{0x00, 0x00, 0x00, 0x00}, []byte{0x00, 0x00}).WriteTo(conn)
+			ln, err := NewReply(statusCmdNotSupport, ATYPIPv4, []byte{0x00, 0x00, 0x00, 0x00}, []byte{0x00, 0x00}).WriteTo(conn)
+			if err == nil {
+				s.counter.IncrProxyOutBytes(int(ln))
+			}
 			s.logger.Warningf("socks5 not support udp associate")
 			return
 		}
@@ -190,7 +198,10 @@ func (s *Service) socks5ProxyTCP(conn net.Conn) {
 			} else {
 				p = NewReply(statusHostUnreachable, ATYPIPv6, net.IPv6zero, []byte{0x00, 0x00})
 			}
-			_, _ = p.WriteTo(conn)
+			ln, e := p.WriteTo(conn)
+			if e == nil {
+				s.counter.IncrProxyOutBytes(int(ln))
+			}
 		}
 		if err != nil {
 			respFunc()
@@ -208,7 +219,10 @@ func (s *Service) socks5ProxyTCP(conn net.Conn) {
 		io.Copy(io.Discard, conn)
 		s.logger.Debugf("socks5 A tcp connection that udp %#v associated closed\n", conn.RemoteAddr())
 	default:
-		_, err = NewReply(statusCmdNotSupport, ATYPIPv4, []byte{0x00, 0x00, 0x00, 0x00}, []byte{0x00, 0x00}).WriteTo(conn)
+		ln, err := NewReply(statusCmdNotSupport, ATYPIPv4, []byte{0x00, 0x00, 0x00, 0x00}, []byte{0x00, 0x00}).WriteTo(conn)
+		if err == nil {
+			s.counter.IncrProxyOutBytes(int(ln))
+		}
 		s.logger.Warningf("socks5 unknown command %+v", cmd)
 	}
 }
@@ -257,36 +271,9 @@ func (s *Service) socks5HandleTCP(conn net.Conn, addr boson.Address) (err error)
 			s.logger.Tracef("socks5 forward to %s stream close", addr)
 		}
 	}()
-	// response
-	respErrCh := make(chan error, 1)
-	go func() {
-		_, err = io.Copy(st, conn)
-		if errors.Is(err, net.ErrClosed) {
-			err = nil
-		}
-		if err != nil {
-			s.logger.Tracef("socks5 forward io.copy req to %s err %v", addr, err)
-		}
-		respErrCh <- err
-	}()
-	// request
-	reqErrCh := make(chan error, 1)
-	go func() {
-		_, err = io.Copy(conn, st)
-		if errors.Is(err, net.ErrClosed) {
-			err = nil
-		}
-		if err != nil {
-			s.logger.Tracef("socks5 forward io.copy resp from %s err %v", addr, err)
-		}
-		reqErrCh <- err
-	}()
-	select {
-	case err = <-respErrCh:
-		return err
-	case err = <-reqErrCh:
-		return err
-	}
+	go s.copyIO(st, conn, streamSocks5TCP)
+	s.copyIO(conn, st, streamSocks5TCP)
+	return nil
 }
 
 func (s *Service) onSocks5TCP(_ context.Context, p p2p.Peer, stream p2p.Stream) (err error) {
@@ -300,7 +287,7 @@ func (s *Service) onSocks5TCP(_ context.Context, p p2p.Peer, stream p2p.Stream) 
 
 	if s.proxyGroup != "" {
 		// forward
-		s.forwardStream(stream, s.proxyGroup, streamSocks5TCP)
+		_ = s.forwardStream(stream, s.proxyGroup, streamSocks5TCP)
 		return nil
 	}
 
@@ -309,6 +296,7 @@ func (s *Service) onSocks5TCP(_ context.Context, p p2p.Peer, stream p2p.Stream) 
 	if err != nil {
 		return err
 	}
+	s.counter.IncrProxyInBytes(n)
 	if n < 2 {
 		return errors.New("failed to read request")
 	}
@@ -323,43 +311,18 @@ func (s *Service) onSocks5TCP(_ context.Context, p p2p.Peer, stream p2p.Stream) 
 
 	conn, err := net.Dial("tcp", addr)
 	if err != nil {
-		_, err = stream.Write([]byte{socks5Version, statusNetworkUnreachable, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00})
+		n, err = stream.Write([]byte{socks5Version, statusNetworkUnreachable, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00})
+		s.counter.IncrProxyOutBytes(n)
 		return err
 	}
-	_, err = stream.Write([]byte{socks5Version, statusSuccess, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00})
+	n, err = stream.Write([]byte{socks5Version, statusSuccess, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00})
+	s.counter.IncrProxyOutBytes(n)
 	if err != nil {
 		return err
 	}
-	// response
-	respErrCh := make(chan error, 1)
-	go func() {
-		_, err = io.Copy(conn, stream)
-		if errors.Is(err, net.ErrClosed) {
-			err = nil
-		}
-		if err != nil {
-			s.logger.Debugf("on socks5 io.copy req from %s err %s", p.Address, err)
-		}
-		respErrCh <- err
-	}()
-	// request
-	reqErrCh := make(chan error, 1)
-	go func() {
-		_, err = io.Copy(stream, conn)
-		if errors.Is(err, net.ErrClosed) {
-			err = nil
-		}
-		if err != nil {
-			s.logger.Debugf("on socks5 io.copy resp to %s err %s", p.Address, err)
-		}
-		reqErrCh <- err
-	}()
-	select {
-	case err = <-respErrCh:
-		return err
-	case err = <-reqErrCh:
-		return err
-	}
+	go s.copyIO(conn, stream, streamSocks5TCP)
+	s.copyIO(stream, conn, streamSocks5TCP)
+	return nil
 }
 
 func (s *Service) socks5HandleUDP(src *net.UDPAddr, dst string, data []byte, addr boson.Address) (err error) {
@@ -385,17 +348,22 @@ func (s *Service) socks5HandleUDP(src *net.UDPAddr, dst string, data []byte, add
 	if err != nil {
 		return err
 	}
-	_, err = st.Write(data)
+	n, err := st.Write(data)
 	if err != nil {
 		return err
 	}
+	s.counter.IncrProxyOutBytes(n)
 	var b [65507]byte
-	n, e := st.Read(b[:])
-	if e != nil {
-		return e
+	n, err = st.Read(b[:])
+	if err != nil {
+		return err
 	}
+	s.counter.IncrProxyInBytes(n)
 	d1 := NewDatagram(a, adr, port, b[0:n])
-	_, _ = s.socks5UDPConn.WriteToUDP(d1.Bytes(), src)
+	n, _ = s.socks5UDPConn.WriteToUDP(d1.Bytes(), src)
+	if n > 0 {
+		s.counter.IncrProxyOutBytes(n)
+	}
 	return
 }
 
@@ -412,7 +380,7 @@ func (s *Service) onSocks5UDP(_ context.Context, p p2p.Peer, stream p2p.Stream) 
 
 	if s.proxyGroup != "" {
 		// forward
-		s.forwardStream(stream, s.proxyGroup, streamSocks5UDP)
+		_ = s.forwardStream(stream, s.proxyGroup, streamSocks5UDP)
 		return nil
 	}
 
@@ -421,6 +389,7 @@ func (s *Service) onSocks5UDP(_ context.Context, p p2p.Peer, stream p2p.Stream) 
 	if err != nil {
 		return err
 	}
+	s.counter.IncrProxyInBytes(n)
 	d, err := s.newDatagramFromBytes(b[:n])
 	if err != nil {
 		return
@@ -429,24 +398,30 @@ func (s *Service) onSocks5UDP(_ context.Context, p p2p.Peer, stream p2p.Stream) 
 		return
 	}
 	dst := d.Address()
-	raddr, err := net.ResolveUDPAddr("udp", dst)
+	dstAddr, err := net.ResolveUDPAddr("udp", dst)
 	if err != nil {
 		return err
 	}
-	rc, err := net.DialUDP("udp", nil, raddr)
+	rc, err := net.DialUDP("udp", nil, dstAddr)
 	if err != nil {
 		return err
 	}
-	_, err = rc.Write(d.Data)
+	n, err = rc.Write(d.Data)
 	if err != nil {
 		return err
 	}
-	n, e := rc.Read(b[:])
-	if e != nil {
-		return e
+	s.counter.IncrProxyOutBytes(n)
+	n, err = rc.Read(b[:])
+	if err != nil {
+		return err
 	}
-	_, err = stream.Write(b[0:n])
-	return err
+	s.counter.IncrProxyInBytes(n)
+	n, err = stream.Write(b[0:n])
+	if err != nil {
+		return err
+	}
+	s.counter.IncrProxyOutBytes(n)
+	return nil
 }
 
 func NewDatagram(atyp byte, dstaddr []byte, dstport []byte, data []byte) *Datagram {
@@ -614,7 +589,7 @@ type UDPExchange struct {
 func (s *Service) forwardStream(src p2p.Stream, group, streamName string) error {
 	forward, err := s.getForward(group)
 	if err != nil {
-		s.logger.Errorf("socks5 get forward peer err %s", err)
+		s.logger.Errorf("%s get forward peer err %s", streamName, err)
 		return err
 	}
 	var st p2p.Stream
@@ -632,7 +607,44 @@ func (s *Service) forwardStream(src p2p.Stream, group, streamName string) error 
 		return err
 	}
 	defer st.Close()
-	go io.Copy(src, st)
-	io.Copy(st, src)
+	go s.copyIO(st, src, streamName)
+	s.copyIO(src, st, streamName)
 	return nil
+}
+
+func (s *Service) copyIO(dst io.Writer, src io.Reader, streamName string) {
+	buf := make([]byte, 32*1024)
+	for {
+		nr, er := src.Read(buf)
+		if nr > 0 {
+			switch streamName {
+			case streamHttpProxy, streamSocks5TCP, streamSocks5UDP:
+				s.counter.IncrProxyInBytes(nr)
+			case streamVpnRequest, streamVpnTun:
+				s.counter.IncrTunInBytes(nr)
+			}
+			nw, ew := dst.Write(buf[0:nr])
+			if nw < 0 || nr < nw {
+				nw = 0
+				if ew == nil {
+					ew = errors.New("invalid write result")
+				}
+			}
+			if ew != nil {
+				break
+			}
+			switch streamName {
+			case streamHttpProxy, streamSocks5TCP, streamSocks5UDP:
+				s.counter.IncrProxyOutBytes(nw)
+			case streamVpnRequest, streamVpnTun:
+				s.counter.IncrTunOutBytes(nw)
+			}
+			if nr != nw {
+				break
+			}
+		}
+		if er != nil {
+			break
+		}
+	}
 }

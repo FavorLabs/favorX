@@ -45,6 +45,7 @@ import (
 	"github.com/FavorLabs/favorX/pkg/topology/lightnode"
 	"github.com/FavorLabs/favorX/pkg/tracing"
 	"github.com/FavorLabs/favorX/pkg/traversal"
+	"github.com/inhies/go-bytesize"
 	crypto2 "github.com/libp2p/go-libp2p/core/crypto"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/sirupsen/logrus"
@@ -121,6 +122,10 @@ type Options struct {
 	TunServiceIPv4         string
 	TunServiceIPv6         string
 	TunGroup               string
+	TunSpeedMin            uint64
+	TunSpeedMax            uint64
+	TunRateEveryday        string
+	TunRateEnable          bool
 	VpnEnable              bool
 	VpnAddr                string
 }
@@ -412,7 +417,7 @@ func NewNode(nodeMode address.Model, addr string, bosonAddress boson.Address, pu
 		}
 	}
 
-	relay := netrelay.New(p2ps, logger, o.Groups, route, group)
+	relay := netrelay.New(p2ps, stateStore, logger, o.Groups, route, group)
 	err = p2ps.AddProtocol(relay.Protocol())
 	if err != nil {
 		return nil, err
@@ -437,12 +442,20 @@ func NewNode(nodeMode address.Model, addr string, bosonAddress boson.Address, pu
 		}
 	}
 	if o.TunEnable {
+		_, err = bytesize.Parse(o.TunRateEveryday)
+		if err != nil {
+			return nil, fmt.Errorf("tun-rate-everyday parse failed: %s", err)
+		}
 		relay.CreateTun(netrelay.TunConfig{
-			ServerIP:   o.TunServiceIPv4,
-			ServerIPv6: o.TunServiceIPv6,
-			CIDR:       o.TunCidr4,
-			CIDRv6:     o.TunCidr6,
-			MTU:        o.TunMTU,
+			ServerIP:     o.TunServiceIPv4,
+			ServerIPv6:   o.TunServiceIPv6,
+			CIDR:         o.TunCidr4,
+			CIDRv6:       o.TunCidr6,
+			MTU:          o.TunMTU,
+			SpeedMax:     o.TunSpeedMax,
+			SpeedMin:     o.TunSpeedMin,
+			RateEveryday: o.TunRateEveryday,
+			RateEnable:   o.TunRateEnable,
 		})
 	}
 	if o.VpnEnable {
@@ -531,13 +544,14 @@ func NewNode(nodeMode address.Model, addr string, bosonAddress boson.Address, pu
 		debugAPIService.MustRegisterMetrics(chunkInfo.Metrics()...)
 		debugAPIService.MustRegisterMetrics(route.Metrics()...)
 		debugAPIService.MustRegisterMetrics(retrieve.Metrics()...)
+		debugAPIService.MustRegisterMetrics(relay.Metrics()...)
 
 		if apiService != nil {
 			debugAPIService.MustRegisterMetrics(apiService.Metrics()...)
 		}
 
 		// inject dependencies and configure full debug api http path routes
-		debugAPIService.Configure(p2ps, pingPong, group, kad, lightNodes, bootNodes, storer, route, chunkInfo, fileInfo, retrieve, addressBook)
+		debugAPIService.Configure(p2ps, pingPong, group, kad, lightNodes, bootNodes, storer, route, chunkInfo, fileInfo, retrieve, addressBook, relay)
 		if apiInterface != nil {
 			debugAPIService.MustRegisterTraffic(apiInterface)
 		}

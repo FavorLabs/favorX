@@ -12,27 +12,72 @@ import (
 	"strings"
 	"time"
 
+	"github.com/FavorLabs/favorX/pkg/logging"
 	"github.com/FavorLabs/favorX/pkg/netrelay/pb"
 	"github.com/FavorLabs/favorX/pkg/p2p"
 	"github.com/FavorLabs/favorX/pkg/p2p/protobuf"
+	"github.com/inhies/go-bytesize"
 	"github.com/net-byte/vtun/common/cache"
-	"github.com/net-byte/vtun/common/counter"
 	"github.com/net-byte/vtun/common/netutil"
 	"github.com/net-byte/vtun/register"
 	"github.com/net-byte/water"
 )
 
-// CreateTun creates a tun interface
-func (s *Service) CreateTun(config TunConfig) (iface *water.Interface) {
+type WaterIface struct {
+	*water.Interface
+	rate *RateService
+}
+
+func ifaceNew(c water.Config, rs *RateService) (*WaterIface, error) {
+	i, e := water.New(c)
+	if e != nil {
+		return nil, e
+	}
+	return &WaterIface{Interface: i, rate: rs}, nil
+}
+
+func (s *WaterIface) Write(p []byte) (n int, err error) {
+	n, err = s.Interface.Write(p)
+	if err != nil {
+		return
+	}
+	if s.rate == nil {
+		return
+	}
+	e := s.rate.WaitN(context.TODO(), n)
+	if e != nil {
+		logging.Errorf("tun iface write rate: %s", e.Error())
+	}
+	return
+}
+
+func (s *WaterIface) Read(p []byte) (n int, err error) {
+	n, err = s.Interface.Read(p)
+	if err != nil {
+		return
+	}
+	if s.rate == nil {
+		return
+	}
+	e := s.rate.WaitN(context.TODO(), n)
+	if e != nil {
+		logging.Errorf("tun iface read rate: %s", e.Error())
+	}
+	return
+}
+
+func (s *Service) CreateTun(config TunConfig) {
 	c := water.Config{DeviceType: water.TUN}
 	c.PlatformSpecificParams = water.PlatformSpecificParams{}
-	os := runtime.GOOS
-	if os == "windows" {
+	o := runtime.GOOS
+	if o == "windows" {
 		c.PlatformSpecificParams.Name = "vtun"
 		c.PlatformSpecificParams.Network = []string{config.CIDR}
 	}
-
-	iface, err := water.New(c)
+	if config.RateEnable {
+		s.tunRate = NewRate(s.counter, s.storer, config.SpeedMin, config.SpeedMax, config.RateEveryday)
+	}
+	iface, err := ifaceNew(c, s.tunRate)
 	if err != nil {
 		s.logger.Errorf("failed to create tun interface:", err)
 		panic(err)
@@ -42,11 +87,10 @@ func (s *Service) CreateTun(config TunConfig) (iface *water.Interface) {
 	go s.forwardVpn(iface)
 	s.iface = iface
 	s.tunConfig = config
-	return iface
 }
 
 // setRoute sets the system routes
-func (s *Service) setRoute(config TunConfig, iface *water.Interface) {
+func (s *Service) setRoute(config TunConfig, iface *WaterIface) {
 	ip, _, err := net.ParseCIDR(config.CIDR)
 	if err != nil {
 		log.Panicf("tun error cidr %v", config.CIDR)
@@ -104,7 +148,7 @@ func (s *Service) setRoute(config TunConfig, iface *water.Interface) {
 	}
 }
 
-func (s *Service) onVpnTun(_ context.Context, p p2p.Peer, stream p2p.Stream) (err error) {
+func (s *Service) onVpnTun(ctx context.Context, p p2p.Peer, stream p2p.Stream) (err error) {
 	defer func() {
 		if err != nil {
 			s.logger.Tracef("onVpnTun from %s err %s", p.Address, err)
@@ -115,42 +159,46 @@ func (s *Service) onVpnTun(_ context.Context, p p2p.Peer, stream p2p.Stream) (er
 		}
 	}()
 	if s.tunGroup != "" {
-		s.forwardStream(stream, s.tunGroup, streamVpnTun)
+		_ = s.forwardStream(stream, s.tunGroup, streamVpnTun)
 		return nil
 	}
 
-	packet := make([]byte, 64*1024)
+	packet := make([]byte, tunBuffer)
 	for {
 		n, err := stream.Read(packet)
 		if err != nil {
 			return err
 		}
+		s.counter.IncrTunInBytes(n)
 		b := packet[:n]
 		if key := netutil.GetSrcKey(b); key != "" {
 			cache.GetCache().Set(key, stream, 24*time.Hour)
-			counter.IncrReadBytes(n)
-			s.iface.Write(b)
+			n, err = s.iface.Write(b)
+			if err == nil {
+				s.counter.IncrTunOutBytes(n)
+			}
 		}
 	}
 }
 
-func (s *Service) forwardVpn(iface *water.Interface) {
-	packet := make([]byte, 64*1024)
+func (s *Service) forwardVpn(iface *WaterIface) {
+	packet := make([]byte, tunBuffer)
 	for {
 		n, err := iface.Read(packet)
 		if err != nil {
 			s.logger.Errorf("vpn tun read %s", err)
 			break
 		}
+		s.counter.IncrTunInBytes(n)
 		b := packet[:n]
 		if key := netutil.GetDstKey(b); key != "" {
 			if v, ok := cache.GetCache().Get(key); ok {
-				_, err = v.(p2p.Stream).Write(b)
+				n, err = v.(p2p.Stream).Write(b)
 				if err != nil {
 					cache.GetCache().Delete(key)
 					continue
 				}
-				counter.IncrWrittenBytes(n)
+				s.counter.IncrTunOutBytes(n)
 			}
 		}
 	}
@@ -168,7 +216,7 @@ func (s *Service) onVpnRequest(ctx context.Context, p p2p.Peer, stream p2p.Strea
 	}()
 
 	if s.tunGroup != "" {
-		s.forwardStream(stream, s.tunGroup, streamVpnRequest)
+		_ = s.forwardStream(stream, s.tunGroup, streamVpnRequest)
 		return nil
 	}
 
@@ -178,46 +226,69 @@ func (s *Service) onVpnRequest(ctx context.Context, p p2p.Peer, stream p2p.Strea
 	if err != nil {
 		return err
 	}
+	s.counter.IncrTunInBytes(req.Size())
+	resp := &pb.VpnResponse{}
 	switch req.Pattern {
 	case "/test":
-		err = w.WriteMsgWithContext(ctx, &pb.VpnResponse{Body: "OK"})
+		resp.Body = "OK"
+		err = w.WriteMsgWithContext(ctx, resp)
 	case "/register/pick/ip":
 		ip, pl := register.PickClientIP(s.tunConfig.CIDR)
-		resp := fmt.Sprintf("%v/%v", ip, pl)
-		err = w.WriteMsgWithContext(ctx, &pb.VpnResponse{Body: resp})
+		resp.Body = fmt.Sprintf("%v/%v", ip, pl)
+		err = w.WriteMsgWithContext(ctx, resp)
 	case "/register/delete/ip":
 		if req.Ip != "" {
 			register.DeleteClientIP(req.Ip)
 		}
-		err = w.WriteMsgWithContext(ctx, &pb.VpnResponse{Body: "OK"})
+		resp.Body = "OK"
+		err = w.WriteMsgWithContext(ctx, resp)
 	case "/register/keepalive/ip":
 		if req.Ip != "" {
 			register.KeepAliveClientIP(req.Ip)
 		}
-		err = w.WriteMsgWithContext(ctx, &pb.VpnResponse{Body: "OK"})
+		resp.Body = "OK"
+		err = w.WriteMsgWithContext(ctx, resp)
 	case "/register/list/ip":
-		resp := strings.Join(register.ListClientIPs(), "\r\n")
-		err = w.WriteMsgWithContext(ctx, &pb.VpnResponse{Body: resp})
+		resp.Body = strings.Join(register.ListClientIPs(), "\r\n")
+		err = w.WriteMsgWithContext(ctx, resp)
 	case "/register/prefix/ipv4":
 		_, ipv4Net, e := net.ParseCIDR(s.tunConfig.CIDR)
-		var resp string
 		if e != nil {
-			resp = "error"
+			resp.Body = "error"
 		} else {
-			resp = ipv4Net.String()
+			resp.Body = ipv4Net.String()
 		}
-		err = w.WriteMsgWithContext(ctx, &pb.VpnResponse{Body: resp})
+		err = w.WriteMsgWithContext(ctx, resp)
 	case "/register/prefix/ipv6":
 		_, ipv6Net, e := net.ParseCIDR(s.tunConfig.CIDRv6)
-		var resp string
 		if e != nil {
-			resp = "error"
+			resp.Body = "error"
 		} else {
-			resp = ipv6Net.String()
+			resp.Body = ipv6Net.String()
 		}
-		err = w.WriteMsgWithContext(ctx, &pb.VpnResponse{Body: resp})
+		err = w.WriteMsgWithContext(ctx, resp)
 	default:
 		return errors.New("mismatch vpn pattern")
 	}
+	if err == nil {
+		s.counter.IncrTunOutBytes(resp.Size())
+	}
 	return
+}
+
+type TunStatus struct {
+	TodayUse  string `json:"todayUse"`
+	Available string `json:"available"`
+	Speed     string `json:"speed"`
+}
+
+func (s *Service) TunStats() TunStatus {
+	if s.tunRate == nil {
+		return TunStatus{}
+	}
+	return TunStatus{
+		TodayUse:  bytesize.New(float64(s.tunRate.todayUse)).String(),
+		Available: bytesize.New(float64(s.tunRate.availableTotal)).String(),
+		Speed:     bytesize.New(float64(s.tunRate.currentSpeed)).String() + "/s",
+	}
 }

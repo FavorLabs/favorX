@@ -13,6 +13,7 @@ import (
 	"github.com/FavorLabs/favorX/pkg/fileinfo"
 	"github.com/FavorLabs/favorX/pkg/logging"
 	"github.com/FavorLabs/favorX/pkg/multicast"
+	"github.com/FavorLabs/favorX/pkg/netrelay"
 	"github.com/FavorLabs/favorX/pkg/p2p"
 	"github.com/FavorLabs/favorX/pkg/pingpong"
 	"github.com/FavorLabs/favorX/pkg/retrieval"
@@ -62,6 +63,7 @@ type Service struct {
 	cache              *gcache.Cache
 	cacheCtx           context.Context
 	addressBook        addressbook.Interface
+	relay              *netrelay.Service
 }
 
 type Options struct {
@@ -103,7 +105,7 @@ func New(overlay boson.Address, publicKey ecdsa.PublicKey, logger logging.Logger
 // this method only once.
 func (s *Service) Configure(p2p p2p.DebugService, pingpong pingpong.Interface, group *multicast.Service, topologyDriver topology.Driver, lightNodes *lightnode.Container,
 	bootNodes *bootnode.Container, storer storage.Storer, route routetab.RouteTab, chunkinfo chunkinfo.Interface, fileInfo fileinfo.Interface, retrieval retrieval.Interface,
-	ab addressbook.Interface) {
+	ab addressbook.Interface, relay *netrelay.Service) {
 	s.p2p = p2p
 	s.pingpong = pingpong
 	s.topologyDriver = topologyDriver
@@ -116,6 +118,7 @@ func (s *Service) Configure(p2p p2p.DebugService, pingpong pingpong.Interface, g
 	s.fileInfo = fileInfo
 	s.retrieval = retrieval
 	s.addressBook = ab
+	s.relay = relay
 
 	s.setRouter(s.newRouter())
 }

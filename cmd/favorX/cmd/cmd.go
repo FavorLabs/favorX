@@ -73,6 +73,10 @@ const (
 	optionNameTunServiceIP4         = "tun-sip4"
 	optionNameTunServiceIP6         = "tun-sip6"
 	optionNameTunGroup              = "tun-group"
+	optionNameTunSpeedMax           = "tun-speed-max"
+	optionNameTunSpeedMin           = "tun-speed-min"
+	optionNameTunRateEveryday       = "tun-rate-everyday"
+	optionNameTunRateEnable         = "tun-rate-enable"
 	optionNameVpnEnable             = "vpn-enable"
 	optionNameVpnAddr               = "vpn-addr"
 )
@@ -262,6 +266,10 @@ func (c *command) setAllFlags(cmd *cobra.Command) {
 	cmd.Flags().String(optionNameTunServiceIP4, "172.16.0.1", "server ip")
 	cmd.Flags().String(optionNameTunServiceIP6, "fec0:9999::1", "server ipv6")
 	cmd.Flags().String(optionNameTunGroup, "", "group name of tunnel")
+	cmd.Flags().Int(optionNameTunSpeedMin, 131072, "min speed of tunnel")
+	cmd.Flags().Int(optionNameTunSpeedMax, 1310720, "max speed of tunnel")
+	cmd.Flags().String(optionNameTunRateEveryday, "30GB", "available of tunnel everyday")
+	cmd.Flags().Bool(optionNameTunRateEnable, true, "Turn on Tunnel speed limit")
 	cmd.Flags().Bool(optionNameVpnEnable, false, "enable tunnel of vpn service")
 	cmd.Flags().String(optionNameVpnAddr, ":1638", "listening address of vpn server")
 }

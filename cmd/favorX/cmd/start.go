@@ -167,6 +167,10 @@ func (c *command) initStartCmd() (err error) {
 				TunServiceIPv4:         c.config.GetString(optionNameTunServiceIP4),
 				TunServiceIPv6:         c.config.GetString(optionNameTunServiceIP6),
 				TunGroup:               c.config.GetString(optionNameTunGroup),
+				TunSpeedMin:            c.config.GetUint64(optionNameTunSpeedMin),
+				TunSpeedMax:            c.config.GetUint64(optionNameTunSpeedMax),
+				TunRateEveryday:        c.config.GetString(optionNameTunRateEveryday),
+				TunRateEnable:          c.config.GetBool(optionNameTunRateEnable),
 				VpnEnable:              c.config.GetBool(optionNameVpnEnable),
 				VpnAddr:                c.config.GetString(optionNameVpnAddr),
 			})

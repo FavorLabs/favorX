@@ -5,8 +5,6 @@ import (
 
 	favor "github.com/FavorLabs/favorX"
 	"github.com/FavorLabs/favorX/pkg/jsonhttp"
-	"github.com/inhies/go-bytesize"
-	"github.com/net-byte/vtun/common/counter"
 	"github.com/net-byte/vtun/register"
 )
 
@@ -41,14 +39,5 @@ func (s *Service) tunRegisterList(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Service) tunStats(w http.ResponseWriter, r *http.Request) {
-	up := bytesize.New(float64(counter.GetReadBytes())).String()
-	down := bytesize.New(float64(counter.GetWrittenBytes())).String()
-
-	jsonhttp.OK(w, struct {
-		Up   string `json:"up"`
-		Down string `json:"down"`
-	}{
-		Up:   up,
-		Down: down,
-	})
+	jsonhttp.OK(w, s.relay.TunStats())
 }
