@@ -18,8 +18,10 @@ import (
 	"github.com/FavorLabs/favorX/pkg/multicast/model"
 	"github.com/FavorLabs/favorX/pkg/p2p"
 	"github.com/FavorLabs/favorX/pkg/routetab"
-	"github.com/net-byte/water"
+	"github.com/FavorLabs/favorX/pkg/storage"
 )
+
+const keyPrefix = "netrelay_"
 
 type NetRelay interface {
 	RelayHttpDo(w http.ResponseWriter, r *http.Request, address boson.Address)
@@ -34,19 +36,27 @@ type Service struct {
 	socks5UDPConn *net.UDPConn
 	socks5UDPAddr *net.UDPAddr
 	proxyGroup    string
-	iface         *water.Interface
+	iface         *WaterIface
 	tunGroup      string
 	tunConfig     TunConfig
+	tunRate       *RateService
+	metrics       metrics
+	storer        storage.StateStorer
+	counter       *Counter
 }
 
-func New(streamer p2p.Streamer, logging logging.Logger, groups []model.ConfigNodeGroup, route routetab.RouteTab, multicast multicast.GroupInterface) *Service {
-	return &Service{
+func New(streamer p2p.Streamer, storer storage.StateStorer, logging logging.Logger, groups []model.ConfigNodeGroup, route routetab.RouteTab, multicast multicast.GroupInterface) *Service {
+	srv := &Service{
 		streamer:  streamer,
 		logger:    logging,
 		groups:    groups,
 		route:     route,
 		multicast: multicast,
+		metrics:   newMetrics(),
+		storer:    storer,
 	}
+	srv.counter = NewCounter(srv.metrics)
+	return srv
 }
 
 func (s *Service) RelayHttpDo(w http.ResponseWriter, r *http.Request, addr boson.Address) {
@@ -269,6 +279,7 @@ func (s *Service) StartProxyUDP(addr, natAddr string) *net.UDPConn {
 				s.logger.Warningf("proxy socks5 udp read err", e.Error())
 				continue
 			}
+			s.counter.IncrProxyInBytes(n)
 			s.logger.Debugf("proxy socks5(udp) got from %s", src)
 			go s.socks5ProxyUDP(src, b[0:n])
 		}
@@ -282,6 +293,7 @@ func (s *Service) parseFirst(conn net.Conn) {
 	if err != nil || n != 1 {
 		return
 	}
+	s.counter.IncrProxyInBytes(n)
 	if b[0] == 0x05 {
 		s.logger.Debugf("proxy socks5(tcp) got from %s", conn.RemoteAddr())
 		go s.socks5ProxyTCP(conn)
@@ -324,40 +336,13 @@ func (s *Service) copyStreamHttpProxy(first []byte, conn net.Conn, addr boson.Ad
 			s.logger.Tracef("proxy http(s) to %s stream close", addr)
 		}
 	}()
-	_, err = st.Write(first)
+	n, err := st.Write(first)
 	if err != nil {
 		return err
 	}
-
+	s.counter.IncrProxyOutBytes(n)
 	defer conn.Close()
-	// response
-	respErrCh := make(chan error, 1)
-	go func() {
-		_, err = io.Copy(conn, st)
-		if errors.Is(err, net.ErrClosed) {
-			err = nil
-		}
-		if err != nil {
-			s.logger.Tracef("proxy http(s) io.copy resp from %s err %v", addr, err)
-		}
-		respErrCh <- err
-	}()
-	// request
-	reqErrCh := make(chan error, 1)
-	go func() {
-		_, err = io.Copy(st, conn)
-		if errors.Is(err, net.ErrClosed) {
-			err = nil
-		}
-		if err != nil {
-			s.logger.Tracef("proxy http(s) io.copy req to %s err %v", addr, err)
-		}
-		reqErrCh <- err
-	}()
-	select {
-	case err = <-respErrCh:
-		return err
-	case err = <-reqErrCh:
-		return err
-	}
+	go s.copyIO(st, conn, streamHttpProxy)
+	s.copyIO(conn, st, streamHttpProxy)
+	return nil
 }

@@ -2,13 +2,16 @@ package netrelay
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"crypto/tls"
 	"errors"
+	"fmt"
 	"io"
 	"net"
 	"net/http"
 	"net/http/httputil"
+	"net/url"
 	"strings"
 
 	"github.com/FavorLabs/favorX/pkg/address"
@@ -195,75 +198,57 @@ func (s *Service) onHttpProxy(ctx context.Context, p p2p.Peer, stream p2p.Stream
 
 	if s.proxyGroup != "" {
 		// forward
-		s.forwardStream(stream, s.proxyGroup, streamHttpProxy)
+		_ = s.forwardStream(stream, s.proxyGroup, streamHttpProxy)
 		return nil
 	}
 
-	buf := bufio.NewReader(stream)
-	// Read the HTTP request from the buffer
-	req, err := http.ReadRequest(buf)
+	var buf [1024]byte
+	n1, err := stream.Read(buf[:])
+	if err != nil {
+		return err
+	}
+	n, err := stream.Read(buf[n1:])
+	if err != nil {
+		return err
+	}
+	n += n1
+	index := bytes.IndexByte(buf[:n], '\n')
+	if index == -1 {
+		return errors.New("No read in 4096 bytes '\n'")
+	}
+	s.counter.IncrProxyInBytes(n)
+
+	var method, host, addr string
+	fmt.Sscanf(string(buf[:index]), "%s%s", &method, &host)
+	hostPortUrl, err := url.Parse(host)
 	if err != nil {
 		return
 	}
-	defer req.Body.Close()
-
-	if req.Method != "CONNECT" {
-		hp := strings.Split(req.Host, ":")
-		if len(hp) > 1 && hp[1] == "443" {
-			req.URL.Scheme = "https"
+	if hostPortUrl.Opaque == "443" {
+		addr = hostPortUrl.Scheme + ":443"
+	} else {
+		if strings.Index(hostPortUrl.Host, ":") == -1 {
+			addr = hostPortUrl.Host + ":80"
 		} else {
-			req.URL.Scheme = "http"
+			addr = hostPortUrl.Host
 		}
-		req.URL.Host = req.Host
-		outreq := new(http.Request).WithContext(ctx)
-		*outreq = *req
-		resp, err := http.DefaultTransport.RoundTrip(outreq)
-		if err != nil {
-			return err
-		}
-		// resp.Write writes whatever response we obtained for our
-		// request back to the stream.
-		return resp.Write(stream)
 	}
-	conn, err := net.Dial("tcp", req.Host)
+	conn, err := net.Dial("tcp", addr)
 	if err != nil {
 		return err
 	}
 	defer conn.Close()
 
-	_, err = stream.Write([]byte("HTTP/1.1 200 Connection established\r\n\r\n"))
+	if method != "CONNECT" {
+		n, err = conn.Write(buf[:n])
+	} else {
+		n, err = stream.Write([]byte("HTTP/1.1 200 Connection established\r\n\r\n"))
+	}
 	if err != nil {
 		return err
 	}
-
-	// response
-	respErrCh := make(chan error, 1)
-	go func() {
-		_, err = io.Copy(stream, conn)
-		if errors.Is(err, net.ErrClosed) {
-			err = nil
-		}
-		if err != nil {
-			s.logger.Tracef("proxy on http(s) io.copy resp to %s err %v", p.Address, err)
-		}
-		respErrCh <- err
-	}()
-	// request
-	reqErrCh := make(chan error, 1)
-	go func() {
-		_, err = io.Copy(conn, stream)
-		if errors.Is(err, net.ErrClosed) {
-			err = nil
-		}
-		if err != nil {
-			s.logger.Tracef("proxy on http(s) io.copy req from %s err %v", p.Address, err)
-		}
-		reqErrCh <- err
-	}()
-	select {
-	case err = <-respErrCh:
-		return err
-	case err = <-reqErrCh:
-		return err
-	}
+	s.counter.IncrProxyOutBytes(n)
+	go s.copyIO(conn, stream, streamHttpProxy)
+	s.copyIO(stream, conn, streamHttpProxy)
+	return nil
 }
