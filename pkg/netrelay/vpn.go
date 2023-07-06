@@ -210,6 +210,7 @@ func (s *Service) toClient(wsConn net.Conn, st p2p.Stream) {
 	for {
 		n, err := st.Read(packet)
 		if err != nil {
+			_ = wsConn.Close()
 			_ = st.Close()
 			break
 		}

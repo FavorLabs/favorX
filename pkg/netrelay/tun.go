@@ -167,6 +167,7 @@ func (s *Service) onVpnTun(ctx context.Context, p p2p.Peer, stream p2p.Stream) (
 	for {
 		n, err := stream.Read(packet)
 		if err != nil {
+			s.logger.Infof("vpn client closed with %s", p.Address)
 			return err
 		}
 		s.counter.IncrTunInBytes(n)
