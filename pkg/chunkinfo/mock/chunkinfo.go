@@ -152,3 +152,23 @@ func (ci *ChunkInfo) OnChunkRetrieved(cid, rootCid, sourceOverlay boson.Address)
 func (ci *ChunkInfo) GetChunkInfoSource(rootCid boson.Address) address.ChunkInfoSourceApi {
 	return address.ChunkInfoSourceApi{}
 }
+
+func (ci *ChunkInfo) Discover(ctx context.Context, auth []byte, rootCid boson.Address, isOracle bool) bool {
+	return true
+}
+
+func (ci *ChunkInfo) FindRoutes(ctx context.Context, rootCid boson.Address, bit int64) []aco.Route {
+	return nil
+}
+
+func (ci *ChunkInfo) OnRetrieved(ctx context.Context, rootCid boson.Address, bit int64, overlay boson.Address) error {
+	return nil
+}
+
+func (ci *ChunkInfo) OnTransferred(ctx context.Context, rootCid boson.Address, bit int64, overlay boson.Address) error {
+	return nil
+}
+
+func (ci *ChunkInfo) OnFileUpload(ctx context.Context, rootCid boson.Address, bitLen int64) error {
+	return nil
+}

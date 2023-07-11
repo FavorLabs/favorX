@@ -123,6 +123,7 @@ type Options struct {
 	TunGroup               string
 	VpnEnable              bool
 	VpnAddr                string
+	Relay                  bool
 }
 
 func NewNode(nodeMode address.Model, addr string, bosonAddress boson.Address, publicKey ecdsa.PublicKey, signer crypto.Signer, networkID uint64, logger logging.Logger, libp2pPrivateKey crypto2.PrivKey, o Options) (b *Favor, err error) {
@@ -373,7 +374,7 @@ func NewNode(nodeMode address.Model, addr string, bosonAddress boson.Address, pu
 	}
 	b.localstoreCloser = storer
 
-	retrieve := retrieval.New(bosonAddress, p2ps, route, storer, nodeMode.IsFull(), logger, tracer, acc, subPub)
+	retrieve := retrieval.New(bosonAddress, p2ps, route, storer, o.Relay, nodeMode.IsFull(), logger, tracer, acc, subPub)
 	if err = p2ps.AddProtocol(retrieve.Protocol()); err != nil {
 		return nil, fmt.Errorf("retrieval service: %w", err)
 	}
