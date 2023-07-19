@@ -54,6 +54,7 @@ type Service struct {
 	singleflight singleflight.Group
 	isFullNode   bool
 	subPub       subscribe.SubPub
+	relay        bool
 }
 
 type retrievalResult struct {
@@ -67,7 +68,7 @@ const (
 	totalRouteCount               = 5
 )
 
-func New(addr boson.Address, streamer p2p.Streamer, routeTable routetab.RouteTab, storer storage.Storer,
+func New(addr boson.Address, streamer p2p.Streamer, routeTable routetab.RouteTab, storer storage.Storer, relay bool,
 	isFullNode bool, logger logging.Logger, tracer *tracing.Tracer, accounting accounting.Interface, subPub subscribe.SubPub) *Service {
 	acoServer := aco.NewAcoServer()
 	return &Service{
@@ -82,6 +83,7 @@ func New(addr boson.Address, streamer p2p.Streamer, routeTable routetab.RouteTab
 		accounting: accounting,
 		isFullNode: isFullNode,
 		subPub:     subPub,
+		relay:      relay,
 	}
 }
 
@@ -174,6 +176,9 @@ func (s *Service) RetrieveChunk(ctx context.Context, rootAddr, chunkAddr boson.A
 func (s *Service) RetrieveChunkFromNode(ctx context.Context, targetNode boson.Address, rootAddr, chunkAddr boson.Address, index int64) (boson.Chunk, error) {
 	s.metrics.RequestCounter.Inc()
 
+	if !s.relay {
+		return nil, storage.ErrNotFound
+	}
 	flightRoute := fmt.Sprintf("%s,%s", targetNode.String(), chunkAddr.String())
 	topCtx := ctx
 	v, _, err := s.singleflight.Do(context.Background(), flightRoute, func(ctx context.Context) (interface{}, error) {

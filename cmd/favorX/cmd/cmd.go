@@ -79,6 +79,7 @@ const (
 	optionNameTunRateEnable         = "tun-rate-enable"
 	optionNameVpnEnable             = "vpn-enable"
 	optionNameVpnAddr               = "vpn-addr"
+	optionRelay                     = "relay"
 )
 
 func init() {
@@ -272,6 +273,7 @@ func (c *command) setAllFlags(cmd *cobra.Command) {
 	cmd.Flags().Bool(optionNameTunRateEnable, true, "Turn on Tunnel speed limit")
 	cmd.Flags().Bool(optionNameVpnEnable, false, "enable tunnel of vpn service")
 	cmd.Flags().String(optionNameVpnAddr, ":1638", "listening address of vpn server")
+	cmd.Flags().Bool(optionRelay, true, "enable relay")
 }
 
 func newLogger(cmd *cobra.Command, verbosity string) (logging.Logger, error) {

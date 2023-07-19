@@ -173,6 +173,7 @@ func (c *command) initStartCmd() (err error) {
 				TunRateEnable:          c.config.GetBool(optionNameTunRateEnable),
 				VpnEnable:              c.config.GetBool(optionNameVpnEnable),
 				VpnAddr:                c.config.GetString(optionNameVpnAddr),
+				Relay:                  c.config.GetBool(optionRelay),
 			})
 			if err != nil {
 				return err
