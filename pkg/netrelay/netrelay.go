@@ -2,6 +2,7 @@ package netrelay
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -81,8 +82,19 @@ func (s *Service) RelayHttpDo(w http.ResponseWriter, r *http.Request, addr boson
 		forward = append(forward, addr)
 	}
 
-	var err error
-	for _, addr := range forward {
+	var (
+		body []byte
+		err  error
+	)
+
+	for k, addr := range forward {
+		if k == 0 {
+			body, err = io.ReadAll(r.Body)
+			if err != nil {
+				break
+			}
+		}
+		r.Body = io.NopCloser(bytes.NewReader(body))
 		err = s.copyStream(w, r, addr)
 		if err == nil {
 			break
